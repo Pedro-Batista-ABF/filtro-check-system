@@ -3,14 +3,14 @@ import { Sector, Service, ServiceType } from "@/types";
 
 // Mock service options
 export const serviceOptions: Service[] = [
-  { id: 'substituicao_parafusos', name: 'Substituição de Parafusos', selected: false, quantity: 0 },
-  { id: 'troca_trecho', name: 'Troca de trecho até 90.000mm²', selected: false },
-  { id: 'desempeno', name: 'Desempeno', selected: false },
-  { id: 'troca_tela_lado_a', name: 'Troca de tela lado A', selected: false },
-  { id: 'troca_tela_lado_b', name: 'Troca de tela lado B', selected: false },
-  { id: 'troca_ambos_lados', name: 'Troca de ambos os lados', selected: false },
-  { id: 'fabricacao_canaleta', name: 'Fabricação canaleta', selected: false },
-  { id: 'fabricacao_setor_completo', name: 'Fabricação setor completo', selected: false },
+  { id: 'substituicao_parafusos', name: 'Substituição de Parafusos', selected: false, quantity: 0, type: 'substituicao_parafusos' },
+  { id: 'troca_trecho', name: 'Troca de trecho até 90.000mm²', selected: false, type: 'troca_trecho' },
+  { id: 'desempeno', name: 'Desempeno', selected: false, type: 'desempeno' },
+  { id: 'troca_tela_lado_a', name: 'Troca de tela lado A', selected: false, type: 'troca_tela_lado_a' },
+  { id: 'troca_tela_lado_b', name: 'Troca de tela lado B', selected: false, type: 'troca_tela_lado_b' },
+  { id: 'troca_ambos_lados', name: 'Troca de ambos os lados', selected: false, type: 'troca_ambos_lados' },
+  { id: 'fabricacao_canaleta', name: 'Fabricação canaleta', selected: false, type: 'fabricacao_canaleta' },
+  { id: 'fabricacao_setor_completo', name: 'Fabricação setor completo', selected: false, type: 'fabricacao_setor_completo' },
 ];
 
 // Function to generate a mock sector with random services
@@ -66,7 +66,7 @@ const generateMockSector = (id: number): Sector => {
       : undefined,
     exitObservations: status === 'concluido' ? 'Observações sobre o estado final do setor.' : undefined,
     cycleCount: 1,
-    outcome: status === 'concluido' ? 'Recuperado' : 'EmAndamento'
+    outcome: status === 'concluido' ? 'recovered' : 'EmAndamento'
   };
 };
 

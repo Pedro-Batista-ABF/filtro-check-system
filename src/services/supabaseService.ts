@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Sector, Service, Photo, CycleOutcome, SectorStatus } from "@/types";
+import { Sector, Service, Photo, CycleOutcome, SectorStatus, ServiceType } from "@/types";
 import { toast } from "sonner";
 
 /**
@@ -83,6 +83,7 @@ const mapServiceFromDB = (
     id: serviceType.id as any,
     name: serviceType.name,
     selected: cycleService?.selected || false,
+    type: serviceType.id as ServiceType, // Add the type field using serviceType.id
     quantity: cycleService?.quantity || undefined,
     observations: cycleService?.observations || undefined,
     photos: photos?.map(mapPhotoFromDB) || []
@@ -696,7 +697,8 @@ export const supabaseService = {
       return (data || []).map(serviceType => ({
         id: serviceType.id as any,
         name: serviceType.name,
-        selected: false
+        selected: false,
+        type: serviceType.id as ServiceType // Add the type field
       }));
     } catch (error) {
       console.error('Erro ao buscar tipos de serviços:', error);

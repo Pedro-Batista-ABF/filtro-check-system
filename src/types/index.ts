@@ -23,7 +23,7 @@ export interface Service {
   id: string;
   name: string;
   selected: boolean;
-  type: string; // Adicionado o campo type que estava faltando
+  type: ServiceType; // Make sure we're using ServiceType here
   quantity?: number;
   photos?: Photo[];
   observations?: string;
@@ -72,9 +72,9 @@ export interface Cycle {
   
   status: SectorStatus;
   outcome: CycleOutcome;
-  createdAt?: string; // Adicionando campo createdAt
-  comments?: string; // Adicionando campo comments
-  technicianId?: string; // Adicionando campo technicianId
+  createdAt?: string;
+  comments?: string;
+  technicianId?: string;
 }
 
 export interface Sector {
@@ -109,8 +109,8 @@ export interface Sector {
   // History tracking
   cycleCount: number;
   previousCycles?: Cycle[];
-  cycles?: Cycle[]; // Adicionando campo cycles
-  comments?: string; // Adicionando campo comments
+  cycles?: Cycle[];
+  comments?: string;
   
   status: SectorStatus;
   outcome?: CycleOutcome;

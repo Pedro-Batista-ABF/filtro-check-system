@@ -348,7 +348,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         productionCompleted: false,
         status: isScrap ? 'sucateadoPendente' : 'emExecucao',
         cycleCount,
-        outcome: isScrap ? 'Sucateado' : 'EmAndamento',
+        outcome: isScrap ? 'scrapped' : 'EmAndamento',
         
         // Scrap fields if applicable
         ...(isScrap ? {
@@ -401,7 +401,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           type: 'after' as const
         })),
         status: 'concluido',
-        outcome: 'Recuperado'
+        outcome: 'recovered'
       };
       
       onSubmit(updatedSector);
@@ -429,7 +429,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           }))
         ],
         status: 'sucateado',
-        outcome: 'Sucateado'
+        outcome: 'scrapped'
       };
       
       onSubmit(updatedSector);
@@ -619,7 +619,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
                     {scrapPhotos.map((photo, index) => (
                       <div key={index} className="relative h-24 bg-gray-200 rounded overflow-hidden">
                         <img 
-                          src={photo} 
+                          src={photo.url} 
                           alt={`Foto adicional ${index + 1}`}
                           className="w-full h-full object-cover"
                         />

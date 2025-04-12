@@ -120,13 +120,13 @@ export default function EntryForm({
                       {cycleHistory.map((cycle, index) => (
                         <div key={cycle.id} className="pb-2">
                           <p className="font-semibold">
-                            Ciclo {index + 1} - {cycle.outcome}
+                            Ciclo {index + 1} - {cycle.outcome === "recovered" ? "Recuperado" : cycle.outcome === "scrapped" ? "Sucateado" : "Em Andamento"}
                           </p>
                           <p>Entrada: {format(new Date(cycle.entryDate), "dd/MM/yyyy", { locale: ptBR })}</p>
-                          {cycle.outcome === 'Recuperado' && cycle.exitDate && (
+                          {cycle.outcome === "recovered" && cycle.exitDate && (
                             <p>Saída: {format(new Date(cycle.exitDate), "dd/MM/yyyy", { locale: ptBR })}</p>
                           )}
-                          {cycle.outcome === 'Sucateado' && cycle.scrapReturnDate && (
+                          {cycle.outcome === "scrapped" && cycle.scrapReturnDate && (
                             <p>Devolução: {format(new Date(cycle.scrapReturnDate), "dd/MM/yyyy", { locale: ptBR })}</p>
                           )}
                           {cycle.services.filter(s => s.selected).length > 0 && (
