@@ -23,17 +23,17 @@ export default function Peritagem() {
     // Apply date filter if dates are provided
     let dateMatch = true;
     if (startDate && endDate) {
-      const sectorDate = new Date(sector.peritagemDate);
+      const sectorDate = new Date(sector.entryDate);
       const start = parse(startDate, "yyyy-MM-dd", new Date());
       const end = parse(endDate, "yyyy-MM-dd", new Date());
       
       dateMatch = isWithinInterval(sectorDate, { start, end });
     } else if (startDate) {
-      const sectorDate = new Date(sector.peritagemDate);
+      const sectorDate = new Date(sector.entryDate);
       const start = parse(startDate, "yyyy-MM-dd", new Date());
       dateMatch = isAfter(sectorDate, start) || format(sectorDate, "yyyy-MM-dd") === startDate;
     } else if (endDate) {
-      const sectorDate = new Date(sector.peritagemDate);
+      const sectorDate = new Date(sector.entryDate);
       const end = parse(endDate, "yyyy-MM-dd", new Date());
       dateMatch = isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
     }
@@ -59,7 +59,7 @@ export default function Peritagem() {
     if (statusDiff !== 0) return statusDiff;
     
     // Then by date (most recent first)
-    return new Date(b.peritagemDate).getTime() - new Date(a.peritagemDate).getTime();
+    return new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime();
   });
 
   return (
@@ -149,4 +149,3 @@ export default function Peritagem() {
     </PageLayout>
   );
 }
-
