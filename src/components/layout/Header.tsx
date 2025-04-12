@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Filter, ClipboardCheck, CheckSquare, Home, FileText } from "lucide-react";
+import { Filter, ClipboardCheck, CheckSquare, Home, FileText, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
@@ -26,7 +26,9 @@ export default function Header({ HeaderExtra }: HeaderProps) {
         
         {/* Mobile menu button */}
         <div className="flex items-center gap-2">
-          {HeaderExtra && <div className="hidden md:block">{HeaderExtra}</div>}
+          {HeaderExtra && (
+            <div className="hidden md:block">{HeaderExtra}</div>
+          )}
           <button 
             className="md:hidden bg-primary-foreground/10 rounded p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -81,6 +83,16 @@ export default function Header({ HeaderExtra }: HeaderProps) {
           </Button>
           <Button 
             variant="ghost" 
+            className={`text-white hover:bg-primary/30 ${isActive('/sucateamento')}`}
+            asChild
+          >
+            <Link to="/sucateamento" className="flex items-center space-x-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Sucateamento</span>
+            </Link>
+          </Button>
+          <Button 
+            variant="ghost" 
             className={`text-white hover:bg-primary/30 ${isActive('/relatorios')}`}
             asChild
           >
@@ -128,6 +140,14 @@ export default function Header({ HeaderExtra }: HeaderProps) {
             >
               <CheckSquare className="h-5 w-5" />
               <span>Qualidade</span>
+            </Link>
+            <Link 
+              to="/sucateamento" 
+              className={`flex items-center space-x-2 py-2 px-4 rounded ${isActive('/sucateamento')}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <AlertTriangle className="h-5 w-5" />
+              <span>Sucateamento</span>
             </Link>
             <Link 
               to="/relatorios" 

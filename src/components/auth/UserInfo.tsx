@@ -16,7 +16,15 @@ export default function UserInfo() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  if (!user) return null;
+  if (!user) {
+    // Se não houver usuário, renderiza um botão de login
+    return (
+      <Button variant="outline" size="sm" onClick={() => navigate("/login")}>
+        <User className="h-4 w-4 mr-2" />
+        <span>Login</span>
+      </Button>
+    );
+  }
 
   const handleLogout = () => {
     logout();
@@ -28,7 +36,7 @@ export default function UserInfo() {
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <User className="h-4 w-4" />
-          <span className="hidden md:inline">{user.fullName}</span>
+          <span className="hidden md:inline">{user.fullName || user.username}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
