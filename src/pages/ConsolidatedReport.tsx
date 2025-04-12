@@ -182,7 +182,7 @@ export default function ConsolidatedReport() {
                     <SelectValue placeholder="Todos os status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os status</SelectItem>
+                    <SelectItem value="all">Todos os status</SelectItem>
                     <SelectItem value="checagemFinalPendente">Checagem Pendente</SelectItem>
                     <SelectItem value="concluido">Concluído</SelectItem>
                   </SelectContent>
