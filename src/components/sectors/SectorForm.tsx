@@ -23,6 +23,20 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
     ? defaultValues?.entryObservations || ''
     : defaultValues?.exitObservations || '');
   
+  // Date handling
+  const today = format(new Date(), 'dd/MM/yyyy', { locale: ptBR });
+  const [entryDate, setEntryDate] = useState<Date>(
+    defaultValues?.entryDate 
+      ? new Date(defaultValues.entryDate) 
+      : new Date()
+  );
+  
+  const [exitDate, setExitDate] = useState<Date>(
+    defaultValues?.exitDate 
+      ? new Date(defaultValues.exitDate) 
+      : new Date()
+  );
+  
   // Initialize services with photos from defaultValues if available
   const initialServices = services.map(service => {
     const defaultService = defaultValues?.services?.find(s => s.id === service.id);
@@ -46,8 +60,6 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
   const [completedServices, setCompletedServices] = useState<Service[]>(
     defaultValues?.services?.filter(s => defaultValues.completedServices?.includes(s.id)) || []
   );
-
-  const today = format(new Date(), 'dd/MM/yyyy', { locale: ptBR });
 
   const handleServiceChange = (id: string, checked: boolean) => {
     setSelectedServices(
@@ -199,7 +211,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         tagNumber,
         tagPhotoUrl: tagPhotoUrl || 'https://placehold.co/300x200?text=TAG+Photo',
         entryInvoice,
-        entryDate: new Date().toISOString().split('T')[0],
+        entryDate: format(entryDate, 'yyyy-MM-dd'),
+        peritagemDate: format(new Date(), 'yyyy-MM-dd'), // New field: Peritagem date
         services: selectedServices,
         beforePhotos: entryPhotos.map((url, index) => ({
           id: `photo-before-${index + 1}`,
@@ -214,7 +227,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           exitDate: defaultValues.exitDate,
           exitInvoice: defaultValues.exitInvoice,
           completedServices: defaultValues.completedServices,
-          exitObservations: defaultValues.exitObservations
+          exitObservations: defaultValues.exitObservations,
+          checagemDate: defaultValues.checagemDate
         } : {}
       } as Sector;
       
@@ -230,7 +244,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
       // Updating exit data
       const updatedSector: Sector = {
         ...defaultValues as Sector,
-        exitDate: new Date().toISOString().split('T')[0],
+        exitDate: format(exitDate, 'yyyy-MM-dd'),
+        checagemDate: format(new Date(), 'yyyy-MM-dd'), // New field: Checagem date
         exitInvoice,
         exitObservations: observations,
         completedServices: completedServices.map(s => s.id),
@@ -267,6 +282,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           entryPhotos={entryPhotos}
           defaultValues={defaultValues}
           today={today}
+          entryDate={entryDate}
+          setEntryDate={setEntryDate}
         />
       ) : (
         <ExitForm 
@@ -282,6 +299,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           defaultValues={defaultValues}
           today={today}
           selectedServices={selectedServices}
+          exitDate={exitDate}
+          setExitDate={setExitDate}
         />
       )}
 

@@ -32,6 +32,15 @@ export default function ReportPreview() {
     toast.success('Relatório enviado por e-mail');
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+      return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   const renderServicePhotos = (service: Service, sectorId: string) => {
     if (!service.photos || service.photos.length === 0) {
       return (
@@ -156,9 +165,11 @@ export default function ReportPreview() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h2 className="text-xl font-bold">TAG: {sector.tagNumber}</h2>
-                    <div className="text-muted-foreground">
-                      Entrada: {format(new Date(sector.entryDate), "dd/MM/yyyy", { locale: ptBR })}
-                      {sector.exitDate ? ` | Saída: ${format(new Date(sector.exitDate), "dd/MM/yyyy", { locale: ptBR })}` : ''}
+                    <div className="text-muted-foreground space-y-1">
+                      <div>Entrada: {formatDate(sector.entryDate)}</div>
+                      <div>Peritagem: {formatDate(sector.peritagemDate)}</div>
+                      {sector.exitDate && <div>Saída: {formatDate(sector.exitDate)}</div>}
+                      {sector.checagemDate && <div>Checagem: {formatDate(sector.checagemDate)}</div>}
                     </div>
                   </div>
                   

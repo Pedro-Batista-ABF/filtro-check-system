@@ -1,3 +1,4 @@
+
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -30,6 +31,7 @@ export interface Sector {
   tagPhotoUrl?: string;
   entryInvoice: string;
   entryDate: string;
+  peritagemDate: string; // New field for peritagem date
   services: Service[];
   beforePhotos: Photo[];
   entryObservations?: string;
@@ -37,6 +39,7 @@ export interface Sector {
   // Checagem final fields
   exitDate?: string;
   exitInvoice?: string;
+  checagemDate?: string; // New field for checagem quality date
   afterPhotos?: Photo[];
   completedServices?: ServiceType[];
   exitObservations?: string;

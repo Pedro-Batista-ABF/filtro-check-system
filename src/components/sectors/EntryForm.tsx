@@ -4,9 +4,15 @@ import { Service, ServiceType, Sector } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Calendar } from "lucide-react";
 import ServiceCheckbox from "./ServiceCheckbox";
 import PhotoUpload from "./PhotoUpload";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface EntryFormProps {
   tagNumber: string;
@@ -25,6 +31,8 @@ interface EntryFormProps {
   entryPhotos: string[];
   defaultValues?: Partial<Sector>;
   today: string;
+  entryDate: Date;
+  setEntryDate: (date: Date) => void;
 }
 
 export default function EntryForm({
@@ -43,7 +51,9 @@ export default function EntryForm({
   handleImageUpload,
   entryPhotos,
   defaultValues,
-  today
+  today,
+  entryDate,
+  setEntryDate
 }: EntryFormProps) {
   return (
     <>
@@ -107,7 +117,37 @@ export default function EntryForm({
           </div>
 
           <div>
-            <Label>Data de Entrada</Label>
+            <Label htmlFor="entryDate">Data de Entrada *</Label>
+            <div className="mt-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !entryDate && "text-muted-foreground"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {entryDate ? format(entryDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={entryDate}
+                    onSelect={(date) => date && setEntryDate(date)}
+                    initialFocus
+                    locale={ptBR}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <div>
+            <Label>Data da Peritagem</Label>
             <div className="mt-1 p-2 bg-gray-100 border border-gray-300 rounded-md">
               {today}
             </div>
