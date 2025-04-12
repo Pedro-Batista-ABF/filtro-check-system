@@ -1,6 +1,5 @@
 
-import { useEffect } from "react";
-import { Route, Routes, useNavigate, Outlet } from "react-router-dom";
+import { Route, Routes, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
@@ -22,14 +21,7 @@ import ConsolidatedReport from "@/pages/ConsolidatedReport";
 import { useApi } from "@/contexts/ApiContextExtended";
 
 const App = () => {
-  const navigate = useNavigate();
   const { isAuthenticated } = useApi();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login");
-    }
-  }, [isAuthenticated, navigate]);
 
   return (
     <>

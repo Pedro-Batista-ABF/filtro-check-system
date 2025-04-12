@@ -1,9 +1,10 @@
 
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useApi();
+  const location = useLocation();
 
   // Show loading when auth is being checked
   if (loading) {
@@ -12,7 +13,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   // Return children if authenticated
