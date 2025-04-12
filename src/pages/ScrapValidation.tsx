@@ -2,6 +2,7 @@
 import PageLayout from "@/components/layout/PageLayout";
 import { useState } from "react";
 import { useApi } from "@/contexts/ApiContext";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Search, Calendar, AlertTriangle } from "lucide-react";
 import SectorGrid from "@/components/sectors/SectorGrid";
@@ -16,6 +17,7 @@ export default function ScrapValidation() {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const navigate = useNavigate();
   
   // Filter sectors by status (only show sucateadoPendente), search term and date
   const filteredSectors = sectors.filter(sector => {
@@ -48,6 +50,10 @@ export default function ScrapValidation() {
   const sortedSectors = [...filteredSectors].sort((a, b) => {
     return new Date(b.peritagemDate).getTime() - new Date(a.peritagemDate).getTime();
   });
+
+  const handleSelectSector = (sector: Sector) => {
+    navigate(`/sucateamento/${sector.id}`);
+  };
 
   return (
     <PageLayout>
@@ -117,7 +123,10 @@ export default function ScrapValidation() {
             <p className="text-gray-500">Carregando setores...</p>
           </div>
         ) : sortedSectors.length > 0 ? (
-          <SectorGrid sectors={sortedSectors} />
+          <SectorGrid 
+            sectors={sortedSectors} 
+            onSelect={handleSelectSector}
+          />
         ) : (
           <div className="py-20 text-center">
             <p className="text-gray-500">

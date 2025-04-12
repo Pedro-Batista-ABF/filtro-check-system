@@ -8,6 +8,8 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -16,12 +18,35 @@ export default function ScrapValidationForm() {
   
   const sector = id ? getSectorById(id) : undefined;
   
-  if (!sector || sector.status !== 'sucateadoPendente') {
+  useEffect(() => {
+    document.title = "Validação de Sucateamento - Gestão de Recuperação";
+  }, []);
+  
+  if (!sector) {
     return (
       <PageLayout>
         <div className="text-center py-12">
           <h1 className="text-xl font-bold text-red-500">
-            {!sector ? 'Setor não encontrado' : 'Este setor não está pendente de validação de sucateamento'}
+            Setor não encontrado
+          </h1>
+          <Button 
+            onClick={() => navigate('/sucateamento')} 
+            className="mt-4"
+            variant="outline"
+          >
+            Voltar para Validação de Sucateamento
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
+  
+  if (sector.status !== 'sucateadoPendente') {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-bold text-red-500">
+            Este setor não está pendente de validação de sucateamento
           </h1>
           <Button 
             onClick={() => navigate('/sucateamento')} 
@@ -37,10 +62,12 @@ export default function ScrapValidationForm() {
 
   const handleSubmit = async (data: Omit<Sector, 'id'>) => {
     try {
-      await updateSector({ ...sector, ...data } as Sector);
+      await updateSector({ ...sector, ...data, status: 'sucateado' } as Sector);
+      toast.success('Sucateamento validado com sucesso!');
       navigate('/sucateamento');
     } catch (error) {
       console.error('Error saving sector:', error);
+      toast.error('Erro ao validar sucateamento');
     }
   };
 
