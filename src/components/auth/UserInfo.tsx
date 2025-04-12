@@ -1,5 +1,5 @@
 
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function UserInfo() {
-  const { user, logout } = useApi();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   if (!user) return null;
