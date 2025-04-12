@@ -3,9 +3,11 @@ import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ClipboardCheck, Filter, CheckSquare, FileText } from "lucide-react";
+import { ClipboardCheck, Filter, CheckSquare, FileText, Calendar, ArrowRight, SendHorizontal } from "lucide-react";
 import { useApi } from "@/contexts/ApiContext";
 import SectorGrid from "@/components/sectors/SectorGrid";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReportList from "@/components/reports/ReportList";
 
 export default function Index() {
   const { sectors, loading } = useApi();
@@ -95,25 +97,50 @@ export default function Index() {
           </Card>
         </section>
 
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Setores Recentes</h2>
-            <Button asChild variant="outline">
-              <Link to="/relatorios">
-                <FileText className="h-4 w-4 mr-2" /> 
-                Ver Relatórios
-              </Link>
-            </Button>
-          </div>
+        <Tabs defaultValue="sectors" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="sectors">Setores Recentes</TabsTrigger>
+            <TabsTrigger value="reports">Relatórios</TabsTrigger>
+          </TabsList>
           
-          {loading ? (
-            <p className="text-center py-6 text-gray-500">Carregando setores...</p>
-          ) : recentSectors.length > 0 ? (
-            <SectorGrid sectors={recentSectors} />
-          ) : (
-            <p className="text-center py-6 text-gray-500">Nenhum setor cadastrado ainda</p>
-          )}
-        </section>
+          <TabsContent value="sectors">
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Setores Recentes</h2>
+                <Button asChild variant="outline">
+                  <Link to="/relatorios">
+                    <FileText className="h-4 w-4 mr-2" /> 
+                    Ver Relatórios
+                  </Link>
+                </Button>
+              </div>
+              
+              {loading ? (
+                <p className="text-center py-6 text-gray-500">Carregando setores...</p>
+              ) : recentSectors.length > 0 ? (
+                <SectorGrid sectors={recentSectors} />
+              ) : (
+                <p className="text-center py-6 text-gray-500">Nenhum setor cadastrado ainda</p>
+              )}
+            </section>
+          </TabsContent>
+          
+          <TabsContent value="reports">
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Relatórios Salvos</h2>
+                <Button asChild variant="outline">
+                  <Link to="/relatorios">
+                    <FileText className="h-4 w-4 mr-2" /> 
+                    Gerar Novo Relatório
+                  </Link>
+                </Button>
+              </div>
+              
+              <ReportList />
+            </section>
+          </TabsContent>
+        </Tabs>
 
         <section className="grid grid-cols-1 md:grid-cols-4 gap-6 py-6">
           <Card className="bg-blue-50 border-blue-200">
