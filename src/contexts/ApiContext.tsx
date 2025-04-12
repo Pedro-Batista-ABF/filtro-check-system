@@ -53,7 +53,17 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createSector = async (sector: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
       setLoading(true);
+      // Garantir que um novo ID único seja gerado
       const newSector = mockDataService.addSector(sector);
+      
+      // Verificar se já existe um setor com o mesmo ID antes de adicionar
+      const existingIndex = sectors.findIndex(s => s.id === newSector.id);
+      if (existingIndex >= 0) {
+        console.warn(`ID duplicado detectado: ${newSector.id}. Gerando novo ID.`);
+        // Gerar um novo ID no caso de colisão
+        newSector.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      }
+      
       setSectors(prevSectors => [...prevSectors, newSector]);
       toast.success(sector.status === 'sucateadoPendente' 
         ? 'Setor registrado como sucateado com sucesso!' 

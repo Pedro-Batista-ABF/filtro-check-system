@@ -6,6 +6,7 @@ import SectorForm from "@/components/sectors/SectorForm";
 import { Sector } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +15,14 @@ export default function PeritagemForm() {
   
   const sector = id ? getSectorById(id) : undefined;
   const isEditing = !!sector;
+
+  // Limpar o ID duplicado na URL se não for encontrado o setor
+  useEffect(() => {
+    if (id && !sector) {
+      console.warn(`Setor com ID ${id} não encontrado.`);
+      navigate('/peritagem/novo', { replace: true });
+    }
+  }, [id, sector, navigate]);
 
   const handleSubmit = async (data: Omit<Sector, 'id'>) => {
     try {

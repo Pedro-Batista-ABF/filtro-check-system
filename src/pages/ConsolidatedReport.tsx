@@ -1,4 +1,3 @@
-
 import PageLayout from "@/components/layout/PageLayout";
 import { useState } from "react";
 import { useApi } from "@/contexts/ApiContext";
@@ -233,7 +232,7 @@ export default function ConsolidatedReport() {
               <div className="space-y-4">
                 {filteredSectors.map((sector) => (
                   <div 
-                    key={sector.id} 
+                    key={`report-sector-${sector.id}`} 
                     className={`p-4 border rounded-lg flex items-center justify-between ${
                       selectedSectors.includes(sector.id) ? 'border-primary bg-primary/5' : ''
                     }`}
