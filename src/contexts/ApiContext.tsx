@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Sector, Service } from '@/types';
 import { mockDataService, serviceOptions } from '@/services/mockData';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 interface ApiContextType {
   sectors: Sector[];
