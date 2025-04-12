@@ -25,11 +25,24 @@ export default function ConsolidatedReport() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
-  // Filter sectors that are fully completed with quality check
-  const completedSectors = sectors.filter(sector => {
-    const isFullyCompleted = sector.status === 'concluido';
+  // Filtrar setores que estão concluídos ou sucateados
+  const filteredSectors = sectors.filter(sector => {
+    // Verificar o status de acordo com o filtro selecionado
+    let statusMatch = true;
+    if (statusFilter) {
+      if (statusFilter === "concluido") {
+        statusMatch = sector.status === 'concluido';
+      } else if (statusFilter === "sucateado") {
+        statusMatch = sector.status === 'sucateado';
+      } else if (statusFilter === "all") {
+        statusMatch = sector.status === 'concluido' || sector.status === 'sucateado';
+      }
+    } else {
+      // Comportamento padrão: mostrar concluídos e sucateados
+      statusMatch = sector.status === 'concluido' || sector.status === 'sucateado';
+    }
     
-    // Apply date filter if dates are provided
+    // Aplicar filtro de data se fornecido
     let dateMatch = true;
     if (startDate && endDate) {
       const sectorDate = new Date(sector.entryDate);
@@ -47,13 +60,7 @@ export default function ConsolidatedReport() {
       dateMatch = isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
     }
     
-    // Apply status filter if provided
-    let statusMatch = true;
-    if (statusFilter && statusFilter !== "all") {
-      statusMatch = sector.status === statusFilter;
-    }
-    
-    // Apply search filter if provided
+    // Aplicar filtro de busca
     let searchMatch = true;
     if (searchTerm) {
       searchMatch = 
@@ -62,7 +69,7 @@ export default function ConsolidatedReport() {
         (sector.exitInvoice && sector.exitInvoice.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     
-    return isFullyCompleted && dateMatch && statusMatch && searchMatch;
+    return statusMatch && dateMatch && searchMatch;
   });
 
   const toggleSectorSelection = (sectorId: string) => {
@@ -74,10 +81,10 @@ export default function ConsolidatedReport() {
   };
 
   const handleSelectAll = () => {
-    if (selectedSectors.length === completedSectors.length) {
+    if (selectedSectors.length === filteredSectors.length) {
       setSelectedSectors([]);
     } else {
-      setSelectedSectors(completedSectors.map(sector => sector.id));
+      setSelectedSectors(filteredSectors.map(sector => sector.id));
     }
   };
 
@@ -179,7 +186,8 @@ export default function ConsolidatedReport() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="concluido">Concluídos</SelectItem>
+                    <SelectItem value="sucateado">Sucateados</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -200,24 +208,30 @@ export default function ConsolidatedReport() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg">Setores com Checagem Concluída</CardTitle>
+            <CardTitle className="text-lg">
+              {statusFilter === "sucateado" 
+                ? "Setores Sucateados" 
+                : statusFilter === "concluido" 
+                  ? "Setores Concluídos" 
+                  : "Setores Concluídos e Sucateados"}
+            </CardTitle>
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="selectAll" 
-                checked={selectedSectors.length === completedSectors.length && completedSectors.length > 0}
+                checked={selectedSectors.length === filteredSectors.length && filteredSectors.length > 0}
                 onCheckedChange={handleSelectAll}
               />
               <Label htmlFor="selectAll" className="text-sm">Selecionar Todos</Label>
             </div>
           </CardHeader>
           <CardContent>
-            {completedSectors.length === 0 ? (
+            {filteredSectors.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">Nenhum setor com checagem concluída encontrado</p>
+                <p className="text-muted-foreground">Nenhum setor encontrado com os filtros selecionados</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {completedSectors.map((sector) => (
+                {filteredSectors.map((sector) => (
                   <div 
                     key={sector.id} 
                     className={`p-4 border rounded-lg flex items-center justify-between ${
@@ -246,8 +260,12 @@ export default function ConsolidatedReport() {
                     </div>
                     
                     <div className="text-xs">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                        Concluído
+                      <span className={`px-2 py-1 rounded-full ${
+                        sector.status === 'sucateado' 
+                          ? 'bg-red-100 text-red-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {sector.status === 'sucateado' ? 'Sucateado' : 'Concluído'}
                       </span>
                     </div>
                   </div>

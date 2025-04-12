@@ -100,6 +100,147 @@ export default function ReportPreview() {
     );
   };
 
+  const renderSectorContent = (sector: Sector) => {
+    if (sector.status === 'sucateado') {
+      return (
+        <>
+          <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-4">
+            <h3 className="text-lg font-medium text-red-700">Setor Sucateado</h3>
+            {sector.scrapObservations && (
+              <div className="mt-2">
+                <p className="text-sm text-red-600 font-medium">Motivo do Sucateamento:</p>
+                <p className="text-sm">{sector.scrapObservations}</p>
+              </div>
+            )}
+            {sector.scrapReturnDate && (
+              <p className="text-sm mt-2">
+                <span className="font-medium">Data de Devolução:</span> {formatDate(sector.scrapReturnDate)}
+              </p>
+            )}
+            {sector.scrapReturnInvoice && (
+              <p className="text-sm">
+                <span className="font-medium">NF de Devolução:</span> {sector.scrapReturnInvoice}
+              </p>
+            )}
+          </div>
+          
+          {/* Exibir serviços que foram apontados na peritagem para contextualização */}
+          <div>
+            <h3 className="text-lg font-medium mb-4">Serviços Apontados na Peritagem</h3>
+            <div className="space-y-4">
+              {sector.services
+                .filter(service => service.selected)
+                .map(service => (
+                  <div key={service.id} className="border rounded-md p-4">
+                    <h4 className="font-medium">
+                      {service.name}
+                      {service.quantity ? ` (${service.quantity})` : ''}
+                    </h4>
+                    
+                    {service.observations && (
+                      <div className="mt-2">
+                        <p className="text-sm text-muted-foreground font-medium">Observações:</p>
+                        <p className="text-sm">{service.observations}</p>
+                      </div>
+                    )}
+                    
+                    {service.photos && service.photos.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm text-muted-foreground font-medium">Fotos do Defeito:</p>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {service.photos
+                            .filter(photo => photo.type === 'before')
+                            .map(photo => (
+                              <div key={photo.id} className="h-32 bg-gray-200 rounded overflow-hidden">
+                                <img 
+                                  src={photo.url} 
+                                  alt={`Foto defeito - ${service.name}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              }
+              
+              {(!sector.services.some(service => service.selected)) && (
+                <p className="text-muted-foreground">Nenhum serviço apontado na peritagem</p>
+              )}
+            </div>
+          </div>
+        </>
+      );
+    }
+    
+    // Conteúdo padrão para setores concluídos
+    return (
+      <>
+        <div>
+          <h3 className="text-lg font-medium mb-4">Serviços Executados</h3>
+          
+          <div className="space-y-6">
+            {sector.services
+              .filter(service => service.selected && sector.completedServices?.includes(service.id))
+              .map(service => (
+                <div key={service.id} className="border rounded-md p-4 space-y-4">
+                  <h4 className="font-medium">
+                    {service.name}
+                    {service.quantity ? ` (${service.quantity})` : ''}
+                  </h4>
+                  
+                  {service.observations && (
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Observações:</p>
+                      <p className="text-sm">{service.observations}</p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground font-medium">Fotos:</p>
+                    {renderServicePhotos(service, sector.id)}
+                  </div>
+                </div>
+              ))
+            }
+            
+            {(!sector.services.some(service => 
+              service.selected && sector.completedServices?.includes(service.id)
+            )) && (
+              <p className="text-muted-foreground">Nenhum serviço executado registrado</p>
+            )}
+          </div>
+        </div>
+        
+        {(sector.entryObservations || sector.exitObservations) && (
+          <>
+            <Separator className="my-6" />
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Observações</h3>
+              
+              {sector.entryObservations && (
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Iniciais:</p>
+                  <p className="text-sm">{sector.entryObservations}</p>
+                </div>
+              )}
+              
+              {sector.exitObservations && (
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Finais:</p>
+                  <p className="text-sm">{sector.exitObservations}</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
+
   if (selectedSectors.length === 0) {
     return (
       <PageLayout>
@@ -176,70 +317,21 @@ export default function ReportPreview() {
                   <div className="text-right">
                     <div>NF Entrada: {sector.entryInvoice}</div>
                     {sector.exitInvoice && <div>NF Saída: {sector.exitInvoice}</div>}
+                    <div className="mt-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        sector.status === 'sucateado' 
+                          ? 'bg-red-100 text-red-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {sector.status === 'sucateado' ? 'Sucateado' : 'Concluído'}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
                 <Separator />
                 
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Serviços Executados</h3>
-                  
-                  <div className="space-y-6">
-                    {sector.services
-                      .filter(service => service.selected && sector.completedServices?.includes(service.id))
-                      .map(service => (
-                        <div key={service.id} className="border rounded-md p-4 space-y-4">
-                          <h4 className="font-medium">
-                            {service.name}
-                            {service.quantity ? ` (${service.quantity})` : ''}
-                          </h4>
-                          
-                          {service.observations && (
-                            <div>
-                              <p className="text-sm text-muted-foreground font-medium">Observações:</p>
-                              <p className="text-sm">{service.observations}</p>
-                            </div>
-                          )}
-                          
-                          <div className="space-y-2">
-                            <p className="text-sm text-muted-foreground font-medium">Fotos:</p>
-                            {renderServicePhotos(service, sector.id)}
-                          </div>
-                        </div>
-                      ))
-                    }
-                    
-                    {(!sector.services.some(service => 
-                      service.selected && sector.completedServices?.includes(service.id)
-                    )) && (
-                      <p className="text-muted-foreground">Nenhum serviço executado registrado</p>
-                    )}
-                  </div>
-                </div>
-                
-                {(sector.entryObservations || sector.exitObservations) && (
-                  <>
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Observações</h3>
-                      
-                      {sector.entryObservations && (
-                        <div>
-                          <p className="text-sm text-muted-foreground font-medium">Iniciais:</p>
-                          <p className="text-sm">{sector.entryObservations}</p>
-                        </div>
-                      )}
-                      
-                      {sector.exitObservations && (
-                        <div>
-                          <p className="text-sm text-muted-foreground font-medium">Finais:</p>
-                          <p className="text-sm">{sector.exitObservations}</p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
+                {renderSectorContent(sector)}
               </CardContent>
             </Card>
           ))}
