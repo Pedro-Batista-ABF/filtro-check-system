@@ -1,34 +1,62 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
-import { Sector } from "@/types";
+import { Sector, Service } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSectorById, createSector, updateSector, getDefaultServices } = useApi();
+  const [sector, setSector] = useState<Sector | undefined>(undefined);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const sector = id ? getSectorById(id) : undefined;
+  // Buscar dados ao carregar o componente
+  useEffect(() => {
+    const fetchData = async () => {
+      // Carregar serviços disponíveis
+      const servicesData = await getDefaultServices();
+      setServices(servicesData);
+      
+      // Se tem ID, buscar o setor
+      if (id) {
+        const sectorData = await getSectorById(id);
+        setSector(sectorData);
+        
+        if (!sectorData) {
+          console.warn(`Setor com ID ${id} não encontrado.`);
+          navigate('/peritagem/novo', { replace: true });
+        }
+      }
+      
+      setLoading(false);
+    };
+    
+    fetchData();
+  }, [id, getSectorById, getDefaultServices, navigate]);
+  
   const isEditing = !!sector;
 
-  // Limpar o ID duplicado na URL se não for encontrado o setor
-  useEffect(() => {
-    if (id && !sector) {
-      console.warn(`Setor com ID ${id} não encontrado.`);
-      navigate('/peritagem/novo', { replace: true });
-    }
-  }, [id, sector, navigate]);
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-semibold">Carregando...</h1>
+        </div>
+      </PageLayout>
+    );
+  }
 
   const handleSubmit = async (data: Omit<Sector, 'id'>) => {
     try {
       if (isEditing && sector) {
-        await updateSector({ ...sector, ...data } as Sector);
+        await updateSector(sector.id, data as Partial<Sector>);
       } else {
         await createSector(data);
       }
@@ -59,7 +87,7 @@ export default function PeritagemForm() {
           <div className="p-6">
             <SectorForm 
               defaultValues={sector}
-              services={getDefaultServices()}
+              services={services}
               onSubmit={handleSubmit}
               formType="entry"
             />

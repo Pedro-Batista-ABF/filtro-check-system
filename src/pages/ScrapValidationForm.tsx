@@ -1,26 +1,49 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
-import { Sector } from "@/types";
+import { Sector, Service } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSectorById, updateSector, getDefaultServices } = useApi();
-  
-  const sector = id ? getSectorById(id) : undefined;
+  const [sector, setSector] = useState<Sector | undefined>(undefined);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     document.title = "Validação de Sucateamento - Gestão de Recuperação";
-  }, []);
+    
+    const fetchData = async () => {
+      if (id) {
+        const sectorData = await getSectorById(id);
+        setSector(sectorData);
+        const servicesData = await getDefaultServices();
+        setServices(servicesData);
+      }
+      setLoading(false);
+    };
+    
+    fetchData();
+  }, [id, getSectorById, getDefaultServices]);
+  
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-semibold">Carregando...</h1>
+        </div>
+      </PageLayout>
+    );
+  }
   
   if (!sector) {
     return (
@@ -62,7 +85,11 @@ export default function ScrapValidationForm() {
 
   const handleSubmit = async (data: Omit<Sector, 'id'>) => {
     try {
-      await updateSector({ ...sector, ...data, status: 'sucateado' } as Sector);
+      const updates = {
+        ...data,
+        status: 'sucateado' as const
+      };
+      await updateSector(sector.id, updates as Partial<Sector>);
       toast.success('Sucateamento validado com sucesso!');
       navigate('/sucateamento');
     } catch (error) {
@@ -99,7 +126,7 @@ export default function ScrapValidationForm() {
         <div className="form-container">
           <SectorForm 
             defaultValues={sector}
-            services={getDefaultServices()}
+            services={services}
             onSubmit={handleSubmit}
             formType="scrap-validation"
           />

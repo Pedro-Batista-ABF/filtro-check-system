@@ -1,19 +1,44 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import SectorDetails from "@/components/sectors/SectorDetails";
 import ProductionCompletionSwitch from "@/components/sectors/ProductionCompletionSwitch";
 import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Sector } from "@/types";
 
 export default function ExecucaoDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSectorById } = useApi();
+  const [sector, setSector] = useState<Sector | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
   
-  const sector = id ? getSectorById(id) : undefined;
+  // Buscar setor ao carregar o componente
+  useEffect(() => {
+    const fetchSector = async () => {
+      if (id) {
+        const sectorData = await getSectorById(id);
+        setSector(sectorData);
+      }
+      setLoading(false);
+    };
+    
+    fetchSector();
+  }, [id, getSectorById]);
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-semibold">Carregando...</h1>
+        </div>
+      </PageLayout>
+    );
+  }
 
   if (!sector) {
     return (

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Sector, Service, Photo, CycleOutcome, SectorStatus } from "@/types";
 import { toast } from "sonner";
@@ -413,7 +412,7 @@ export const supabaseService = {
    */
   addSector: async (sectorData: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
-      const { user } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
       
       // 1. Insere o setor
@@ -513,7 +512,7 @@ export const supabaseService = {
    */
   updateSector: async (sectorData: Sector): Promise<Sector> => {
     try {
-      const { user } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
       
       // 1. Busca o ciclo atual do setor

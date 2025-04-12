@@ -1,4 +1,3 @@
-
 import { ChangeEvent, useState, useEffect } from "react";
 import { Photo, Service, Sector, ServiceType, Cycle } from "@/types";
 import { format } from "date-fns";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import EntryForm from "./EntryForm";
 import ExitForm from "./ExitForm";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -85,56 +84,65 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
     defaultValues?.afterPhotos?.map(p => p.url) || []
   );
   const [completedServices, setCompletedServices] = useState<Service[]>(
-    defaultValues?.services?.filter(s => defaultValues.completedServices?.includes(s.id)) || []
+    defaultValues?.services?.filter(s => defaultValues.completedServices?.includes(s.id as any)) || []
   );
 
   // Check for existing TAG history
   useEffect(() => {
     if (formType === 'entry' && tagNumber && tagNumber.length > 3) {
       // Get previous cycles for this TAG
-      const previousSectors = getSectorsByTag(tagNumber);
-      
-      if (previousSectors && previousSectors.length > 0) {
-        // Convert previous sectors into cycles
-        const previousCycles = previousSectors.flatMap(sector => {
-          // Include the main sector itself as the most recent cycle
-          const mainCycle: Cycle = {
-            id: sector.id,
-            tagNumber: sector.tagNumber,
-            entryInvoice: sector.entryInvoice,
-            entryDate: sector.entryDate,
-            peritagemDate: sector.peritagemDate,
-            services: sector.services,
-            beforePhotos: sector.beforePhotos,
-            productionCompleted: sector.productionCompleted,
-            exitDate: sector.exitDate,
-            exitInvoice: sector.exitInvoice,
-            checagemDate: sector.checagemDate,
-            afterPhotos: sector.afterPhotos || [],
-            completedServices: sector.completedServices,
-            scrapObservations: sector.scrapObservations,
-            scrapPhotos: sector.scrapPhotos,
-            scrapValidated: sector.scrapValidated,
-            scrapReturnDate: sector.scrapReturnDate,
-            scrapReturnInvoice: sector.scrapReturnInvoice,
-            status: sector.status,
-            outcome: sector.outcome || 'EmAndamento',
-            entryObservations: sector.entryObservations,
-            exitObservations: sector.exitObservations
-          };
+      const fetchHistory = async () => {
+        try {
+          const previousSectors = await getSectorsByTag(tagNumber);
           
-          // Add any previous cycles
-          const allCycles = [mainCycle];
-          if (sector.previousCycles && sector.previousCycles.length > 0) {
-            allCycles.push(...sector.previousCycles);
+          if (previousSectors && previousSectors.length > 0) {
+            // Convert previous sectors into cycles
+            const previousCycles: Cycle[] = [];
+            
+            for (const sector of previousSectors) {
+              // Include the main sector itself as the most recent cycle
+              const mainCycle: Cycle = {
+                id: sector.id,
+                tagNumber: sector.tagNumber,
+                entryInvoice: sector.entryInvoice,
+                entryDate: sector.entryDate,
+                peritagemDate: sector.peritagemDate,
+                services: sector.services,
+                beforePhotos: sector.beforePhotos,
+                productionCompleted: sector.productionCompleted,
+                exitDate: sector.exitDate,
+                exitInvoice: sector.exitInvoice,
+                checagemDate: sector.checagemDate,
+                afterPhotos: sector.afterPhotos || [],
+                completedServices: sector.completedServices,
+                scrapObservations: sector.scrapObservations,
+                scrapPhotos: sector.scrapPhotos,
+                scrapValidated: sector.scrapValidated,
+                scrapReturnDate: sector.scrapReturnDate,
+                scrapReturnInvoice: sector.scrapReturnInvoice,
+                status: sector.status,
+                outcome: sector.outcome || 'EmAndamento',
+                entryObservations: sector.entryObservations,
+                exitObservations: sector.exitObservations
+              };
+              
+              previousCycles.push(mainCycle);
+              
+              // Add any previous cycles
+              if (sector.previousCycles && sector.previousCycles.length > 0) {
+                previousCycles.push(...sector.previousCycles);
+              }
+            }
+            
+            // Set the history
+            setCycleHistory(previousCycles);
           }
-          
-          return allCycles;
-        });
-        
-        // Set the history
-        setCycleHistory(previousCycles);
-      }
+        } catch (error) {
+          console.error("Erro ao buscar histórico da TAG:", error);
+        }
+      };
+      
+      fetchHistory();
     }
   }, [tagNumber, getSectorsByTag, formType]);
 

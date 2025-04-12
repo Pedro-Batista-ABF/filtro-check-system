@@ -1,25 +1,69 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
 import { Sector } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSectorById, updateSector, getDefaultServices } = useApi();
+  const [sector, setSector] = useState<Sector | undefined>(undefined);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const sector = id ? getSectorById(id) : undefined;
+  // Buscar dados ao carregar o componente
+  useEffect(() => {
+    const fetchData = async () => {
+      if (id) {
+        const sectorData = await getSectorById(id);
+        setSector(sectorData);
+        const servicesData = await getDefaultServices();
+        setServices(servicesData);
+      }
+      setLoading(false);
+    };
+    
+    fetchData();
+  }, [id, getSectorById, getDefaultServices]);
 
-  if (!sector || sector.status !== 'checagemFinalPendente') {
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-semibold">Carregando...</h1>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!sector) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-bold text-red-500">Setor não encontrado</h1>
+          <Button 
+            onClick={() => navigate('/checagem')} 
+            className="mt-4"
+            variant="outline"
+          >
+            Voltar para Checagem
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (sector.status !== 'checagemFinalPendente') {
     return (
       <PageLayout>
         <div className="text-center py-12">
           <h1 className="text-xl font-bold text-red-500">
-            {!sector ? 'Setor não encontrado' : 'Este setor não está pendente de checagem'}
+            Este setor não está pendente de checagem
           </h1>
           <Button 
             onClick={() => navigate('/checagem')} 
@@ -35,7 +79,7 @@ export default function CheckagemForm() {
 
   const handleSubmit = async (data: Omit<Sector, 'id'>) => {
     try {
-      await updateSector({ ...sector, ...data } as Sector);
+      await updateSector(sector.id, data as Partial<Sector>);
       navigate('/checagem');
     } catch (error) {
       console.error('Error updating sector:', error);
@@ -59,7 +103,7 @@ export default function CheckagemForm() {
         <div className="form-container">
           <SectorForm 
             defaultValues={sector}
-            services={getDefaultServices()}
+            services={services}
             onSubmit={handleSubmit}
             formType="exit"
           />

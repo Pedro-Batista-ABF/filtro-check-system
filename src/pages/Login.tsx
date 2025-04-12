@@ -1,158 +1,122 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, UserCircle, Key, LogIn, UserPlus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import UserRegistrationForm from "@/components/auth/UserRegistrationForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import UserRegistrationForm from "@/components/auth/UserRegistrationForm";
 
-export default function Login() {
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated } = useApi();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login, isAuthenticated } = useAuth();
-  const { toast } = useToast();
   
-  // Redireciona para a página principal ou a página de origem se o usuário já estiver autenticado
-  useEffect(() => {
-    if (isAuthenticated) {
-      const from = location.state?.from || "/";
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, location.state]);
+  // If already authenticated, redirect to home
+  if (isAuthenticated) {
+    navigate("/", { replace: true });
+    return null;
+  }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
+    
     if (!email || !password) {
-      toast({
-        title: "Erro de validação",
-        description: "Email e senha são obrigatórios.",
-        variant: "destructive",
-      });
+      toast.error("Preencha todos os campos");
       return;
     }
-
-    setIsLoading(true);
     
     try {
+      setIsLoading(true);
       const success = await login(email, password);
+      
       if (success) {
-        const from = location.state?.from || "/";
-        navigate(from, { replace: true });
+        navigate("/");
       }
+    } catch (error) {
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-gradient-to-b from-blue-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md shadow-lg border-blue-100">
-        <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Sistema de Recuperação de Filtros</CardTitle>
-          <CardDescription>
-            Faça login para acessar o sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Cadastro</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">Gestão de Recuperação</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Sistema de controle de setores em recuperação
+          </p>
+        </div>
+        
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Cadastro</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Entrar no Sistema</CardTitle>
+                <CardDescription>
+                  Entre com seu e-mail e senha para acessar o sistema.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleLogin}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      E-mail
+                    </label>
                     <Input
                       id="email"
                       type="email"
+                      placeholder="seu.email@empresa.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Digite seu email"
-                      className="pl-10"
-                      disabled={isLoading}
                       required
                     />
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                      Senha
+                    </label>
                     <Input
                       id="password"
-                      type={showPassword ? "text" : "password"}
+                      type="password"
+                      placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Digite sua senha"
-                      className="pl-10 pr-10"
-                      disabled={isLoading}
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
-                    </button>
                   </div>
-                </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                  size="lg"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Entrando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <LogIn className="h-5 w-5" />
-                      Entrar
-                    </span>
-                  )}
-                </Button>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Entrando..." : "Entrar"}
+                  </Button>
+                </CardFooter>
               </form>
-            </TabsContent>
-            
-            <TabsContent value="register">
-              <UserRegistrationForm />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Sistema de Recuperação de Filtros
-          </p>
-        </CardFooter>
-      </Card>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="register">
+            <UserRegistrationForm />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
-}
+};
+
+export default Login;

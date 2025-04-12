@@ -1,9 +1,9 @@
 
 import React, { createContext, useContext } from 'react';
-import { Sector, Service } from '@/types';
+import { Sector, Service, ServiceType, Photo } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
-import { useApi } from './ApiContext';
+import { useApiOriginal } from './ApiContext';
 
 interface ApiContextValue {
   sectors: Sector[];
@@ -28,7 +28,7 @@ const ApiContextExtended = createContext<ApiContextValue | undefined>(undefined)
 // This provider will combine both original API functionality and authentication
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the original api context
-  const api = useApi();
+  const api = useApiOriginal();
   
   // Use the auth context for authentication functionality
   const auth = useAuth();
@@ -103,11 +103,11 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // Adiciona a nova foto
-      const newPhoto = {
+      const newPhoto: Photo = {
         id: `photo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         url: photoUrl,
         type,
-        serviceId
+        serviceId: serviceId as ServiceType
       };
 
       // Adiciona a foto ao array apropriado dependendo do tipo

@@ -179,10 +179,11 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-export const useApi = (): ApiContextType => {
+// Renamed from useApi to useApiOriginal to avoid name conflict
+export const useApiOriginal = (): ApiContextType => {
   const context = useContext(ApiContext);
   if (context === undefined) {
-    throw new Error('useApi must be used within an ApiProvider');
+    throw new Error('useApiOriginal must be used within an ApiProvider');
   }
   return context;
 };
