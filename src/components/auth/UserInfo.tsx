@@ -37,9 +37,9 @@ export default function UserInfo() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 text-foreground">
           <User className="h-4 w-4" />
-          <span className="hidden md:inline">{displayName}</span>
+          <span className="md:inline">{displayName}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
