@@ -18,11 +18,8 @@ import ScrapValidationForm from "@/pages/ScrapValidationForm";
 import Login from "@/pages/Login";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ConsolidatedReport from "@/pages/ConsolidatedReport";
-import { useApi } from "@/contexts/ApiContextExtended";
 
 const App = () => {
-  const { isAuthenticated } = useApi();
-
   return (
     <>
       <Routes>

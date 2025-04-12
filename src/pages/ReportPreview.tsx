@@ -59,11 +59,11 @@ export default function ReportPreview() {
   // Service types organization
   const getServicesByType = (sector: Sector) => {
     const groupedServices = sector.services.reduce((groups, service) => {
-      const type = service.type;
-      if (!groups[type]) {
-        groups[type] = [];
+      const serviceType = service.serviceType; // Using serviceType instead of type
+      if (!groups[serviceType]) {
+        groups[serviceType] = [];
       }
-      groups[type].push(service);
+      groups[serviceType].push(service);
       return groups;
     }, {} as Record<string, typeof sector.services>);
     
@@ -199,12 +199,12 @@ const ServicesList = ({ sector }: { sector: Sector }) => {
     <div className="space-y-4">
       <h3 className="font-semibold text-lg border-b pb-2">Serviços Executados</h3>
       
-      {Object.entries(servicesByType).map(([type, services]) => (
-        <div key={type} className="mb-4">
+      {Object.entries(servicesByType).map(([serviceType, services]) => (
+        <div key={serviceType} className="mb-4">
           <h4 className="font-medium mb-2 bg-gray-100 p-2 rounded">
-            {type === 'lavagem' ? 'Lavagem' : 
-             type === 'pintura' ? 'Pintura' : 
-             type === 'troca_elemento' ? 'Troca de Elemento' : type}
+            {serviceType === 'lavagem' ? 'Lavagem' : 
+             serviceType === 'pintura' ? 'Pintura' : 
+             serviceType === 'troca_elemento' ? 'Troca de Elemento' : serviceType}
           </h4>
           
           <div className="space-y-2 pl-4">
@@ -251,12 +251,12 @@ const PhotosComparison = ({ sector }: { sector: Sector }) => {
     <div className="space-y-6">
       <h3 className="font-semibold text-lg border-b pb-2">Comparativo de Fotos</h3>
       
-      {Object.entries(servicesByType).map(([type, services]) => (
-        <div key={type} className="mb-6">
+      {Object.entries(servicesByType).map(([serviceType, services]) => (
+        <div key={serviceType} className="mb-6">
           <h4 className="font-medium mb-4 bg-gray-100 p-2 rounded">
-            {type === 'lavagem' ? 'Lavagem' : 
-             type === 'pintura' ? 'Pintura' : 
-             type === 'troca_elemento' ? 'Troca de Elemento' : type}
+            {serviceType === 'lavagem' ? 'Lavagem' : 
+             serviceType === 'pintura' ? 'Pintura' : 
+             serviceType === 'troca_elemento' ? 'Troca de Elemento' : serviceType}
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -326,11 +326,11 @@ const PhotosComparison = ({ sector }: { sector: Sector }) => {
 // Helper function to group services by type
 function getServicesByType(sector: Sector) {
   const groupedServices = sector.services.reduce((groups, service) => {
-    const type = service.type;
-    if (!groups[type]) {
-      groups[type] = [];
+    const serviceType = service.serviceType; // Using serviceType instead of type
+    if (!groups[serviceType]) {
+      groups[serviceType] = [];
     }
-    groups[type].push(service);
+    groups[serviceType].push(service);
     return groups;
   }, {} as Record<string, typeof sector.services>);
   

@@ -1,9 +1,9 @@
 
 import { Navigate, useLocation } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useApi();
+  const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
   // Show loading when auth is being checked
