@@ -65,6 +65,8 @@ const generateMockSector = (id: number): Sector => {
         .map(service => service.id as ServiceType) 
       : undefined,
     exitObservations: status === 'concluido' ? 'Observações sobre o estado final do setor.' : undefined,
+    cycleCount: 1,
+    outcome: status === 'concluido' ? 'Recuperado' : 'EmAndamento'
   };
 };
 
@@ -83,6 +85,10 @@ class MockDataService {
 
   getSectorById(id: string): Sector | undefined {
     return this.sectors.find(sector => sector.id === id);
+  }
+
+  getSectorsByTag(tagNumber: string): Sector[] {
+    return this.sectors.filter(sector => sector.tagNumber === tagNumber);
   }
 
   addSector(sector: Omit<Sector, 'id'>): Sector {

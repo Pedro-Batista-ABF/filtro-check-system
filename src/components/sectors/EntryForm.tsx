@@ -1,6 +1,6 @@
 
 import { ChangeEvent, useState } from "react";
-import { Service, ServiceType, Sector, Photo, SectorStatus } from "@/types";
+import { Service, ServiceType, Sector, Photo, Cycle } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";

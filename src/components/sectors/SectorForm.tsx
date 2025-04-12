@@ -1,4 +1,3 @@
-
 import { ChangeEvent, useState, useEffect } from "react";
 import { Photo, Service, Sector, ServiceType, Cycle } from "@/types";
 import { format } from "date-fns";
@@ -8,6 +7,13 @@ import { toast } from "sonner";
 import EntryForm from "./EntryForm";
 import ExitForm from "./ExitForm";
 import { useApi } from "@/contexts/ApiContext";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Calendar, ImagePlus } from "lucide-react";
 
 interface SectorFormProps {
   defaultValues?: Partial<Sector>;
@@ -321,7 +327,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         beforePhotos: isScrap ? [] : entryPhotos.map((url, index) => ({
           id: `photo-before-${index + 1}`,
           url,
-          type: 'before'
+          type: 'before' as const
         })),
         entryObservations: isScrap ? '' : observations,
         productionCompleted: false,
@@ -335,7 +341,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           scrapPhotos: scrapPhotos.map((url, index) => ({
             id: `photo-scrap-${index + 1}`,
             url,
-            type: 'before'
+            type: 'before' as const
           })),
           scrapValidated: false
         } : {}),
@@ -377,7 +383,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         afterPhotos: exitPhotos.map((url, index) => ({
           id: `photo-after-${index + 1}`,
           url,
-          type: 'after'
+          type: 'after' as const
         })),
         status: 'concluido',
         outcome: 'Recuperado'
@@ -404,7 +410,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           ...scrapPhotos.map((url, index) => ({
             id: `photo-scrap-validation-${index + 1}`,
             url,
-            type: 'after'
+            type: 'after' as const
           }))
         ],
         status: 'sucateado',
