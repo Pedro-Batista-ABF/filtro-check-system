@@ -37,8 +37,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
   // Scrap related states
   const [isScrap, setIsScrap] = useState(defaultValues?.status === 'sucateado' || defaultValues?.status === 'sucateadoPendente');
   const [scrapObservations, setScrapObservations] = useState(defaultValues?.scrapObservations || '');
-  const [scrapPhotos, setScrapPhotos] = useState<string[]>(
-    defaultValues?.scrapPhotos?.map(p => p.url) || []
+  const [scrapPhotos, setScrapPhotos] = useState<Photo[]>(
+    defaultValues?.scrapPhotos || []
   );
   const [scrapValidated, setScrapValidated] = useState(defaultValues?.scrapValidated || false);
   const [cycleHistory, setCycleHistory] = useState<Cycle[]>([]);
@@ -77,11 +77,11 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
   
   const [selectedServices, setSelectedServices] = useState<Service[]>(initialServices);
   const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(defaultValues?.tagPhotoUrl);
-  const [entryPhotos, setEntryPhotos] = useState<string[]>(
-    defaultValues?.beforePhotos?.map(p => p.url) || []
+  const [entryPhotos, setEntryPhotos] = useState<Photo[]>(
+    defaultValues?.beforePhotos || []
   );
-  const [exitPhotos, setExitPhotos] = useState<string[]>(
-    defaultValues?.afterPhotos?.map(p => p.url) || []
+  const [exitPhotos, setExitPhotos] = useState<Photo[]>(
+    defaultValues?.afterPhotos || []
   );
   const [completedServices, setCompletedServices] = useState<Service[]>(
     defaultValues?.services?.filter(s => defaultValues.completedServices?.includes(s.id as any)) || []
@@ -222,21 +222,27 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
       setTagPhotoUrl('https://placehold.co/300x200?text=TAG+Photo');
       toast.success('Foto da tag adicionada');
     } else if (type === 'entry') {
-      const newPhotos = Array.from(files).map((_, index) => 
-        `https://placehold.co/600x400?text=Before+Photo+${entryPhotos.length + index + 1}`
-      );
+      const newPhotos: Photo[] = Array.from(files).map((_, index) => ({
+        id: `photo-before-${entryPhotos.length + index + 1}`,
+        url: `https://placehold.co/600x400?text=Before+Photo+${entryPhotos.length + index + 1}`,
+        type: 'before'
+      }));
       setEntryPhotos([...entryPhotos, ...newPhotos]);
       toast.success(`${files.length} foto(s) adicionada(s)`);
     } else if (type === 'exit') {
-      const newPhotos = Array.from(files).map((_, index) => 
-        `https://placehold.co/600x400?text=After+Photo+${exitPhotos.length + index + 1}`
-      );
+      const newPhotos: Photo[] = Array.from(files).map((_, index) => ({
+        id: `photo-after-${exitPhotos.length + index + 1}`,
+        url: `https://placehold.co/600x400?text=After+Photo+${exitPhotos.length + index + 1}`,
+        type: 'after'
+      }));
       setExitPhotos([...exitPhotos, ...newPhotos]);
       toast.success(`${files.length} foto(s) adicionada(s)`);
     } else if (type === 'scrap') {
-      const newPhotos = Array.from(files).map((_, index) => 
-        `https://placehold.co/600x400?text=Scrap+Photo+${scrapPhotos.length + index + 1}`
-      );
+      const newPhotos: Photo[] = Array.from(files).map((_, index) => ({
+        id: `photo-scrap-${scrapPhotos.length + index + 1}`,
+        url: `https://placehold.co/600x400?text=Scrap+Photo+${scrapPhotos.length + index + 1}`,
+        type: 'before'
+      }));
       setScrapPhotos([...scrapPhotos, ...newPhotos]);
       toast.success(`${files.length} foto(s) de sucateamento adicionada(s)`);
     }
@@ -339,11 +345,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         entryDate: format(entryDate, 'yyyy-MM-dd'),
         peritagemDate: format(new Date(), 'yyyy-MM-dd'),
         services: isScrap ? [] : selectedServices,
-        beforePhotos: isScrap ? [] : entryPhotos.map((url, index) => ({
-          id: `photo-before-${index + 1}`,
-          url,
-          type: 'before' as const
-        })),
+        beforePhotos: isScrap ? [] : entryPhotos,
         entryObservations: isScrap ? '' : observations,
         productionCompleted: false,
         status: isScrap ? 'sucateadoPendente' : 'emExecucao',
@@ -353,11 +355,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         // Scrap fields if applicable
         ...(isScrap ? {
           scrapObservations,
-          scrapPhotos: scrapPhotos.map((url, index) => ({
-            id: `photo-scrap-${index + 1}`,
-            url,
-            type: 'before' as const
-          })),
+          scrapPhotos,
           scrapValidated: false
         } : {}),
         
@@ -395,11 +393,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         exitObservations: observations,
         completedServices: completedServices.map(s => s.id),
         services: selectedServices,
-        afterPhotos: exitPhotos.map((url, index) => ({
-          id: `photo-after-${index + 1}`,
-          url,
-          type: 'after' as const
-        })),
+        afterPhotos: exitPhotos,
         status: 'concluido',
         outcome: 'recovered'
       };
@@ -422,11 +416,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
         scrapValidated: true,
         scrapPhotos: [
           ...(defaultValues.scrapPhotos || []),
-          ...scrapPhotos.map((url, index) => ({
-            id: `photo-scrap-validation-${index + 1}`,
-            url,
-            type: 'after' as const
-          }))
+          ...scrapPhotos
         ],
         status: 'sucateado',
         outcome: 'scrapped'
