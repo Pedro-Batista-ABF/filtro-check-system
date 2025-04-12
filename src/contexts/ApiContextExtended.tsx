@@ -1,17 +1,18 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockSectors } from '@/services/mockData';
+import React, { createContext, useContext } from 'react';
 import { Sector, Service } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
+import { useApi } from './ApiContext';
 
 interface ApiContextValue {
   sectors: Sector[];
   loading: boolean;
   addSector: (sector: Omit<Sector, 'id'>) => Promise<string>;
   updateSector: (id: string, updates: Partial<Sector>) => Promise<boolean>;
-  getSectorById: (id: string) => Sector | undefined;
+  getSectorById: (id: string) => Promise<Sector | undefined>;
   updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
+  uploadPhoto: (file: File, folder?: string) => Promise<string>;
   
   // Auth properties and methods from AuthContext
   user: { id: string; email: string; } | null;
@@ -26,68 +27,52 @@ const ApiContextExtended = createContext<ApiContextValue | undefined>(undefined)
 
 // This provider will combine both original API functionality and authentication
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sectors, setSectors] = useState<Sector[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use the original api context
+  const api = useApi();
   
   // Use the auth context for authentication functionality
   const auth = useAuth();
 
-  useEffect(() => {
-    const loadSectors = async () => {
-      setLoading(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSectors(mockSectors);
-      setLoading(false);
-    };
+  // Simplify user object to match expected API
+  const userInfo = auth.user ? {
+    id: auth.user.id,
+    email: auth.user.email || ''
+  } : null;
 
-    loadSectors();
-  }, []);
-
-  const getCurrentUserIdentifier = () => {
-    if (!auth.user) return 'system';
-    const metadata = auth.getUserMetadata();
-    return metadata.email || auth.user.id || 'system';
-  };
-
+  // Adapter methods for extended API context
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
-    // Associate current user with the action
-    const currentUser = getCurrentUserIdentifier();
-    
-    // Create a new sector with ID and tracking info
-    const newSector: Sector = {
-      ...sectorData,
-      id: `sector-${Date.now()}`,
-      // Add user tracking information
-      _createdBy: currentUser,
-      _createdAt: new Date().toISOString(),
-    } as Sector;
-
-    setSectors(prev => [...prev, newSector]);
-    return newSector.id;
+    try {
+      const newSector = await api.createSector(sectorData);
+      return newSector.id;
+    } catch (error) {
+      console.error("Error adding sector:", error);
+      toast.error("Não foi possível adicionar o setor");
+      throw error;
+    }
   };
 
   const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
-    // Associate current user with the action
-    const currentUser = getCurrentUserIdentifier();
-    
-    // Add user tracking information
-    const updatesWithTracking = {
-      ...updates,
-      _updatedBy: currentUser,
-      _updatedAt: new Date().toISOString(),
-    };
+    try {
+      // Primeiro, busca o setor atual
+      const currentSector = await api.getSectorById(id);
+      if (!currentSector) {
+        throw new Error("Setor não encontrado");
+      }
 
-    setSectors(prev => 
-      prev.map(sector => 
-        sector.id === id ? { ...sector, ...updatesWithTracking } : sector
-      )
-    );
-    return true;
-  };
+      // Combina os dados atuais com as atualizações
+      const updatedSector: Sector = {
+        ...currentSector,
+        ...updates
+      };
 
-  const getSectorById = (id: string): Sector | undefined => {
-    return sectors.find(sector => sector.id === id);
+      // Atualiza o setor
+      await api.updateSector(updatedSector);
+      return true;
+    } catch (error) {
+      console.error("Error updating sector:", error);
+      toast.error("Não foi possível atualizar o setor");
+      return false;
+    }
   };
 
   const updateServicePhotos = async (
@@ -96,60 +81,62 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     photoUrl: string, 
     type: 'before' | 'after'
   ): Promise<boolean> => {
-    setSectors(prev => {
-      return prev.map(sector => {
-        if (sector.id === sectorId) {
-          const services = sector.services.map(service => {
-            if (service.id === serviceId) {
-              // Get existing photos or initialize
-              const photos = service.photos || [];
-              
-              // Add new photo with user tracking
-              const newPhoto = {
-                id: `photo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                url: photoUrl,
-                type,
-                serviceId,
-                _addedBy: getCurrentUserIdentifier(),
-                _addedAt: new Date().toISOString(),
-              };
-              
-              return {
-                ...service,
-                photos: [...photos, newPhoto],
-              };
-            }
-            return service;
-          });
-          
-          return {
-            ...sector,
-            services,
-            _updatedBy: getCurrentUserIdentifier(),
-            _updatedAt: new Date().toISOString(),
-          };
-        }
-        return sector;
-      });
-    });
-    
-    return true;
-  };
+    try {
+      // Busca o setor atual
+      const sector = await api.getSectorById(sectorId);
+      if (!sector) {
+        throw new Error("Setor não encontrado");
+      }
 
-  // Simplify user object to match expected API
-  const userInfo = auth.user ? {
-    id: auth.user.id,
-    email: auth.user.email || ''
-  } : null;
+      // Cria uma cópia do setor para modificar
+      const updatedSector = { ...sector };
+
+      // Encontra o serviço
+      const serviceIndex = updatedSector.services.findIndex(s => s.id === serviceId);
+      if (serviceIndex === -1) {
+        throw new Error("Serviço não encontrado");
+      }
+
+      // Inicializa o array de fotos do serviço se necessário
+      if (!updatedSector.services[serviceIndex].photos) {
+        updatedSector.services[serviceIndex].photos = [];
+      }
+
+      // Adiciona a nova foto
+      const newPhoto = {
+        id: `photo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        url: photoUrl,
+        type,
+        serviceId
+      };
+
+      // Adiciona a foto ao array apropriado dependendo do tipo
+      if (type === 'before') {
+        updatedSector.beforePhotos = [...(updatedSector.beforePhotos || []), newPhoto];
+      } else {
+        updatedSector.afterPhotos = [...(updatedSector.afterPhotos || []), newPhoto];
+      }
+
+      // Atualiza o setor
+      await api.updateSector(updatedSector);
+      return true;
+    } catch (error) {
+      console.error("Error updating service photos:", error);
+      toast.error("Não foi possível atualizar as fotos do serviço");
+      return false;
+    }
+  };
 
   // Combine the original API context with authentication context
   const value: ApiContextValue = {
-    sectors,
-    loading,
+    sectors: api.sectors,
+    loading: api.loading,
     addSector,
     updateSector,
-    getSectorById,
+    getSectorById: api.getSectorById,
     updateServicePhotos,
+    uploadPhoto: api.uploadPhoto,
+    
     // Include auth properties and methods
     user: userInfo,
     isAuthenticated: auth.isAuthenticated,

@@ -9,7 +9,305 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      cycle_services: {
+        Row: {
+          completed: boolean | null
+          created_at: string
+          cycle_id: string
+          id: string
+          observations: string | null
+          quantity: number | null
+          selected: boolean | null
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string
+          cycle_id: string
+          id?: string
+          observations?: string | null
+          quantity?: number | null
+          selected?: boolean | null
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string
+          cycle_id?: string
+          id?: string
+          observations?: string | null
+          quantity?: number | null
+          selected?: boolean | null
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycle_services_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cycles: {
+        Row: {
+          checagem_date: string | null
+          created_at: string
+          created_by: string
+          entry_date: string
+          entry_invoice: string
+          entry_observations: string | null
+          exit_date: string | null
+          exit_invoice: string | null
+          exit_observations: string | null
+          id: string
+          outcome: string | null
+          peritagem_date: string | null
+          production_completed: boolean | null
+          scrap_observations: string | null
+          scrap_return_date: string | null
+          scrap_return_invoice: string | null
+          scrap_validated: boolean | null
+          sector_id: string
+          status: string
+          tag_number: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          checagem_date?: string | null
+          created_at?: string
+          created_by: string
+          entry_date: string
+          entry_invoice: string
+          entry_observations?: string | null
+          exit_date?: string | null
+          exit_invoice?: string | null
+          exit_observations?: string | null
+          id?: string
+          outcome?: string | null
+          peritagem_date?: string | null
+          production_completed?: boolean | null
+          scrap_observations?: string | null
+          scrap_return_date?: string | null
+          scrap_return_invoice?: string | null
+          scrap_validated?: boolean | null
+          sector_id: string
+          status: string
+          tag_number: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          checagem_date?: string | null
+          created_at?: string
+          created_by?: string
+          entry_date?: string
+          entry_invoice?: string
+          entry_observations?: string | null
+          exit_date?: string | null
+          exit_invoice?: string | null
+          exit_observations?: string | null
+          id?: string
+          outcome?: string | null
+          peritagem_date?: string | null
+          production_completed?: boolean | null
+          scrap_observations?: string | null
+          scrap_return_date?: string | null
+          scrap_return_invoice?: string | null
+          scrap_validated?: boolean | null
+          sector_id?: string
+          status?: string
+          tag_number?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycles_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos: {
+        Row: {
+          created_at: string
+          created_by: string
+          cycle_id: string
+          id: string
+          service_id: string | null
+          type: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          cycle_id: string
+          id?: string
+          service_id?: string | null
+          type: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          cycle_id?: string
+          id?: string
+          service_id?: string | null
+          type?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sectors: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_outcome: string | null
+          current_status: string
+          cycle_count: number
+          id: string
+          tag_number: string
+          tag_photo_url: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_outcome?: string | null
+          current_status: string
+          cycle_count?: number
+          id?: string
+          tag_number: string
+          tag_photo_url?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_outcome?: string | null
+          current_status?: string
+          cycle_count?: number
+          id?: string
+          tag_number?: string
+          tag_photo_url?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sectors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sectors_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_types: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          id: string
+          name: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

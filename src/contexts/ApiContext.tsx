@@ -1,19 +1,21 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Sector, Service, Cycle } from '@/types';
-import { mockDataService, serviceOptions } from '@/services/mockData';
+import { Sector, Service } from '@/types';
+import { supabaseService } from '@/services/supabaseService';
 import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
 
 interface ApiContextType {
   sectors: Sector[];
   loading: boolean;
   error: string | null;
-  getSectorById: (id: string) => Sector | undefined;
-  getSectorsByTag: (tagNumber: string) => Sector[];
+  getSectorById: (id: string) => Promise<Sector | undefined>;
+  getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
   createSector: (sector: Omit<Sector, 'id'>) => Promise<Sector>;
   updateSector: (sector: Sector) => Promise<Sector>;
   deleteSector: (id: string) => Promise<void>;
-  getDefaultServices: () => Service[];
+  getDefaultServices: () => Promise<Service[]>;
+  uploadPhoto: (file: File, folder?: string) => Promise<string>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -22,52 +24,63 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const auth = useAuth();
 
   useEffect(() => {
-    // Simulate API fetch
-    const fetchData = () => {
+    const fetchData = async () => {
+      if (!auth.isAuthenticated) {
+        setSectors([]);
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
-        const data = mockDataService.getAllSectors();
+        const data = await supabaseService.getAllSectors();
         setSectors(data);
         setError(null);
       } catch (err) {
         setError('Erro ao carregar dados dos setores');
         console.error(err);
+        toast.error('Não foi possível carregar os setores');
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [auth.isAuthenticated]);
 
-  const getSectorById = (id: string): Sector | undefined => {
-    return mockDataService.getSectorById(id);
+  const getSectorById = async (id: string): Promise<Sector | undefined> => {
+    try {
+      return await supabaseService.getSectorById(id);
+    } catch (err) {
+      console.error('Erro ao buscar setor por ID:', err);
+      return undefined;
+    }
   };
 
-  const getSectorsByTag = (tagNumber: string): Sector[] => {
-    return mockDataService.getSectorsByTag(tagNumber);
+  const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
+    try {
+      return await supabaseService.getSectorsByTag(tagNumber);
+    } catch (err) {
+      console.error('Erro ao buscar setores por TAG:', err);
+      return [];
+    }
   };
 
   const createSector = async (sector: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
       setLoading(true);
-      // Garantir que um novo ID único seja gerado
-      const newSector = mockDataService.addSector(sector);
+      const newSector = await supabaseService.addSector(sector);
       
-      // Verificar se já existe um setor com o mesmo ID antes de adicionar
-      const existingIndex = sectors.findIndex(s => s.id === newSector.id);
-      if (existingIndex >= 0) {
-        console.warn(`ID duplicado detectado: ${newSector.id}. Gerando novo ID.`);
-        // Gerar um novo ID no caso de colisão
-        newSector.id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
-      }
-      
+      // Atualiza a lista de setores
       setSectors(prevSectors => [...prevSectors, newSector]);
+      
       toast.success(sector.status === 'sucateadoPendente' 
         ? 'Setor registrado como sucateado com sucesso!' 
         : 'Setor cadastrado com sucesso!');
+        
       return newSector;
     } catch (err) {
       const errorMsg = 'Erro ao cadastrar setor';
@@ -82,7 +95,9 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateSector = async (sector: Sector): Promise<Sector> => {
     try {
       setLoading(true);
-      const updatedSector = mockDataService.updateSector(sector);
+      const updatedSector = await supabaseService.updateSector(sector);
+      
+      // Atualiza a lista de setores
       setSectors(prevSectors => 
         prevSectors.map(s => s.id === sector.id ? updatedSector : s)
       );
@@ -111,7 +126,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteSector = async (id: string): Promise<void> => {
     try {
       setLoading(true);
-      mockDataService.deleteSector(id);
+      await supabaseService.deleteSector(id);
       setSectors(prevSectors => prevSectors.filter(sector => sector.id !== id));
       toast.success('Setor removido com sucesso!');
     } catch (err) {
@@ -124,8 +139,24 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const getDefaultServices = (): Service[] => {
-    return JSON.parse(JSON.stringify(serviceOptions));
+  const getDefaultServices = async (): Promise<Service[]> => {
+    try {
+      return await supabaseService.getServiceTypes();
+    } catch (err) {
+      console.error('Erro ao buscar serviços:', err);
+      toast.error('Não foi possível carregar os serviços disponíveis');
+      return [];
+    }
+  };
+  
+  const uploadPhoto = async (file: File, folder?: string): Promise<string> => {
+    try {
+      return await supabaseService.uploadPhoto(file, folder);
+    } catch (err) {
+      console.error('Erro ao fazer upload de foto:', err);
+      toast.error('Não foi possível fazer upload da foto');
+      throw err;
+    }
   };
 
   const contextValue: ApiContextType = {
@@ -137,7 +168,8 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     createSector,
     updateSector,
     deleteSector,
-    getDefaultServices
+    getDefaultServices,
+    uploadPhoto
   };
 
   return (
