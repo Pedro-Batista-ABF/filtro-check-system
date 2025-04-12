@@ -1,7 +1,6 @@
-
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ClipboardCheck, Filter, CheckSquare, FileText, Calendar, ArrowRight, SendHorizontal } from "lucide-react";
 import { useApi } from "@/contexts/ApiContext";
@@ -35,6 +34,54 @@ export default function Index() {
           </p>
         </section>
 
+        {/* Status Cards moved to the top */}
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6 py-6">
+          <Card className="bg-blue-50 border-blue-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Peritagem Pendente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-blue-700">
+                {statusCounts.peritagemPendente || 0}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-purple-50 border-purple-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Em Execução</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-purple-700">
+                {statusCounts.emExecucao || 0}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-amber-50 border-amber-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Checagem Pendente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-amber-700">
+                {statusCounts.checagemFinalPendente || 0}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Concluídos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-green-700">
+                {statusCounts.concluido || 0}
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Rest of the existing content remains the same */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="module-card">
             <CardHeader className="pb-2">
@@ -141,52 +188,6 @@ export default function Index() {
             </section>
           </TabsContent>
         </Tabs>
-
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6 py-6">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Peritagem Pendente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-blue-700">
-                {statusCounts.peritagemPendente || 0}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-purple-50 border-purple-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Em Execução</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-purple-700">
-                {statusCounts.emExecucao || 0}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-amber-50 border-amber-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Checagem Pendente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-amber-700">
-                {statusCounts.checagemFinalPendente || 0}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-green-50 border-green-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Concluídos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-green-700">
-                {statusCounts.concluido || 0}
-              </p>
-            </CardContent>
-          </Card>
-        </section>
       </div>
     </PageLayout>
   );
