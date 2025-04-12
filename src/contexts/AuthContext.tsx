@@ -1,143 +1,117 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-interface User {
-  id: string;
-  username: string;
-  fullName: string;
-  email: string;
-}
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  registerUser: (userData: { username: string; password: string; fullName: string; email: string; }) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users database
-const USERS_STORAGE_KEY = 'filter-system-users';
-const CURRENT_USER_KEY = 'filter-system-current-user';
-
-// Default admin user
-const DEFAULT_ADMIN: User = {
-  id: 'admin-1',
-  username: 'admin',
-  fullName: 'Administrador',
-  email: 'admin@example.com',
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    // Initialize the users database if it doesn't exist
-    const existingUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    if (!existingUsers) {
-      const initialUsers = [
-        {
-          ...DEFAULT_ADMIN,
-          password: 'admin123', // In a real app, this would be hashed
-        },
-      ];
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
-    }
-    
-    // Check if there's a saved login session
-    const savedUser = localStorage.getItem(CURRENT_USER_KEY);
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Failed to parse saved user data');
-        localStorage.removeItem(CURRENT_USER_KEY);
+    // Configura o listener de mudança de estado de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
       }
-    }
+    );
+
+    // Verifica sessão existente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
-    // Simulate API request delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      if (!usersJson) return false;
-      
-      const users = JSON.parse(usersJson);
-      const foundUser = users.find((u: any) => 
-        u.username === username && u.password === password
-      );
-      
-      if (foundUser) {
-        // Don't include password in the user state
-        const { password, ...userWithoutPassword } = foundUser;
-        setUser(userWithoutPassword);
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
-  };
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
-    toast.success('Logout realizado com sucesso');
-  };
-
-  const registerUser = async (userData: { username: string; password: string; fullName: string; email: string; }): Promise<boolean> => {
-    // Removed authentication check to allow anyone to register
-    
-    // Simulate API request delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    try {
-      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      if (!usersJson) return false;
-      
-      const users = JSON.parse(usersJson);
-      
-      // Check if username already exists
-      if (users.some((u: any) => u.username === userData.username)) {
-        toast.error('Nome de usuário já existe');
+      if (error) {
+        toast.error('Erro ao fazer login: ' + error.message);
         return false;
       }
-      
-      const newUser = {
-        id: `user-${Date.now()}`,
-        username: userData.username,
-        password: userData.password, // In a real app, this would be hashed
-        fullName: userData.fullName,
-        email: userData.email,
-      };
-      
-      users.push(newUser);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-      
+
+      toast.success('Login realizado com sucesso!');
       return true;
     } catch (error) {
-      console.error('Registration error:', error);
+      toast.error('Erro ao fazer login');
       return false;
     }
   };
-  
-  const contextValue: AuthContextType = {
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error('Erro ao fazer logout: ' + error.message);
+        return;
+      }
+      toast.success('Logout realizado com sucesso');
+    } catch (error) {
+      toast.error('Erro ao fazer logout');
+    }
+  };
+
+  const registerUser = async (userData: { email: string; password: string; fullName: string; }): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.fullName,
+          }
+        }
+      });
+
+      if (error) {
+        toast.error('Erro ao cadastrar usuário: ' + error.message);
+        return false;
+      }
+
+      toast.success('Cadastro realizado com sucesso! Verifique seu email.');
+      return true;
+    } catch (error) {
+      toast.error('Erro ao cadastrar usuário');
+      return false;
+    }
+  };
+
+  const value = {
     user,
+    session,
     isAuthenticated: !!user,
     login,
     logout,
     registerUser,
   };
 
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  if (isLoading) {
+    return <div>Carregando...</div>;
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {

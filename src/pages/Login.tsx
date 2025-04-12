@@ -1,25 +1,25 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, UserCircle, Key, LogIn } from "lucide-react";
-import { useApi } from "@/contexts/ApiContextExtended";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import UserRegistrationForm from "@/components/auth/UserRegistrationForm";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useApi();
+  const { login, isAuthenticated } = useAuth();
   const { toast } = useToast();
   
-  // If user is already authenticated, redirect to home page
+  // Se o usuário já estiver autenticado, redireciona para a página inicial
   if (isAuthenticated) {
     navigate("/");
     return null;
@@ -27,10 +27,10 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!email || !password) {
       toast({
         title: "Erro de validação",
-        description: "Usuário e senha são obrigatórios.",
+        description: "Email e senha são obrigatórios.",
         variant: "destructive",
       });
       return;
@@ -39,26 +39,10 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      const success = await login(username, password);
+      const success = await login(email, password);
       if (success) {
-        toast({
-          title: "Login realizado com sucesso",
-          description: "Bem-vindo ao sistema.",
-        });
         navigate("/");
-      } else {
-        toast({
-          title: "Erro de autenticação",
-          description: "Usuário ou senha incorretos.",
-          variant: "destructive",
-        });
       }
-    } catch (error) {
-      toast({
-        title: "Erro ao realizar login",
-        description: "Ocorreu um erro ao processar sua solicitação.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -76,17 +60,16 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Usuário</Label>
+              <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Digite seu nome de usuário"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Digite seu email"
                   className="pl-10"
-                  autoComplete="username"
                   disabled={isLoading}
                   required
                 />
@@ -100,11 +83,10 @@ export default function Login() {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
                   className="pl-10 pr-10"
-                  autoComplete="current-password"
                   disabled={isLoading}
                   required
                 />
@@ -146,24 +128,8 @@ export default function Login() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="link" className="text-sm text-blue-600 hover:text-blue-800">
-                Cadastrar novo usuário
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Cadastro de Novo Usuário</DialogTitle>
-                <DialogDescription>
-                  Preencha os dados abaixo para cadastrar um novo usuário no sistema.
-                </DialogDescription>
-              </DialogHeader>
-              <UserRegistrationForm />
-            </DialogContent>
-          </Dialog>
-          <p className="text-xs text-gray-500 mt-4 text-center">
+        <CardFooter className="flex justify-center">
+          <p className="text-xs text-gray-500">
             © {new Date().getFullYear()} Sistema de Recuperação de Filtros
           </p>
         </CardFooter>
