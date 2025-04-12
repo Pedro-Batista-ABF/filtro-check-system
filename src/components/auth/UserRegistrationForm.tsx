@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
