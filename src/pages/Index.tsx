@@ -1,6 +1,7 @@
+
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { ClipboardCheck, Filter, CheckSquare, FileText, Calendar, ArrowRight, SendHorizontal } from "lucide-react";
 import { useApi } from "@/contexts/ApiContext";
