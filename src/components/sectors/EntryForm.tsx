@@ -1,13 +1,11 @@
 
 import { ChangeEvent } from "react";
-import { Service, Sector } from "@/types";
+import { Service, ServiceType, Sector } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ImagePlus } from "lucide-react";
-import { toast } from "sonner";
 import ServiceCheckbox from "./ServiceCheckbox";
-import QuantityInput from "./QuantityInput";
 import PhotoUpload from "./PhotoUpload";
 
 interface EntryFormProps {
@@ -19,12 +17,12 @@ interface EntryFormProps {
   setObservations: (value: string) => void;
   selectedServices: Service[];
   handleServiceChange: (id: string, checked: boolean) => void;
-  handleParafusosQuantityChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  handleTrocaTrechoQuantityChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  handleServiceQuantityChange: (id: ServiceType, quantity: number) => void;
+  handleServiceObservationChange: (id: ServiceType, observation: string) => void;
+  handleServicePhotoUpload: (id: ServiceType, files: FileList, type: 'before' | 'after') => void;
   tagPhotoUrl?: string;
-  setTagPhotoUrl: (url?: string) => void;
-  entryPhotos: string[];
   handleImageUpload: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit') => void;
+  entryPhotos: string[];
   defaultValues?: Partial<Sector>;
   today: string;
 }
@@ -38,12 +36,12 @@ export default function EntryForm({
   setObservations,
   selectedServices,
   handleServiceChange,
-  handleParafusosQuantityChange,
-  handleTrocaTrechoQuantityChange,
+  handleServiceQuantityChange,
+  handleServiceObservationChange,
+  handleServicePhotoUpload,
   tagPhotoUrl,
-  setTagPhotoUrl,
-  entryPhotos,
   handleImageUpload,
+  entryPhotos,
   defaultValues,
   today
 }: EntryFormProps) {
@@ -120,42 +118,31 @@ export default function EntryForm({
       {/* Services */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Serviços Necessários *</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Selecione os serviços necessários. Para cada serviço, é <strong>obrigatório</strong> adicionar pelo menos uma foto do defeito.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {selectedServices.map((service) => (
             <div key={service.id} className="space-y-2">
               <ServiceCheckbox 
                 service={service} 
-                onChange={handleServiceChange} 
+                onChange={handleServiceChange}
+                onQuantityChange={handleServiceQuantityChange}
+                onObservationChange={handleServiceObservationChange}
+                onPhotoUpload={handleServicePhotoUpload}
+                photoType="before"
+                required={true}
               />
-              
-              {service.id === 'substituicao_parafusos' && service.selected && (
-                <QuantityInput
-                  id="parafusosQuantity"
-                  label="Quantidade"
-                  value={service.quantity}
-                  onChange={handleParafusosQuantityChange}
-                />
-              )}
-
-              {service.id === 'troca_trecho' && service.selected && (
-                <QuantityInput
-                  id="trechoQuantity"
-                  label="Quantidade"
-                  value={service.quantity}
-                  onChange={handleTrocaTrechoQuantityChange}
-                  unit="mm²"
-                />
-              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Photos */}
+      {/* General Photos */}
       <PhotoUpload
         id="entryPhotos"
-        title="Fotos dos Defeitos"
+        title="Fotos Gerais (Opcionais)"
         onPhotoUpload={handleImageUpload}
         type="entry"
         photos={entryPhotos}

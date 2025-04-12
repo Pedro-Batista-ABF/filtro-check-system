@@ -20,6 +20,7 @@ interface ServiceCheckboxProps {
   completedCheckboxId?: string;
   viewMode?: boolean;
   photoType?: 'before' | 'after';
+  required?: boolean;
 }
 
 export default function ServiceCheckbox({ 
@@ -31,7 +32,8 @@ export default function ServiceCheckbox({
   isCompleted,
   completedCheckboxId,
   viewMode = false,
-  photoType = 'before'
+  photoType = 'before',
+  required = false
 }: ServiceCheckboxProps) {
   const [expanded, setExpanded] = useState(false);
   
@@ -45,6 +47,9 @@ export default function ServiceCheckbox({
     e.target.value = '';
     toast.success(`${files.length} foto(s) adicionada(s) para ${service.name}`);
   };
+
+  // Calculate how many photos of the requested type this service has
+  const photoCount = service.photos?.filter(p => p.type === photoType).length || 0;
 
   return (
     <div className="space-y-2 border rounded-md p-3">
@@ -107,8 +112,11 @@ export default function ServiceCheckbox({
           
           {onPhotoUpload && (
             <div className="space-y-1">
-              <Label htmlFor={`photos-${service.id}`} className="text-xs">
+              <Label htmlFor={`photos-${service.id}`} className="text-xs flex items-center">
                 Fotos {photoType === 'before' ? 'Antes' : 'Depois'}:
+                {required && photoType === 'before' && photoCount === 0 && (
+                  <span className="ml-1 text-red-500">*</span>
+                )}
               </Label>
               <div className="flex items-center space-x-2">
                 <Label 
@@ -126,6 +134,11 @@ export default function ServiceCheckbox({
                   className="hidden"
                   onChange={handleImageUpload}
                 />
+                {photoCount > 0 && (
+                  <span className="text-xs text-green-600">
+                    {photoCount} foto(s) adicionada(s)
+                  </span>
+                )}
               </div>
               
               {service.photos && service.photos.length > 0 && (

@@ -1,4 +1,3 @@
-
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -9,6 +8,13 @@ export type ServiceType =
   | 'fabricacao_canaleta'
   | 'fabricacao_setor_completo';
 
+export interface Photo {
+  id: string;
+  url: string;
+  type: 'before' | 'after';
+  serviceId?: ServiceType;
+}
+
 export interface Service {
   id: ServiceType;
   name: string;
@@ -16,13 +22,6 @@ export interface Service {
   quantity?: number;
   photos?: Photo[];
   observations?: string;
-}
-
-export interface Photo {
-  id: string;
-  url: string;
-  type: 'before' | 'after';
-  serviceId?: ServiceType;
 }
 
 export interface Sector {

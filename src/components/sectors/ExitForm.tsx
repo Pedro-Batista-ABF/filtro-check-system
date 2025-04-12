@@ -1,6 +1,6 @@
 
 import { ChangeEvent } from "react";
-import { Service, Sector } from "@/types";
+import { Service, ServiceType, Sector } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,9 @@ interface ExitFormProps {
   observations: string;
   setObservations: (value: string) => void;
   completedServices: Service[];
+  selectedServices: Service[];
   handleCompletedServiceChange: (id: string, checked: boolean) => void;
+  handleCompletedServicePhotoUpload: (id: ServiceType, files: FileList, type: 'before' | 'after') => void;
   exitPhotos: string[];
   handleImageUpload: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit') => void;
   defaultValues?: Partial<Sector>;
@@ -26,7 +28,9 @@ export default function ExitForm({
   observations,
   setObservations,
   completedServices,
+  selectedServices,
   handleCompletedServiceChange,
+  handleCompletedServicePhotoUpload,
   exitPhotos,
   handleImageUpload,
   defaultValues,
@@ -73,24 +77,35 @@ export default function ExitForm({
       {/* Services */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Serviços Realizados *</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Marque os serviços que foram realizados. Para cada serviço realizado, é <strong>obrigatório</strong> adicionar pelo menos uma foto do resultado.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {defaultValues?.services?.filter(s => s.selected).map((service) => (
-            <ServiceCheckbox 
-              key={service.id}
-              service={service}
-              onChange={handleCompletedServiceChange}
-              isCompleted={completedServices.some(s => s.id === service.id)}
-              completedCheckboxId={`completed-${service.id}`}
-            />
-          ))}
+          {defaultValues?.services?.filter(s => s.selected).map((service) => {
+            // Find the service in the selectedServices array to access photos
+            const updatedService = selectedServices.find(s => s.id === service.id) || service;
+            
+            return (
+              <ServiceCheckbox 
+                key={service.id}
+                service={updatedService}
+                onChange={handleCompletedServiceChange}
+                onPhotoUpload={handleCompletedServicePhotoUpload}
+                isCompleted={completedServices.some(s => s.id === service.id)}
+                completedCheckboxId={`completed-${service.id}`}
+                photoType="after"
+                required={true}
+              />
+            );
+          })}
         </div>
       </div>
 
       {/* Photos */}
       <PhotoUpload
         id="exitPhotos"
-        title="Fotos Após Serviço"
+        title="Fotos Gerais Após Serviço (Opcionais)"
         onPhotoUpload={handleImageUpload}
         type="exit"
         photos={exitPhotos}

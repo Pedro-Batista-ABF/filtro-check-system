@@ -1,6 +1,6 @@
 
 import { ChangeEvent, useState } from "react";
-import { Service, Sector } from "@/types";
+import { Photo, Service, Sector, ServiceType } from "@/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,27 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
   const [observations, setObservations] = useState(formType === 'entry'
     ? defaultValues?.entryObservations || ''
     : defaultValues?.exitObservations || '');
-  const [selectedServices, setSelectedServices] = useState<Service[]>(services);
+  
+  // Initialize services with photos from defaultValues if available
+  const initialServices = services.map(service => {
+    const defaultService = defaultValues?.services?.find(s => s.id === service.id);
+    return {
+      ...service,
+      selected: defaultService?.selected || false,
+      quantity: defaultService?.quantity,
+      observations: defaultService?.observations,
+      photos: defaultService?.photos || [],
+    };
+  });
+  
+  const [selectedServices, setSelectedServices] = useState<Service[]>(initialServices);
   const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(defaultValues?.tagPhotoUrl);
-  const [entryPhotos, setEntryPhotos] = useState<string[]>([]);
-  const [exitPhotos, setExitPhotos] = useState<string[]>([]);
+  const [entryPhotos, setEntryPhotos] = useState<string[]>(
+    defaultValues?.beforePhotos?.map(p => p.url) || []
+  );
+  const [exitPhotos, setExitPhotos] = useState<string[]>(
+    defaultValues?.afterPhotos?.map(p => p.url) || []
+  );
   const [completedServices, setCompletedServices] = useState<Service[]>(
     defaultValues?.services?.filter(s => defaultValues.completedServices?.includes(s.id)) || []
   );
@@ -42,107 +59,56 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
     );
   };
 
+  const handleServiceQuantityChange = (id: ServiceType, quantity: number) => {
+    setSelectedServices(
+      selectedServices.map(service => 
+        service.id === id 
+          ? { ...service, quantity } 
+          : service
+      )
+    );
+  };
+
+  const handleServiceObservationChange = (id: ServiceType, observation: string) => {
+    setSelectedServices(
+      selectedServices.map(service => 
+        service.id === id 
+          ? { ...service, observations: observation } 
+          : service
+      )
+    );
+  };
+
+  const handleServicePhotoUpload = (id: ServiceType, files: FileList, type: 'before' | 'after') => {
+    // Create new photo objects for the service
+    const newPhotos: Photo[] = Array.from(files).map((_, index) => ({
+      id: `photo-${type}-${id}-${Date.now()}-${index}`,
+      url: `https://placehold.co/600x400?text=${type === 'before' ? 'Before' : 'After'}+Photo+${id}`,
+      type,
+      serviceId: id
+    }));
+
+    // Update the service with the new photos
+    setSelectedServices(
+      selectedServices.map(service => 
+        service.id === id 
+          ? { 
+              ...service, 
+              photos: [...(service.photos || []), ...newPhotos]
+            } 
+          : service
+      )
+    );
+  };
+
   const handleCompletedServiceChange = (id: string, checked: boolean) => {
     if (checked) {
-      const serviceToAdd = services.find(s => s.id === id);
+      const serviceToAdd = selectedServices.find(s => s.id === id);
       if (serviceToAdd) {
         setCompletedServices([...completedServices, { ...serviceToAdd, selected: true }]);
       }
     } else {
       setCompletedServices(completedServices.filter(s => s.id !== id));
-    }
-  };
-
-  const handleParafusosQuantityChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const quantity = parseInt(e.target.value);
-    setSelectedServices(
-      selectedServices.map(service => 
-        service.id === 'substituicao_parafusos' 
-          ? { ...service, quantity } 
-          : service
-      )
-    );
-  };
-
-  const handleTrocaTrechoQuantityChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const quantity = parseInt(e.target.value);
-    setSelectedServices(
-      selectedServices.map(service => 
-        service.id === 'troca_trecho' 
-          ? { ...service, quantity } 
-          : service
-      )
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formType === 'entry' && (!tagNumber || !entryInvoice)) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-    
-    if (formType === 'exit' && (!exitInvoice)) {
-      toast.error('Preencha o número da nota fiscal de saída');
-      return;
-    }
-
-    const servicesWithAtLeastOneSelected = selectedServices.some(service => service.selected);
-    
-    if (formType === 'entry' && !servicesWithAtLeastOneSelected) {
-      toast.error('Selecione pelo menos um serviço');
-      return;
-    }
-
-    if (formType === 'entry') {
-      // Creating or updating entry data
-      const newSector: Omit<Sector, 'id'> = {
-        tagNumber,
-        tagPhotoUrl: tagPhotoUrl || 'https://placehold.co/300x200?text=TAG+Photo',
-        entryInvoice,
-        entryDate: new Date().toISOString().split('T')[0],
-        services: selectedServices,
-        beforePhotos: entryPhotos.map((url, index) => ({
-          id: `photo-before-${index + 1}`,
-          url,
-          type: 'before'
-        })),
-        entryObservations: observations,
-        status: 'emExecucao',
-        ...defaultValues ? {
-          id: defaultValues.id,
-          afterPhotos: defaultValues.afterPhotos,
-          exitDate: defaultValues.exitDate,
-          exitInvoice: defaultValues.exitInvoice,
-          completedServices: defaultValues.completedServices,
-          exitObservations: defaultValues.exitObservations
-        } : {}
-      } as Sector;
-      
-      onSubmit(newSector);
-    } else {
-      // Updating exit data
-      if (!defaultValues) {
-        toast.error('Dados do setor não encontrados');
-        return;
-      }
-      
-      const updatedSector: Sector = {
-        ...defaultValues as Sector,
-        exitDate: new Date().toISOString().split('T')[0],
-        exitInvoice,
-        exitObservations: observations,
-        completedServices: completedServices.map(s => s.id),
-        afterPhotos: exitPhotos.map((url, index) => ({
-          id: `photo-after-${index + 1}`,
-          url,
-          type: 'after'
-        })),
-        status: 'concluido'
-      };
-      
-      onSubmit(updatedSector);
     }
   };
 
@@ -176,6 +142,111 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
     e.target.value = '';
   };
 
+  const validateEntryForm = () => {
+    // Check if all required fields are filled
+    if (!tagNumber || !entryInvoice) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return false;
+    }
+    
+    // Check if at least one service is selected
+    const servicesWithAtLeastOneSelected = selectedServices.some(service => service.selected);
+    
+    if (!servicesWithAtLeastOneSelected) {
+      toast.error('Selecione pelo menos um serviço');
+      return false;
+    }
+    
+    // Check if all selected services have at least one "before" photo
+    const selectedServicesWithoutPhotos = selectedServices
+      .filter(service => service.selected)
+      .filter(service => !service.photos?.some(photo => photo.type === 'before'));
+    
+    if (selectedServicesWithoutPhotos.length > 0) {
+      toast.error(`Adicione pelo menos uma foto para cada serviço selecionado (faltando: ${selectedServicesWithoutPhotos.map(s => s.name).join(', ')})`);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const validateExitForm = () => {
+    if (!exitInvoice) {
+      toast.error('Preencha o número da nota fiscal de saída');
+      return false;
+    }
+
+    // Check if all completed services have "after" photos
+    const completedServicesWithoutPhotos = completedServices
+      .filter(service => !service.photos?.some(photo => photo.type === 'after'));
+    
+    if (completedServicesWithoutPhotos.length > 0) {
+      toast.error(`Adicione pelo menos uma foto "depois" para cada serviço concluído (faltando: ${completedServicesWithoutPhotos.map(s => s.name).join(', ')})`);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (formType === 'entry') {
+      if (!validateEntryForm()) return;
+      
+      // Creating or updating entry data
+      const newSector: Omit<Sector, 'id'> = {
+        tagNumber,
+        tagPhotoUrl: tagPhotoUrl || 'https://placehold.co/300x200?text=TAG+Photo',
+        entryInvoice,
+        entryDate: new Date().toISOString().split('T')[0],
+        services: selectedServices,
+        beforePhotos: entryPhotos.map((url, index) => ({
+          id: `photo-before-${index + 1}`,
+          url,
+          type: 'before'
+        })),
+        entryObservations: observations,
+        status: 'emExecucao',
+        ...defaultValues ? {
+          id: defaultValues.id,
+          afterPhotos: defaultValues.afterPhotos,
+          exitDate: defaultValues.exitDate,
+          exitInvoice: defaultValues.exitInvoice,
+          completedServices: defaultValues.completedServices,
+          exitObservations: defaultValues.exitObservations
+        } : {}
+      } as Sector;
+      
+      onSubmit(newSector);
+    } else {
+      if (!validateExitForm()) return;
+
+      if (!defaultValues) {
+        toast.error('Dados do setor não encontrados');
+        return;
+      }
+      
+      // Updating exit data
+      const updatedSector: Sector = {
+        ...defaultValues as Sector,
+        exitDate: new Date().toISOString().split('T')[0],
+        exitInvoice,
+        exitObservations: observations,
+        completedServices: completedServices.map(s => s.id),
+        services: selectedServices, // Update the services with the photos added during exit
+        afterPhotos: exitPhotos.map((url, index) => ({
+          id: `photo-after-${index + 1}`,
+          url,
+          type: 'after'
+        })),
+        status: 'concluido'
+      };
+      
+      onSubmit(updatedSector);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {formType === 'entry' ? (
@@ -188,12 +259,12 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           setObservations={setObservations}
           selectedServices={selectedServices}
           handleServiceChange={handleServiceChange}
-          handleParafusosQuantityChange={handleParafusosQuantityChange}
-          handleTrocaTrechoQuantityChange={handleTrocaTrechoQuantityChange}
+          handleServiceQuantityChange={handleServiceQuantityChange}
+          handleServiceObservationChange={handleServiceObservationChange}
+          handleServicePhotoUpload={handleServicePhotoUpload}
           tagPhotoUrl={tagPhotoUrl}
-          setTagPhotoUrl={setTagPhotoUrl}
-          entryPhotos={entryPhotos}
           handleImageUpload={handleImageUpload}
+          entryPhotos={entryPhotos}
           defaultValues={defaultValues}
           today={today}
         />
@@ -205,10 +276,12 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
           setObservations={setObservations}
           completedServices={completedServices}
           handleCompletedServiceChange={handleCompletedServiceChange}
+          handleCompletedServicePhotoUpload={handleServicePhotoUpload}
           exitPhotos={exitPhotos}
           handleImageUpload={handleImageUpload}
           defaultValues={defaultValues}
           today={today}
+          selectedServices={selectedServices}
         />
       )}
 
