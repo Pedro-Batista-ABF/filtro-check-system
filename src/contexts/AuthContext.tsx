@@ -94,11 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerUser = async (userData: { username: string; password: string; fullName: string; email: string; }): Promise<boolean> => {
-    // Only authenticated users can register new users
-    if (!user) {
-      toast.error('Você precisa estar logado para cadastrar novos usuários');
-      return false;
-    }
+    // Removed authentication check to allow anyone to register
     
     // Simulate API request delay
     await new Promise(resolve => setTimeout(resolve, 800));

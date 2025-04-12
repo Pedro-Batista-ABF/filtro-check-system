@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ export default function UserRegistrationForm() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { registerUser, isAuthenticated } = useApi();
+  const { registerUser } = useAuth();
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,16 +51,6 @@ export default function UserRegistrationForm() {
       toast({
         title: "Email inválido",
         description: "Por favor, forneça um endereço de email válido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if user is authenticated (required for registration)
-    if (!isAuthenticated) {
-      toast({
-        title: "Acesso negado",
-        description: "Você precisa estar logado para cadastrar novos usuários.",
         variant: "destructive",
       });
       return;
