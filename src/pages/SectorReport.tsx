@@ -3,7 +3,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Mail } from "lucide-react";
+import { ArrowLeft, Printer, Mail, FileText } from "lucide-react";
 import SectorDetails from "@/components/sectors/SectorDetails";
 import { toast } from "sonner";
 
@@ -56,6 +56,14 @@ export default function SectorReport() {
           </div>
           
           <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/relatorios')}
+              className="flex items-center"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Relatório Consolidado
+            </Button>
             <Button 
               variant="outline" 
               onClick={handleEmail}

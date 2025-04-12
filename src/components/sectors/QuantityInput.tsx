@@ -9,6 +9,8 @@ interface QuantityInputProps {
   value: number | undefined;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   unit?: string;
+  min?: string;
+  className?: string;
 }
 
 export default function QuantityInput({ 
@@ -16,17 +18,19 @@ export default function QuantityInput({
   label, 
   value, 
   onChange, 
-  unit = "" 
+  unit = "",
+  min = "1",
+  className = ""
 }: QuantityInputProps) {
   return (
-    <div className="mt-2">
+    <div className={`mt-2 ${className}`}>
       <Label htmlFor={id} className="text-xs">
         {label}{unit ? ` (${unit})` : ""}:
       </Label>
       <Input
         id={id}
         type="number"
-        min="1"
+        min={min}
         value={value || ''}
         onChange={onChange}
         className="h-8 text-sm"

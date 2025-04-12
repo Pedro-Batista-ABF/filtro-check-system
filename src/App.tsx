@@ -14,6 +14,8 @@ import ExecucaoDetails from "./pages/ExecucaoDetails";
 import Checagem from "./pages/Checagem";
 import CheckagemForm from "./pages/CheckagemForm";
 import SectorReport from "./pages/SectorReport";
+import ConsolidatedReport from "./pages/ConsolidatedReport";
+import ReportPreview from "./pages/ReportPreview";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/checagem" element={<Checagem />} />
             <Route path="/checagem/:id" element={<CheckagemForm />} />
             <Route path="/setor/:id" element={<SectorReport />} />
+            <Route path="/relatorios" element={<ConsolidatedReport />} />
+            <Route path="/relatorio-preview" element={<ReportPreview />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

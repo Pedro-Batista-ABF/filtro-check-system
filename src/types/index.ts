@@ -14,6 +14,8 @@ export interface Service {
   name: string;
   selected: boolean;
   quantity?: number;
+  photos?: Photo[];
+  observations?: string;
 }
 
 export interface Photo {
