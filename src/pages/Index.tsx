@@ -94,8 +94,8 @@ export default function Index() {
 
         {/* Rest of the existing content remains the same */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="pb-2">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300 flex flex-col">
+            <CardHeader className="pb-2 flex-grow-0">
               <CardTitle className="text-xl flex items-center">
                 <ClipboardCheck className="h-5 w-5 mr-2 text-primary" />
                 Peritagem
@@ -104,18 +104,18 @@ export default function Index() {
                 Cadastro e avaliação inicial dos setores
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600">
+            <CardContent className="text-sm text-gray-600 flex-grow">
               <p>Registre novos setores, inclua fotos dos defeitos e selecione os serviços necessários.</p>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="mt-auto">
               <Button 
                 asChild 
                 variant="default" 
-                className="w-full group hover:bg-primary/90 transition-colors"
+                className="w-full group hover:bg-primary/90 transition-colors flex items-center justify-between"
               >
                 <Link 
                   to="/peritagem" 
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between w-full"
                 >
                   Acessar Peritagem
                   <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -124,8 +124,8 @@ export default function Index() {
             </CardFooter>
           </Card>
           
-          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="pb-2">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300 flex flex-col">
+            <CardHeader className="pb-2 flex-grow-0">
               <CardTitle className="text-xl flex items-center">
                 <Filter className="h-5 w-5 mr-2 text-primary" />
                 Execução
@@ -134,18 +134,18 @@ export default function Index() {
                 Acompanhamento da produção
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600">
+            <CardContent className="text-sm text-gray-600 flex-grow">
               <p>Visualize os setores em execução e os serviços a serem realizados em cada um deles.</p>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="mt-auto">
               <Button 
                 asChild 
                 variant="default" 
-                className="w-full group hover:bg-primary/90 transition-colors"
+                className="w-full group hover:bg-primary/90 transition-colors flex items-center justify-between"
               >
                 <Link 
                   to="/execucao" 
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between w-full"
                 >
                   Acessar Execução
                   <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -154,8 +154,8 @@ export default function Index() {
             </CardFooter>
           </Card>
           
-          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="pb-2">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300 flex flex-col">
+            <CardHeader className="pb-2 flex-grow-0">
               <CardTitle className="text-xl flex items-center">
                 <CheckSquare className="h-5 w-5 mr-2 text-primary" />
                 Qualidade
@@ -164,18 +164,18 @@ export default function Index() {
                 Checagem final dos serviços
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600">
+            <CardContent className="text-sm text-gray-600 flex-grow">
               <p>Realize a verificação final dos setores, confirme os serviços executados e finalize o processo.</p>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="mt-auto">
               <Button 
                 asChild 
                 variant="default" 
-                className="w-full group hover:bg-primary/90 transition-colors"
+                className="w-full group hover:bg-primary/90 transition-colors flex items-center justify-between"
               >
                 <Link 
                   to="/checagem" 
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between w-full"
                 >
                   Acessar Qualidade
                   <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -184,8 +184,8 @@ export default function Index() {
             </CardFooter>
           </Card>
           
-          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="pb-2">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300 flex flex-col">
+            <CardHeader className="pb-2 flex-grow-0">
               <CardTitle className="text-xl flex items-center">
                 <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
                 Sucateamento
@@ -194,18 +194,18 @@ export default function Index() {
                 Validação e registro de devolução
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600">
+            <CardContent className="text-sm text-gray-600 flex-grow">
               <p>Valide os setores marcados como sucateados e registre sua devolução ao cliente.</p>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="mt-auto">
               <Button 
                 asChild 
                 variant="default" 
-                className="w-full group bg-red-600 hover:bg-red-700 transition-colors"
+                className="w-full group bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-between"
               >
                 <Link 
                   to="/sucateamento" 
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between w-full"
                 >
                   Acessar Sucateamento
                   <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
