@@ -9,7 +9,6 @@ import ExitForm from "./ExitForm";
 import { useApi } from "@/contexts/ApiContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -243,6 +242,12 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
       return false;
     }
     
+    // Check if tag photo is provided - new validation
+    if (!tagPhotoUrl) {
+      toast.error('Adicione uma foto da TAG');
+      return false;
+    }
+    
     if (isScrap) {
       // For scrap, check if scrap observations and photos are provided
       if (!scrapObservations) {
@@ -319,7 +324,7 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
       // Creating or updating entry data
       const newSector: Omit<Sector, 'id'> = {
         tagNumber,
-        tagPhotoUrl: tagPhotoUrl || 'https://placehold.co/300x200?text=TAG+Photo',
+        tagPhotoUrl: tagPhotoUrl || '', // This is now required in the form validation
         entryInvoice,
         entryDate: format(entryDate, 'yyyy-MM-dd'),
         peritagemDate: format(new Date(), 'yyyy-MM-dd'),

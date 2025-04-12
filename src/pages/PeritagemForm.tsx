@@ -7,6 +7,7 @@ import { Sector } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
+import { Card } from "@/components/ui/card";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -40,27 +41,30 @@ export default function PeritagemForm() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3 pb-2 border-b">
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="icon" 
             onClick={() => navigate('/peritagem')}
+            className="hover:bg-primary/10"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5 text-primary" />
           </Button>
-          <h1 className="page-title">
+          <h1 className="text-2xl font-bold text-primary">
             {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
           </h1>
         </div>
         
-        <div className="form-container">
-          <SectorForm 
-            defaultValues={sector}
-            services={getDefaultServices()}
-            onSubmit={handleSubmit}
-            formType="entry"
-          />
-        </div>
+        <Card className="border-none shadow-lg">
+          <div className="p-6">
+            <SectorForm 
+              defaultValues={sector}
+              services={getDefaultServices()}
+              onSubmit={handleSubmit}
+              formType="entry"
+            />
+          </div>
+        </Card>
       </div>
     </PageLayout>
   );
