@@ -1,4 +1,3 @@
-
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -102,4 +101,24 @@ export interface Sector {
   
   status: SectorStatus;
   outcome?: CycleOutcome;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string;
+}
+
+// You can add these extensions to the Sector interface to track user actions
+export interface SectorWithUserTracking extends Sector {
+  _createdBy?: string;
+  _createdAt?: string;
+  _updatedBy?: string;
+  _updatedAt?: string;
+}
+
+export interface PhotoWithUserTracking extends Photo {
+  _addedBy?: string;
+  _addedAt?: string;
 }

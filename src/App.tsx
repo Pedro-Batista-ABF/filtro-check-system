@@ -3,9 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ApiProvider } from "./contexts/ApiContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ApiProvider } from "./contexts/ApiContextExtended";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Peritagem from "./pages/Peritagem";
 import PeritagemForm from "./pages/PeritagemForm";
@@ -25,32 +28,102 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ApiProvider>
-      <TooltipProvider>
-        <Toaster />
-        <SonnerToaster />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/peritagem" element={<Peritagem />} />
-            <Route path="/peritagem/novo" element={<PeritagemForm />} />
-            <Route path="/peritagem/:id" element={<PeritagemForm />} />
-            <Route path="/execucao" element={<Execucao />} />
-            <Route path="/execucao/:id" element={<ExecucaoDetails />} />
-            <Route path="/checagem" element={<Checagem />} />
-            <Route path="/checagem-final" element={<CheckagemFinal />} />
-            <Route path="/checagem/:id" element={<CheckagemForm />} />
-            <Route path="/sucateamento" element={<ScrapValidation />} />
-            <Route path="/sucateamento/:id" element={<ScrapValidationForm />} />
-            <Route path="/concluidos" element={<Concluidos />} />
-            <Route path="/setor/:id" element={<SectorReport />} />
-            <Route path="/relatorios" element={<ConsolidatedReport />} />
-            <Route path="/relatorio-preview" element={<ReportPreview />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ApiProvider>
+    <AuthProvider>
+      <ApiProvider>
+        <TooltipProvider>
+          <Toaster />
+          <SonnerToaster />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected routes */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/peritagem" element={
+                <ProtectedRoute>
+                  <Peritagem />
+                </ProtectedRoute>
+              } />
+              <Route path="/peritagem/novo" element={
+                <ProtectedRoute>
+                  <PeritagemForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/peritagem/:id" element={
+                <ProtectedRoute>
+                  <PeritagemForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/execucao" element={
+                <ProtectedRoute>
+                  <Execucao />
+                </ProtectedRoute>
+              } />
+              <Route path="/execucao/:id" element={
+                <ProtectedRoute>
+                  <ExecucaoDetails />
+                </ProtectedRoute>
+              } />
+              <Route path="/checagem" element={
+                <ProtectedRoute>
+                  <Checagem />
+                </ProtectedRoute>
+              } />
+              <Route path="/checagem-final" element={
+                <ProtectedRoute>
+                  <CheckagemFinal />
+                </ProtectedRoute>
+              } />
+              <Route path="/checagem/:id" element={
+                <ProtectedRoute>
+                  <CheckagemForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/sucateamento" element={
+                <ProtectedRoute>
+                  <ScrapValidation />
+                </ProtectedRoute>
+              } />
+              <Route path="/sucateamento/:id" element={
+                <ProtectedRoute>
+                  <ScrapValidationForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/concluidos" element={
+                <ProtectedRoute>
+                  <Concluidos />
+                </ProtectedRoute>
+              } />
+              <Route path="/setor/:id" element={
+                <ProtectedRoute>
+                  <SectorReport />
+                </ProtectedRoute>
+              } />
+              <Route path="/relatorios" element={
+                <ProtectedRoute>
+                  <ConsolidatedReport />
+                </ProtectedRoute>
+              } />
+              <Route path="/relatorio-preview" element={
+                <ProtectedRoute>
+                  <ReportPreview />
+                </ProtectedRoute>
+              } />
+              
+              {/* Redirect root to login if not authenticated */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              
+              {/* 404 route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ApiProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
