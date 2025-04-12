@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Filter, ClipboardCheck, CheckSquare, Home, FileText, AlertTriangle } from "lucide-react";
@@ -21,7 +20,7 @@ export default function Header({ HeaderExtra }: HeaderProps) {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link to="/" className="flex items-center space-x-2">
           <Filter className="h-6 w-6" />
-          <span className="text-xl font-bold">Controle de Recuperação de Setores</span>
+          <span className="text-xl font-bold">Controle de Setores - ABF</span>
         </Link>
         
         {/* Mobile menu button */}
