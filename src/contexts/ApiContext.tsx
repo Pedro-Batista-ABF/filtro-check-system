@@ -17,7 +17,7 @@ interface ApiContextType {
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
 
-export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ApiProvider = ({ children }: { children: React.ReactNode }) => {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
