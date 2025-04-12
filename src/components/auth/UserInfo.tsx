@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function UserInfo() {
-  const { user, logout } = useAuth();
+  const { user, logout, getUserMetadata } = useAuth();
   const navigate = useNavigate();
+  const userMetadata = getUserMetadata();
 
   if (!user) {
     // Se não houver usuário, renderiza um botão de login
@@ -31,12 +32,14 @@ export default function UserInfo() {
     navigate("/login");
   };
 
+  const displayName = userMetadata.fullName || userMetadata.email || 'Usuário';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <User className="h-4 w-4" />
-          <span className="hidden md:inline">{user.fullName || user.username}</span>
+          <span className="hidden md:inline">{displayName}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -44,7 +47,7 @@ export default function UserInfo() {
         <DropdownMenuSeparator />
         <DropdownMenuItem className="gap-2">
           <User className="h-4 w-4" />
-          <span>{user.username}</span>
+          <span>{userMetadata.email}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="gap-2 text-red-600">

@@ -11,7 +11,6 @@ import { Eye, EyeOff, UserPlus } from "lucide-react";
 interface UserRegistrationData {
   fullName: string;
   email: string;
-  username: string;
   password: string;
 }
 
@@ -19,7 +18,6 @@ export default function UserRegistrationForm() {
   const [formData, setFormData] = useState<UserRegistrationData>({
     fullName: "",
     email: "",
-    username: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +34,7 @@ export default function UserRegistrationForm() {
     e.preventDefault();
     
     // Validate form data
-    if (!formData.fullName || !formData.email || !formData.username || !formData.password) {
+    if (!formData.fullName || !formData.email || !formData.password) {
       toast({
         title: "Erro de validação",
         description: "Todos os campos são obrigatórios.",
@@ -63,13 +61,12 @@ export default function UserRegistrationForm() {
       if (success) {
         toast({
           title: "Usuário cadastrado com sucesso",
-          description: `O usuário ${formData.username} foi cadastrado.`,
+          description: `O usuário ${formData.email} foi cadastrado.`,
         });
         // Reset form data
         setFormData({
           fullName: "",
           email: "",
-          username: "",
           password: "",
         });
         // Close dialog
@@ -77,7 +74,7 @@ export default function UserRegistrationForm() {
       } else {
         toast({
           title: "Erro no cadastro",
-          description: "Não foi possível cadastrar o usuário. Verifique se o nome de usuário já existe.",
+          description: "Não foi possível cadastrar o usuário. Verifique se o email já existe.",
           variant: "destructive",
         });
       }
@@ -116,19 +113,6 @@ export default function UserRegistrationForm() {
           value={formData.email}
           onChange={handleChange}
           placeholder="Digite o e-mail"
-          disabled={isLoading}
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="username">Nome de usuário (login)</Label>
-        <Input
-          id="username"
-          name="username"
-          value={formData.username}
-          onChange={handleChange}
-          placeholder="Digite o nome de usuário"
           disabled={isLoading}
           required
         />

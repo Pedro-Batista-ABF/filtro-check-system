@@ -14,11 +14,11 @@ interface ApiContextValue {
   updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   
   // Auth properties and methods from AuthContext
-  user: { id: string; username: string; fullName: string; email: string; } | null;
+  user: { id: string; email: string; } | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  registerUser: (userData: { username: string; password: string; fullName: string; email: string; }) => Promise<boolean>;
+  registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
 }
 
 // Create a new context that extends the original ApiContext
@@ -44,9 +44,15 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadSectors();
   }, []);
 
+  const getCurrentUserIdentifier = () => {
+    if (!auth.user) return 'system';
+    const metadata = auth.getUserMetadata();
+    return metadata.email || auth.user.id || 'system';
+  };
+
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     // Associate current user with the action
-    const currentUser = auth.user?.username || 'system';
+    const currentUser = getCurrentUserIdentifier();
     
     // Create a new sector with ID and tracking info
     const newSector: Sector = {
@@ -63,7 +69,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
     // Associate current user with the action
-    const currentUser = auth.user?.username || 'system';
+    const currentUser = getCurrentUserIdentifier();
     
     // Add user tracking information
     const updatesWithTracking = {
@@ -104,7 +110,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 url: photoUrl,
                 type,
                 serviceId,
-                _addedBy: auth.user?.username || 'system',
+                _addedBy: getCurrentUserIdentifier(),
                 _addedAt: new Date().toISOString(),
               };
               
@@ -119,7 +125,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return {
             ...sector,
             services,
-            _updatedBy: auth.user?.username || 'system',
+            _updatedBy: getCurrentUserIdentifier(),
             _updatedAt: new Date().toISOString(),
           };
         }
@@ -130,6 +136,12 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  // Simplify user object to match expected API
+  const userInfo = auth.user ? {
+    id: auth.user.id,
+    email: auth.user.email || ''
+  } : null;
+
   // Combine the original API context with authentication context
   const value: ApiContextValue = {
     sectors,
@@ -139,7 +151,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getSectorById,
     updateServicePhotos,
     // Include auth properties and methods
-    user: auth.user,
+    user: userInfo,
     isAuthenticated: auth.isAuthenticated,
     login: auth.login,
     logout: auth.logout,
