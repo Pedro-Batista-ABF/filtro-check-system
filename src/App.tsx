@@ -1,10 +1,11 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ApiProvider } from "./contexts/ApiContextExtended";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ApiProvider } from "./contexts/ApiContextExtended";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -30,8 +31,8 @@ const App = () => (
     <AuthProvider>
       <ApiProvider>
         <TooltipProvider>
-          <SonnerToaster />
           <BrowserRouter>
+            <SonnerToaster />
             <Routes>
               <Route path="/login" element={<Login />} />
               

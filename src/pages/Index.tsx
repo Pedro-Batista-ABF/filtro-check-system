@@ -1,5 +1,4 @@
-
-import PageLayout from "@/components/layout/PageLayout";
+import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
@@ -8,7 +7,6 @@ import { useApi } from "@/contexts/ApiContextExtended";
 import SectorGrid from "@/components/sectors/SectorGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReportList from "@/components/reports/ReportList";
-import UserInfo from "@/components/auth/UserInfo";
 
 export default function Index() {
   const { sectors, loading } = useApi();
@@ -25,7 +23,7 @@ export default function Index() {
   }, {} as Record<string, number>);
 
   return (
-    <PageLayout HeaderExtra={<UserInfo />}>
+    <PageLayoutWrapper>
       <div className="space-y-10">
         <section className="text-center py-6">
           <h1 className="text-3xl font-bold text-primary md:text-4xl">
@@ -262,6 +260,6 @@ export default function Index() {
           </TabsContent>
         </Tabs>
       </div>
-    </PageLayout>
+    </PageLayoutWrapper>
   );
 }
