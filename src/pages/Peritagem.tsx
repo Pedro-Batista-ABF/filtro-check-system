@@ -1,7 +1,7 @@
+
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContext";
-import { Sector, SectorStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";
@@ -12,7 +12,7 @@ export default function Peritagem() {
   const { sectors, loading } = useApi();
   
   // Calculate sector counts by status
-  const statusCounts: Record<SectorStatus, number> = {
+  const statusCounts = {
     peritagemPendente: sectors.filter(s => s.status === 'peritagemPendente').length,
     emExecucao: sectors.filter(s => s.status === 'emExecucao').length,
     checagemFinalPendente: sectors.filter(s => s.status === 'checagemFinalPendente').length,
@@ -35,34 +35,51 @@ export default function Peritagem() {
             Nova Peritagem
           </Button>
         </div>
-        
+
         {loading ? (
           <p>Carregando setores...</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <SectorStatusCard 
-              title="Peritagem Pendente" 
-              status="peritagemPendente" 
-              count={statusCounts.peritagemPendente} 
+            <SectorStatusCard
+              title="Peritagem Pendente"
+              status="peritagemPendente"
+              count={statusCounts.peritagemPendente}
               onClick={() => navigate('/peritagem/pendente')}
             />
-            <SectorStatusCard 
-              title="Em Execução" 
-              status="emExecucao" 
-              count={statusCounts.emExecucao} 
+            
+            <SectorStatusCard
+              title="Em Execução"
+              status="emExecucao"
+              count={statusCounts.emExecucao}
               onClick={() => navigate('/execucao')}
             />
-            <SectorStatusCard 
-              title="Checagem Final Pendente" 
-              status="checagemFinalPendente" 
-              count={statusCounts.checagemFinalPendente} 
+            
+            <SectorStatusCard
+              title="Checagem Final Pendente"
+              status="checagemFinalPendente"
+              count={statusCounts.checagemFinalPendente}
               onClick={() => navigate('/checagem')}
             />
-            <SectorStatusCard 
-              title="Concluído" 
-              status="concluido" 
-              count={statusCounts.concluido} 
+            
+            <SectorStatusCard
+              title="Concluído"
+              status="concluido"
+              count={statusCounts.concluido}
               onClick={() => navigate('/concluidos')}
+            />
+            
+            <SectorStatusCard
+              title="Sucateamento Pendente"
+              status="sucateadoPendente"
+              count={statusCounts.sucateadoPendente}
+              onClick={() => navigate('/sucateamento')}
+            />
+            
+            <SectorStatusCard
+              title="Sucateados"
+              status="sucateado"
+              count={statusCounts.sucateado}
+              onClick={() => navigate('/sucateamento?filtro=sucateados')}
             />
           </div>
         )}

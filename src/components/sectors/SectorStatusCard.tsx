@@ -16,9 +16,29 @@ const SectorStatusCard: React.FC<SectorStatusCardProps> = ({
   count, 
   onClick 
 }) => {
+  // Define colors based on status
+  const getStatusColor = () => {
+    switch (status) {
+      case 'peritagemPendente':
+        return 'border-l-4 border-l-yellow-500';
+      case 'emExecucao':
+        return 'border-l-4 border-l-blue-500';
+      case 'checagemFinalPendente':
+        return 'border-l-4 border-l-purple-500';
+      case 'concluido':
+        return 'border-l-4 border-l-green-500';
+      case 'sucateado':
+        return 'border-l-4 border-l-red-500';
+      case 'sucateadoPendente':
+        return 'border-l-4 border-l-orange-500';
+      default:
+        return 'border-l-4 border-l-gray-500';
+    }
+  };
+
   return (
     <Card 
-      className="hover:bg-gray-50 cursor-pointer transition-colors" 
+      className={`hover:bg-gray-50 cursor-pointer transition-colors ${getStatusColor()}`} 
       onClick={onClick}
     >
       <CardHeader>

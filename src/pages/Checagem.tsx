@@ -1,10 +1,14 @@
+
 import PageLayout from "@/components/layout/PageLayout";
 import { useApi } from "@/contexts/ApiContext";
 import { SectorStatus } from "@/types";
 import { Link } from "react-router-dom";
+import SectorStatusCard from "@/components/sectors/SectorStatusCard";
+import { useNavigate } from "react-router-dom";
 
 export default function Checagem() {
   const { sectors, loading } = useApi();
+  const navigate = useNavigate();
   
   // Calculate sector counts by status
   const statusCounts: Record<SectorStatus, number> = {
@@ -27,36 +31,26 @@ export default function Checagem() {
           <p>Carregando dados...</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-white shadow rounded-md p-4">
-              <h2 className="text-lg font-semibold mb-2">
-                Pendentes de Checagem Final
-              </h2>
-              <p className="text-gray-600">
-                Número de setores: {statusCounts.checagemFinalPendente}
-              </p>
-              <Link to="/checagem-final" className="text-blue-500 hover:underline block mt-2">
-                Ver setores
-              </Link>
-            </div>
+            <SectorStatusCard
+              title="Pendentes de Checagem"
+              status="checagemFinalPendente"
+              count={statusCounts.checagemFinalPendente}
+              onClick={() => navigate('/checagem-final')}
+            />
 
-            <div className="bg-white shadow rounded-md p-4">
-              <h2 className="text-lg font-semibold mb-2">Concluídos</h2>
-              <p className="text-gray-600">
-                Número de setores: {statusCounts.concluido}
-              </p>
-            </div>
+            <SectorStatusCard
+              title="Concluídos"
+              status="concluido"
+              count={statusCounts.concluido}
+              onClick={() => navigate('/concluidos')}
+            />
 
-            <div className="bg-white shadow rounded-md p-4">
-              <h2 className="text-lg font-semibold mb-2">
-                Status dos Setores
-              </h2>
-              <ul className="list-disc list-inside text-gray-600">
-                <li>Peritagem Pendente: {statusCounts.peritagemPendente}</li>
-                <li>Em Execução: {statusCounts.emExecucao}</li>
-                <li>Sucateado Pendente: {statusCounts.sucateadoPendente}</li>
-                <li>Sucateado: {statusCounts.sucateado}</li>
-              </ul>
-            </div>
+            <SectorStatusCard
+              title="Sucateamento Pendente"
+              status="sucateadoPendente"
+              count={statusCounts.sucateadoPendente}
+              onClick={() => navigate('/sucateamento')}
+            />
           </div>
         )}
       </div>
