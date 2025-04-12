@@ -25,9 +25,9 @@ export default function ConsolidatedReport() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
-  // Filter sectors that are completed or in final check
+  // Filter sectors that are fully completed with quality check
   const completedSectors = sectors.filter(sector => {
-    const isCompleted = sector.status === 'concluido' || sector.status === 'checagemFinalPendente';
+    const isFullyCompleted = sector.status === 'concluido';
     
     // Apply date filter if dates are provided
     let dateMatch = true;
@@ -49,7 +49,7 @@ export default function ConsolidatedReport() {
     
     // Apply status filter if provided
     let statusMatch = true;
-    if (statusFilter) {
+    if (statusFilter && statusFilter !== "all") {
       statusMatch = sector.status === statusFilter;
     }
     
@@ -62,7 +62,7 @@ export default function ConsolidatedReport() {
         (sector.exitInvoice && sector.exitInvoice.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     
-    return isCompleted && dateMatch && statusMatch && searchMatch;
+    return isFullyCompleted && dateMatch && statusMatch && searchMatch;
   });
 
   const toggleSectorSelection = (sectorId: string) => {
@@ -86,10 +86,6 @@ export default function ConsolidatedReport() {
       toast.error("Selecione pelo menos um setor para gerar o relatório");
       return;
     }
-    
-    // In a real implementation, this would generate a PDF
-    // For now, we'll just show a toast message
-    toast.success(`Relatório gerado com ${selectedSectors.length} setores`);
     
     // Navigate to the preview page with selected sector IDs
     navigate(`/relatorio-preview?sectors=${selectedSectors.join(',')}`);
@@ -183,7 +179,6 @@ export default function ConsolidatedReport() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="checagemFinalPendente">Checagem Pendente</SelectItem>
                     <SelectItem value="concluido">Concluído</SelectItem>
                   </SelectContent>
                 </Select>
@@ -205,7 +200,7 @@ export default function ConsolidatedReport() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg">Setores Disponíveis</CardTitle>
+            <CardTitle className="text-lg">Setores com Checagem Concluída</CardTitle>
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="selectAll" 
@@ -218,7 +213,7 @@ export default function ConsolidatedReport() {
           <CardContent>
             {completedSectors.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">Nenhum setor disponível com os filtros selecionados</p>
+                <p className="text-muted-foreground">Nenhum setor com checagem concluída encontrado</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -251,15 +246,9 @@ export default function ConsolidatedReport() {
                     </div>
                     
                     <div className="text-xs">
-                      {sector.status === 'concluido' ? (
-                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                          Concluído
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                          Checagem Pendente
-                        </span>
-                      )}
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                        Concluído
+                      </span>
                     </div>
                   </div>
                 ))}
