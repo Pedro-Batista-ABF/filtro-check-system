@@ -29,12 +29,16 @@ const generateMockSector = (id: number): Sector => {
         ? 'emExecucao' 
         : 'peritagemPendente';
 
+  const entryDate = new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const peritagemDate = new Date(Date.now() - Math.floor(Math.random() * 20) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
   return {
     id: `sector-${id}`,
     tagNumber: `TAG-${1000 + id}`,
     tagPhotoUrl: 'https://placehold.co/300x200?text=TAG+Photo',
     entryInvoice: `NF-${5000 + id}`,
-    entryDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    entryDate,
+    peritagemDate,
     services: randomServices,
     beforePhotos: [
       { id: `photo-before-1-${id}`, url: 'https://placehold.co/600x400?text=Before+Photo+1', type: 'before' },
@@ -44,6 +48,9 @@ const generateMockSector = (id: number): Sector => {
     status,
     exitDate: status === 'concluido' ? new Date().toISOString().split('T')[0] : undefined,
     exitInvoice: status === 'concluido' ? `NF-S-${6000 + id}` : undefined,
+    checagemDate: status === 'concluido' || status === 'checagemFinalPendente' 
+      ? new Date(Date.now() - Math.floor(Math.random() * 5) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+      : undefined,
     afterPhotos: status === 'concluido' || status === 'checagemFinalPendente' ? [
       { id: `photo-after-1-${id}`, url: 'https://placehold.co/600x400?text=After+Photo+1', type: 'after' },
       { id: `photo-after-2-${id}`, url: 'https://placehold.co/600x400?text=After+Photo+2', type: 'after' },
