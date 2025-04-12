@@ -1,6 +1,6 @@
 
 import PageLayout from "@/components/layout/PageLayout";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { SectorStatus } from "@/types";
 import { Link } from "react-router-dom";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";

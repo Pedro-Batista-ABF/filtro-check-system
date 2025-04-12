@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSectorById, createSector, updateSector, getDefaultServices } = useApi();
+  const { getSectorById, addSector, updateSector } = useApi();
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,9 +20,14 @@ export default function PeritagemForm() {
   // Buscar dados ao carregar o componente
   useEffect(() => {
     const fetchData = async () => {
-      // Carregar serviços disponíveis
-      const servicesData = await getDefaultServices();
-      setServices(servicesData);
+      // Carregar lista de serviços (simulada por enquanto)
+      // TODO: implementar getDefaultServices após adicionar essa função no ApiContextExtended
+      const defaultServices: Service[] = [
+        { id: "lavagem", name: "Lavagem", description: "Limpeza completa" },
+        { id: "pintura", name: "Pintura", description: "Pintura de superfície" },
+        { id: "troca_elemento", name: "Troca de Elemento", description: "Substituição do elemento filtrante" }
+      ];
+      setServices(defaultServices);
       
       // Se tem ID, buscar o setor
       if (id) {
@@ -39,7 +44,7 @@ export default function PeritagemForm() {
     };
     
     fetchData();
-  }, [id, getSectorById, getDefaultServices, navigate]);
+  }, [id, getSectorById, navigate]);
   
   const isEditing = !!sector;
 
@@ -58,7 +63,7 @@ export default function PeritagemForm() {
       if (isEditing && sector) {
         await updateSector(sector.id, data as Partial<Sector>);
       } else {
-        await createSector(data);
+        await addSector(data);
       }
       navigate('/peritagem');
     } catch (error) {

@@ -1,11 +1,10 @@
 import PageLayout from "@/components/layout/PageLayout";
 import { useState } from "react";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Printer, Mail, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

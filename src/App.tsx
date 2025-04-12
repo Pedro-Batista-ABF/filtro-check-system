@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Route, Routes, useNavigate, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
@@ -20,7 +20,6 @@ import Login from "@/pages/Login";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ConsolidatedReport from "@/pages/ConsolidatedReport";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { toast } from "sonner";
 
 const App = () => {
   const navigate = useNavigate();
@@ -37,7 +36,13 @@ const App = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         
-        <Route path="/" element={<ProtectedRoute><PageLayoutWrapper /></ProtectedRoute>}>
+        <Route path="/" element={
+          <ProtectedRoute>
+            <PageLayoutWrapper>
+              <Outlet />
+            </PageLayoutWrapper>
+          </ProtectedRoute>
+        }>
           <Route index element={<Index />} />
           <Route path="peritagem" element={<Peritagem />} />
           <Route path="peritagem/novo" element={<PeritagemForm />} />

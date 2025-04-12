@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Sector } from "@/types";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { toast } from "sonner";
 
 interface ProductionCompletionSwitchProps {
@@ -21,14 +21,15 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
       // Update the status to checagemFinalPendente if switching to completed
       const newStatus = checked ? 'checagemFinalPendente' : 'emExecucao';
       
-      const updatedSector = await updateSector({
-        ...sector,
+      const success = await updateSector(sector.id, {
         productionCompleted: checked,
         status: newStatus
       });
       
-      setIsCompleted(updatedSector.productionCompleted);
-      toast.success(`Setor ${checked ? 'liberado para checagem' : 'retornado para produção'}`);
+      if (success) {
+        setIsCompleted(checked);
+        toast.success(`Setor ${checked ? 'liberado para checagem' : 'retornado para produção'}`);
+      }
     } catch (error) {
       toast.error('Erro ao atualizar status de conclusão');
       // Revert UI state on error

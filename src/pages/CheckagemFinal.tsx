@@ -1,6 +1,6 @@
 
 import PageLayout from "@/components/layout/PageLayout";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SectorGrid from "@/components/sectors/SectorGrid";

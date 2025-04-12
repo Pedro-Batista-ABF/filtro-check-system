@@ -1,7 +1,7 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";

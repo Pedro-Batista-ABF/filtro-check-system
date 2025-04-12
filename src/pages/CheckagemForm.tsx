@@ -3,7 +3,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
-import { Sector } from "@/types";
+import { Sector, Service } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSectorById, updateSector, getDefaultServices } = useApi();
+  const { getSectorById, updateSector } = useApi();
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,14 +22,16 @@ export default function CheckagemForm() {
       if (id) {
         const sectorData = await getSectorById(id);
         setSector(sectorData);
-        const servicesData = await getDefaultServices();
-        setServices(servicesData);
+        // Utilizamos os serviços já disponíveis no setor
+        if (sectorData?.services) {
+          setServices(sectorData.services);
+        }
       }
       setLoading(false);
     };
     
     fetchData();
-  }, [id, getSectorById, getDefaultServices]);
+  }, [id, getSectorById]);
 
   if (loading) {
     return (
