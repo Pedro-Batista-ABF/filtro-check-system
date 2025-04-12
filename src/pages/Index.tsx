@@ -94,7 +94,7 @@ export default function Index() {
 
         {/* Rest of the existing content remains the same */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="module-card">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center">
                 <ClipboardCheck className="h-5 w-5 mr-2 text-primary" />
@@ -108,13 +108,23 @@ export default function Index() {
               <p>Registre novos setores, inclua fotos dos defeitos e selecione os serviços necessários.</p>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="default" className="w-full">
-                <Link to="/peritagem">Acessar Peritagem</Link>
+              <Button 
+                asChild 
+                variant="default" 
+                className="w-full group hover:bg-primary/90 transition-colors"
+              >
+                <Link 
+                  to="/peritagem" 
+                  className="flex items-center justify-between"
+                >
+                  Acessar Peritagem
+                  <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               </Button>
             </CardFooter>
           </Card>
           
-          <Card className="module-card">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center">
                 <Filter className="h-5 w-5 mr-2 text-primary" />
@@ -128,13 +138,23 @@ export default function Index() {
               <p>Visualize os setores em execução e os serviços a serem realizados em cada um deles.</p>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="default" className="w-full">
-                <Link to="/execucao">Acessar Execução</Link>
+              <Button 
+                asChild 
+                variant="default" 
+                className="w-full group hover:bg-primary/90 transition-colors"
+              >
+                <Link 
+                  to="/execucao" 
+                  className="flex items-center justify-between"
+                >
+                  Acessar Execução
+                  <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               </Button>
             </CardFooter>
           </Card>
           
-          <Card className="module-card">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center">
                 <CheckSquare className="h-5 w-5 mr-2 text-primary" />
@@ -148,13 +168,23 @@ export default function Index() {
               <p>Realize a verificação final dos setores, confirme os serviços executados e finalize o processo.</p>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="default" className="w-full">
-                <Link to="/checagem">Acessar Qualidade</Link>
+              <Button 
+                asChild 
+                variant="default" 
+                className="w-full group hover:bg-primary/90 transition-colors"
+              >
+                <Link 
+                  to="/checagem" 
+                  className="flex items-center justify-between"
+                >
+                  Acessar Qualidade
+                  <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               </Button>
             </CardFooter>
           </Card>
           
-          <Card className="module-card">
+          <Card className="module-card hover:shadow-xl transition-shadow duration-300">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center">
                 <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
@@ -168,8 +198,18 @@ export default function Index() {
               <p>Valide os setores marcados como sucateados e registre sua devolução ao cliente.</p>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="default" className="w-full bg-red-600 hover:bg-red-700">
-                <Link to="/sucateamento">Acessar Sucateamento</Link>
+              <Button 
+                asChild 
+                variant="default" 
+                className="w-full group bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                <Link 
+                  to="/sucateamento" 
+                  className="flex items-center justify-between"
+                >
+                  Acessar Sucateamento
+                  <ArrowRight className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               </Button>
             </CardFooter>
           </Card>
