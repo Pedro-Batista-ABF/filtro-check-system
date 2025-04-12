@@ -113,10 +113,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Redirect root to login if not authenticated */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              
-              {/* 404 route */}
+              {/* Fallback route - redirect to login */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
