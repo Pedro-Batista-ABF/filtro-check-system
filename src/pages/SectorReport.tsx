@@ -1,3 +1,4 @@
+
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -142,7 +143,7 @@ export default function SectorReport() {
 // Helper function to group services by type
 function getServicesByType(sector: Sector) {
   const groupedServices = sector.services.reduce((groups, service) => {
-    const type = service.type; // Mantendo o uso de 'type'
+    const type = service.type;
     if (!groups[type]) {
       groups[type] = [];
     }
@@ -153,7 +154,6 @@ function getServicesByType(sector: Sector) {
   return groupedServices;
 }
 
-// Vamos corrigir as comparações que estão causando erros TS2367
 // Extraindo o rendering da tabela de ciclos
 const renderCycleTable = (cycles: Cycle[]) => {
   return (
@@ -182,8 +182,11 @@ const renderCycleTable = (cycles: Cycle[]) => {
                 {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString() : "N/A"}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                {/* Substituindo comparações de string literal por string indexada */}
-                <span className={cycle.outcome === "recovered" ? "text-green-600" : cycle.outcome === "scrapped" ? "text-red-600" : "text-yellow-600"}>
+                <span className={
+                  cycle.outcome === "recovered" ? "text-green-600" : 
+                  cycle.outcome === "scrapped" ? "text-red-600" : 
+                  "text-yellow-600"
+                }>
                   {cycle.outcome === "recovered" ? "Recuperado" : 
                    cycle.outcome === "scrapped" ? "Sucateado" : 
                    "Pendente"}
@@ -203,13 +206,12 @@ const renderCycleTable = (cycles: Cycle[]) => {
   );
 };
 
-// Corrigindo o serviço para usar 'type' em vez de tipos inexistentes
+// Componente para exibir detalhes do serviço
 const ServiceDetails = ({ service }: { service: Service }) => {
   return (
     <div className="service-details">
       <h3 className="font-medium">{service.name}</h3>
       <p className="text-sm text-gray-500">Tipo: {service.type}</p>
-      {/* Adicione aqui outros detalhes do serviço que você queira exibir */}
     </div>
   );
 };

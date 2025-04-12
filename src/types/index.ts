@@ -1,3 +1,4 @@
+
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -6,19 +7,23 @@ export type ServiceType =
   | 'troca_tela_lado_b'
   | 'troca_ambos_lados'
   | 'fabricacao_canaleta'
-  | 'fabricacao_setor_completo';
+  | 'fabricacao_setor_completo'
+  | 'lavagem'
+  | 'pintura'
+  | 'troca_elemento';
 
 export interface Photo {
   id: string;
   url: string;
   type: 'before' | 'after';
-  serviceId?: ServiceType;
+  serviceId?: string;
 }
 
 export interface Service {
-  id: ServiceType;
+  id: string;
   name: string;
   selected: boolean;
+  type: string; // Adicionado o campo type que estava faltando
   quantity?: number;
   photos?: Photo[];
   observations?: string;
@@ -32,7 +37,10 @@ export type SectorStatus =
   | 'sucateado'
   | 'sucateadoPendente';
 
-export type CycleOutcome = 'Recuperado' | 'Sucateado' | 'EmAndamento';
+export type CycleOutcome = 
+  | 'recovered' 
+  | 'scrapped' 
+  | 'EmAndamento';
 
 export interface Cycle {
   id: string;
@@ -52,7 +60,7 @@ export interface Cycle {
   exitInvoice?: string;
   checagemDate?: string;
   afterPhotos?: Photo[];
-  completedServices?: ServiceType[];
+  completedServices?: string[];
   exitObservations?: string;
   
   // Sucateamento fields
@@ -64,6 +72,9 @@ export interface Cycle {
   
   status: SectorStatus;
   outcome: CycleOutcome;
+  createdAt?: string; // Adicionando campo createdAt
+  comments?: string; // Adicionando campo comments
+  technicianId?: string; // Adicionando campo technicianId
 }
 
 export interface Sector {
@@ -85,7 +96,7 @@ export interface Sector {
   exitInvoice?: string;
   checagemDate?: string;
   afterPhotos?: Photo[];
-  completedServices?: ServiceType[];
+  completedServices?: string[];
   exitObservations?: string;
   
   // Sucateamento fields
@@ -98,6 +109,8 @@ export interface Sector {
   // History tracking
   cycleCount: number;
   previousCycles?: Cycle[];
+  cycles?: Cycle[]; // Adicionando campo cycles
+  comments?: string; // Adicionando campo comments
   
   status: SectorStatus;
   outcome?: CycleOutcome;

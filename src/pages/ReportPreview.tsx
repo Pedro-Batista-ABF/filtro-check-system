@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Sector } from '@/types';
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,7 @@ const ReportPreview: React.FC = () => {
   // Service types organization
   const getServicesByType = (sector: Sector) => {
     const groupedServices = sector.services.reduce((groups, service) => {
-      const type = service.type; // Mantendo o uso de 'type' 
+      const type = service.type;
       if (!groups[type]) {
         groups[type] = [];
       }
@@ -123,8 +124,14 @@ const ReportPreview: React.FC = () => {
                           {cycle.createdAt ? new Date(cycle.createdAt).toLocaleDateString() : "N/A"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={cycle.outcome === "recovered" ? "text-green-600" : cycle.outcome === "scrapped" ? "text-red-600" : "text-yellow-600"}>
-                            {cycle.outcome === "recovered" ? "Recuperado" : cycle.outcome === "scrapped" ? "Sucateado" : "Pendente"}
+                          <span className={
+                            cycle.outcome === "recovered" ? "text-green-600" : 
+                            cycle.outcome === "scrapped" ? "text-red-600" : 
+                            "text-yellow-600"
+                          }>
+                            {cycle.outcome === "recovered" ? "Recuperado" : 
+                             cycle.outcome === "scrapped" ? "Sucateado" : 
+                             "Pendente"}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -170,7 +177,12 @@ const ReportPreview: React.FC = () => {
         <div className="space-y-4">
           <h3 className="font-semibold text-lg border-b pb-2">Comparativo de Fotos</h3>
           {sector.services.map(service => (
-            <PhotoComparison key={service.id} sectorId={sector.id} service={service} />
+            <PhotoComparison 
+              key={service.id} 
+              sector={sector} 
+              service={service} 
+              sectorId={sector.id}
+            />
           ))}
         </div>
       </div>
@@ -179,17 +191,3 @@ const ReportPreview: React.FC = () => {
 };
 
 export default ReportPreview;
-
-// Helper function to group services by type
-function getServicesByType(sector: Sector) {
-  const groupedServices = sector.services.reduce((groups, service) => {
-    const type = service.type; // Mantendo o uso de 'type'
-    if (!groups[type]) {
-      groups[type] = [];
-    }
-    groups[type].push(service);
-    return groups;
-  }, {} as Record<string, typeof sector.services>);
-  
-  return groupedServices;
-}
