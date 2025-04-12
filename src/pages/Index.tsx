@@ -34,14 +34,14 @@ export default function Index() {
           </p>
         </section>
 
-        {/* Status Cards moved to the top */}
+        {/* Status Cards with fixed alignment */}
         <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6 py-6">
           <Card className="bg-blue-50 border-blue-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Peritagem Pendente</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-blue-700">
+              <p className="text-3xl font-bold text-blue-700 tabular-nums">
                 {statusCounts.peritagemPendente || 0}
               </p>
             </CardContent>
@@ -52,7 +52,7 @@ export default function Index() {
               <CardTitle className="text-lg">Em Execução</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-purple-700">
+              <p className="text-3xl font-bold text-purple-700 tabular-nums">
                 {statusCounts.emExecucao || 0}
               </p>
             </CardContent>
@@ -63,7 +63,7 @@ export default function Index() {
               <CardTitle className="text-lg">Checagem Pendente</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-amber-700">
+              <p className="text-3xl font-bold text-amber-700 tabular-nums">
                 {statusCounts.checagemFinalPendente || 0}
               </p>
             </CardContent>
@@ -74,7 +74,7 @@ export default function Index() {
               <CardTitle className="text-lg">Sucateamento Pendente</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-red-700">
+              <p className="text-3xl font-bold text-red-700 tabular-nums">
                 {statusCounts.sucateadoPendente || 0}
               </p>
             </CardContent>
@@ -85,7 +85,7 @@ export default function Index() {
               <CardTitle className="text-lg">Concluídos</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-green-700">
+              <p className="text-3xl font-bold text-green-700 tabular-nums">
                 {(statusCounts.concluido || 0) + (statusCounts.sucateado || 0)}
               </p>
             </CardContent>
