@@ -1,9 +1,8 @@
-
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ClipboardCheck, Filter, CheckSquare, FileText, Calendar, ArrowRight, SendHorizontal } from "lucide-react";
+import { ClipboardCheck, Filter, CheckSquare, FileText, Calendar, ArrowRight, SendHorizontal, AlertTriangle } from "lucide-react";
 import { useApi } from "@/contexts/ApiContext";
 import SectorGrid from "@/components/sectors/SectorGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,7 +35,7 @@ export default function Index() {
         </section>
 
         {/* Status Cards moved to the top */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6 py-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6 py-6">
           <Card className="bg-blue-50 border-blue-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Peritagem Pendente</CardTitle>
@@ -70,20 +69,31 @@ export default function Index() {
             </CardContent>
           </Card>
           
+          <Card className="bg-red-50 border-red-200">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Sucateamento Pendente</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-red-700">
+                {statusCounts.sucateadoPendente || 0}
+              </p>
+            </CardContent>
+          </Card>
+          
           <Card className="bg-green-50 border-green-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Concluídos</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-green-700">
-                {statusCounts.concluido || 0}
+                {(statusCounts.concluido || 0) + (statusCounts.sucateado || 0)}
               </p>
             </CardContent>
           </Card>
         </section>
 
         {/* Rest of the existing content remains the same */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="module-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center">
@@ -140,6 +150,26 @@ export default function Index() {
             <CardFooter>
               <Button asChild variant="default" className="w-full">
                 <Link to="/checagem">Acessar Qualidade</Link>
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card className="module-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
+                Sucateamento
+              </CardTitle>
+              <CardDescription>
+                Validação e registro de devolução
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-600">
+              <p>Valide os setores marcados como sucateados e registre sua devolução ao cliente.</p>
+            </CardContent>
+            <CardFooter>
+              <Button asChild variant="default" className="w-full bg-red-600 hover:bg-red-700">
+                <Link to="/sucateamento">Acessar Sucateamento</Link>
               </Button>
             </CardFooter>
           </Card>

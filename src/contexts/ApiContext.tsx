@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Sector, Service } from '@/types';
+import { Sector, Service, Cycle } from '@/types';
 import { mockDataService, serviceOptions } from '@/services/mockData';
 import { toast } from 'sonner';
 
@@ -9,6 +9,7 @@ interface ApiContextType {
   loading: boolean;
   error: string | null;
   getSectorById: (id: string) => Sector | undefined;
+  getSectorsByTag: (tagNumber: string) => Sector[];
   createSector: (sector: Omit<Sector, 'id'>) => Promise<Sector>;
   updateSector: (sector: Sector) => Promise<Sector>;
   deleteSector: (id: string) => Promise<void>;
@@ -45,12 +46,18 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return mockDataService.getSectorById(id);
   };
 
+  const getSectorsByTag = (tagNumber: string): Sector[] => {
+    return mockDataService.getSectorsByTag(tagNumber);
+  };
+
   const createSector = async (sector: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
       setLoading(true);
       const newSector = mockDataService.addSector(sector);
       setSectors(prevSectors => [...prevSectors, newSector]);
-      toast.success('Setor cadastrado com sucesso!');
+      toast.success(sector.status === 'sucateadoPendente' 
+        ? 'Setor registrado como sucateado com sucesso!' 
+        : 'Setor cadastrado com sucesso!');
       return newSector;
     } catch (err) {
       const errorMsg = 'Erro ao cadastrar setor';
@@ -69,7 +76,17 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSectors(prevSectors => 
         prevSectors.map(s => s.id === sector.id ? updatedSector : s)
       );
-      toast.success('Setor atualizado com sucesso!');
+      
+      let successMessage = 'Setor atualizado com sucesso!';
+      if (sector.status === 'concluido') {
+        successMessage = 'Setor finalizado com sucesso!';
+      } else if (sector.status === 'sucateado') {
+        successMessage = 'Sucateamento validado com sucesso!';
+      } else if (sector.status === 'sucateadoPendente') {
+        successMessage = 'Setor marcado como sucateado com sucesso!';
+      }
+      
+      toast.success(successMessage);
       return updatedSector;
     } catch (err) {
       const errorMsg = 'Erro ao atualizar setor';
@@ -106,6 +123,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loading,
     error,
     getSectorById,
+    getSectorsByTag,
     createSector,
     updateSector,
     deleteSector,
