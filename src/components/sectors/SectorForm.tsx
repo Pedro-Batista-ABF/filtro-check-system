@@ -1,4 +1,3 @@
-
 import { ChangeEvent, useState } from "react";
 import { Service, Sector } from "@/types";
 import { format } from "date-fns";
@@ -61,6 +60,17 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
     setSelectedServices(
       selectedServices.map(service => 
         service.id === 'substituicao_parafusos' 
+          ? { ...service, quantity } 
+          : service
+      )
+    );
+  };
+
+  const handleTrocaTrechoQuantityChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const quantity = parseInt(e.target.value);
+    setSelectedServices(
+      selectedServices.map(service => 
+        service.id === 'troca_trecho' 
           ? { ...service, quantity } 
           : service
       )
@@ -291,12 +301,27 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
                       />
                     </div>
                   )}
-                </div>
+
+                {service.id === 'troca_trecho' && service.selected && (
+                  <div className="mt-2">
+                    <Label htmlFor="trechoQuantity" className="text-xs">
+                      Quantidade (mm²):
+                    </Label>
+                    <Input
+                      id="trechoQuantity"
+                      type="number"
+                      min="1"
+                      value={service.quantity || ''}
+                      onChange={handleTrocaTrechoQuantityChange}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                )}
               </div>
-            ))
-          ) : (
-            // Exit form showing completed services
-            defaultValues?.services?.filter(s => s.selected).map((service) => (
+            </div>
+          ))
+        ) : (
+          defaultValues?.services?.filter(s => s.selected).map((service) => (
               <div key={service.id} className="flex items-start space-x-2">
                 <Checkbox 
                   id={`completed-${service.id}`}
@@ -314,8 +339,8 @@ export default function SectorForm({ defaultValues, services, onSubmit, formType
                 </div>
               </div>
             ))
-          )}
-        </div>
+        )}
+      </div>
       </div>
 
       {/* Photos */}
