@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Filter, ClipboardCheck, CheckSquare, Home } from "lucide-react";
+import { Filter, ClipboardCheck, CheckSquare, Home, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Header() {
@@ -72,6 +72,16 @@ export default function Header() {
               <span>Qualidade</span>
             </Link>
           </Button>
+          <Button 
+            variant="ghost" 
+            className={`text-white hover:bg-primary/30 ${isActive('/relatorios')}`}
+            asChild
+          >
+            <Link to="/relatorios" className="flex items-center space-x-2">
+              <FileText className="h-4 w-4" />
+              <span>Relatórios</span>
+            </Link>
+          </Button>
         </nav>
       </div>
       
@@ -110,6 +120,14 @@ export default function Header() {
             >
               <CheckSquare className="h-5 w-5" />
               <span>Qualidade</span>
+            </Link>
+            <Link 
+              to="/relatorios" 
+              className={`flex items-center space-x-2 py-2 px-4 rounded ${isActive('/relatorios')}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <FileText className="h-5 w-5" />
+              <span>Relatórios</span>
             </Link>
           </div>
         </nav>
