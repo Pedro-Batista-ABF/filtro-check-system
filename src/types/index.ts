@@ -31,15 +31,18 @@ export interface Sector {
   tagPhotoUrl?: string;
   entryInvoice: string;
   entryDate: string;
-  peritagemDate: string; // New field for peritagem date
+  peritagemDate: string; // Peritagem date
   services: Service[];
   beforePhotos: Photo[];
   entryObservations?: string;
   
+  // Execução field
+  productionCompleted: boolean; // New field for production completion
+  
   // Checagem final fields
   exitDate?: string;
   exitInvoice?: string;
-  checagemDate?: string; // New field for checagem quality date
+  checagemDate?: string; // Checagem quality date
   afterPhotos?: Photo[];
   completedServices?: ServiceType[];
   exitObservations?: string;

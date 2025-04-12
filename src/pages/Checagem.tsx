@@ -12,13 +12,16 @@ export default function Checagem() {
   const [searchTerm, setSearchTerm] = useState("");
   
   // Filter sectors that are pending checagem or already concluded
+  // AND have been marked as completed by production
   const filteredSectors = sectors.filter(sector => {
     const matchesSearch = 
       sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sector.entryInvoice.toLowerCase().includes(searchTerm.toLowerCase());
       
-    return (sector.status === 'checagemFinalPendente' || 
-            sector.status === 'concluido') && matchesSearch;
+    return ((sector.status === 'checagemFinalPendente' || 
+            sector.status === 'concluido') && 
+            sector.productionCompleted && 
+            matchesSearch);
   });
   
   // Sort sectors: checagemFinalPendente first, then most recent

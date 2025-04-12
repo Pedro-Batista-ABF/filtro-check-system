@@ -5,6 +5,8 @@ import { useApi } from "@/contexts/ApiContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import SectorDetails from "@/components/sectors/SectorDetails";
+import ProductionCompletionSwitch from "@/components/sectors/ProductionCompletionSwitch";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ExecucaoDetails() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +45,17 @@ export default function ExecucaoDetails() {
           </Button>
           <h1 className="page-title">Detalhes do Setor em Execução</h1>
         </div>
+        
+        {/* Production Completion Status */}
+        <Card className="shadow-sm border-l-4 border-l-blue-500">
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-medium mb-4">Status de Conclusão da Produção</h2>
+            <p className="text-gray-600 mb-4">
+              Ao marcar como concluído, o setor ficará disponível para a equipe de Qualidade realizar a checagem final.
+            </p>
+            <ProductionCompletionSwitch sector={sector} />
+          </CardContent>
+        </Card>
         
         <SectorDetails sector={sector} />
       </div>

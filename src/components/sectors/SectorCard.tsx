@@ -2,7 +2,7 @@
 import { Sector } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckSquare, ClipboardCheck, AlertTriangle } from "lucide-react";
+import { CheckSquare, ClipboardCheck, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -65,6 +65,23 @@ export default function SectorCard({ sector }: SectorCardProps) {
         <CardDescription>
           Data: {new Date(sector.entryDate).toLocaleDateString('pt-BR')}
         </CardDescription>
+        
+        {/* Production Completion Badge */}
+        {(sector.status === 'emExecucao' || sector.status === 'checagemFinalPendente') && (
+          <div className="mt-2 flex items-center text-xs">
+            {sector.productionCompleted ? (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Produção Concluída
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Produção em Andamento
+              </Badge>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="pb-2 flex-grow">
         <div className="text-sm">

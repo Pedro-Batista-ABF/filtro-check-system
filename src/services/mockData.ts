@@ -32,6 +32,9 @@ const generateMockSector = (id: number): Sector => {
   const entryDate = new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const peritagemDate = new Date(Date.now() - Math.floor(Math.random() * 20) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
+  // Set productionCompleted based on status
+  const productionCompleted = status === 'checagemFinalPendente' || status === 'concluido';
+  
   return {
     id: `sector-${id}`,
     tagNumber: `TAG-${1000 + id}`,
@@ -45,6 +48,7 @@ const generateMockSector = (id: number): Sector => {
       { id: `photo-before-2-${id}`, url: 'https://placehold.co/600x400?text=Before+Photo+2', type: 'before' },
     ],
     entryObservations: 'Observações sobre o estado inicial do setor.',
+    productionCompleted,
     status,
     exitDate: status === 'concluido' ? new Date().toISOString().split('T')[0] : undefined,
     exitInvoice: status === 'concluido' ? `NF-S-${6000 + id}` : undefined,

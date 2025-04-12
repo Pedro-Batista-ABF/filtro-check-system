@@ -35,6 +35,13 @@ export default function Execucao() {
     const statusDiff = statusPriority[a.status] - statusPriority[b.status];
     if (statusDiff !== 0) return statusDiff;
     
+    // If both are in the same status, show incomplete production first
+    if (a.status === 'emExecucao' && b.status === 'emExecucao') {
+      if (a.productionCompleted !== b.productionCompleted) {
+        return a.productionCompleted ? 1 : -1; // Non-completed first
+      }
+    }
+    
     // Then by date (most recent first)
     return new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime();
   });
