@@ -1,10 +1,15 @@
 
 import Header from "./Header";
 
-export default function PageLayout({ children }: { children: React.ReactNode }) {
+interface PageLayoutProps {
+  children: React.ReactNode;
+  HeaderExtra?: React.ReactNode;
+}
+
+export default function PageLayout({ children, HeaderExtra }: PageLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
+      <Header HeaderExtra={HeaderExtra} />
       <main className="flex-1 container mx-auto px-4 py-8">
         {children}
       </main>

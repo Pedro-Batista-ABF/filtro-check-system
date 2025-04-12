@@ -4,7 +4,11 @@ import { Link, useLocation } from "react-router-dom";
 import { Filter, ClipboardCheck, CheckSquare, Home, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function Header() {
+interface HeaderProps {
+  HeaderExtra?: React.ReactNode;
+}
+
+export default function Header({ HeaderExtra }: HeaderProps) {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -21,14 +25,17 @@ export default function Header() {
         </Link>
         
         {/* Mobile menu button */}
-        <button 
-          className="md:hidden bg-primary-foreground/10 rounded p-2"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {HeaderExtra && <div className="hidden md:block">{HeaderExtra}</div>}
+          <button 
+            className="md:hidden bg-primary-foreground/10 rounded p-2"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+        </div>
         
         {/* Desktop menu */}
         <nav className="hidden md:flex space-x-2">
@@ -89,6 +96,7 @@ export default function Header() {
       {isMenuOpen && (
         <nav className="md:hidden bg-primary-foreground/10 p-4">
           <div className="flex flex-col space-y-2">
+            {HeaderExtra && <div className="pb-2 border-b border-white/20 mb-2">{HeaderExtra}</div>}
             <Link 
               to="/" 
               className={`flex items-center space-x-2 py-2 px-4 rounded ${isActive('/')}`}
