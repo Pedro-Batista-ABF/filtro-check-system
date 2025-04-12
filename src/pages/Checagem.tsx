@@ -2,9 +2,9 @@
 import PageLayout from "@/components/layout/PageLayout";
 import { useApi } from "@/contexts/ApiContext";
 import { SectorStatus } from "@/types";
-import { Link } from "react-router-dom";
-import SectorStatusCard from "@/components/sectors/SectorStatusCard";
 import { useNavigate } from "react-router-dom";
+import SectorStatusCard from "@/components/sectors/SectorStatusCard";
+import { useEffect } from "react";
 
 export default function Checagem() {
   const { sectors, loading } = useApi();
@@ -19,6 +19,10 @@ export default function Checagem() {
     sucateado: sectors.filter(s => s.status === 'sucateado').length,
     sucateadoPendente: sectors.filter(s => s.status === 'sucateadoPendente').length
   };
+
+  useEffect(() => {
+    document.title = "Checagem - Gestão de Recuperação";
+  }, []);
 
   return (
     <PageLayout>
