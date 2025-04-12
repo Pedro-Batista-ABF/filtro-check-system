@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Sector, Service, ServiceType, Photo } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';

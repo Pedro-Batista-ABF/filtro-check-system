@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAuthenticated: boolean;
+  loading: boolean; // Adicionando a propriedade loading
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
@@ -19,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Configura o listener de mudança de estado de autenticação
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        setIsLoading(false);
+        setLoading(false);
       }
     );
 
@@ -35,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setIsLoading(false);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -115,13 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     isAuthenticated: !!user,
+    loading,  // Adicionando loading ao objeto value
     login,
     logout,
     registerUser,
     getUserMetadata,
   };
 
-  if (isLoading) {
+  if (loading) {
     return <div>Carregando...</div>;
   }
 
