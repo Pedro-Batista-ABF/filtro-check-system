@@ -11,6 +11,8 @@ interface ApiContextValue {
   addSector: (sector: Omit<Sector, 'id'>) => Promise<string>;
   updateSector: (id: string, updates: Partial<Sector>) => Promise<boolean>;
   getSectorById: (id: string) => Promise<Sector | undefined>;
+  getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
+  getDefaultServices: () => Promise<Service[]>;
   updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
   
@@ -134,6 +136,8 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addSector,
     updateSector,
     getSectorById: api.getSectorById,
+    getSectorsByTag: api.getSectorsByTag,
+    getDefaultServices: api.getDefaultServices,
     updateServicePhotos,
     uploadPhoto: api.uploadPhoto,
     

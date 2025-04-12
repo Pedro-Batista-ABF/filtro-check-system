@@ -1,7 +1,7 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Mail, FileText, History } from "lucide-react";
 import SectorDetails from "@/components/sectors/SectorDetails";

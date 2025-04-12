@@ -1,4 +1,3 @@
-
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -23,13 +22,19 @@ export default function ScrapValidationForm() {
     document.title = "Validação de Sucateamento - Gestão de Recuperação";
     
     const fetchData = async () => {
-      if (id) {
-        const sectorData = await getSectorById(id);
-        setSector(sectorData);
-        const servicesData = await getDefaultServices();
-        setServices(servicesData);
+      try {
+        if (id) {
+          const sectorData = await getSectorById(id);
+          setSector(sectorData);
+          const servicesData = await getDefaultServices();
+          setServices(servicesData);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar dados do setor");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     
     fetchData();

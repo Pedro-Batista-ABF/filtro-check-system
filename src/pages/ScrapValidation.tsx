@@ -1,7 +1,7 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useState } from "react";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Search, Calendar, AlertTriangle } from "lucide-react";

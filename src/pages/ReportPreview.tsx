@@ -1,7 +1,7 @@
 
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Mail } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
