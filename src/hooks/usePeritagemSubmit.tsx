@@ -1,31 +1,33 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Sector, PhotoWithFile } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { addSector, updateSector, uploadPhoto } = useApi();
+  const { addSector, updateSector, uploadPhoto, isAuthenticated } = useApi();
 
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
       setIsSaving(true);
       setErrorMessage(null);
       
-      // Verificar se tem usuário autenticado
-      if (!localStorage.getItem('supabase.auth.token')) {
+      // Verificar se tem usuário autenticado - usando o método correto
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
         toast({
           title: "Não autenticado",
           description: "Você precisa estar logado para realizar esta operação",
           variant: "destructive"
         });
         setIsSaving(false);
+        setErrorMessage("Não autenticado. Faça login para continuar.");
         return false;
       }
       
@@ -39,6 +41,7 @@ export function usePeritagemSubmit() {
           variant: "destructive"
         });
         setIsSaving(false);
+        setErrorMessage("Foto do TAG obrigatória");
         return false;
       }
 
@@ -59,6 +62,7 @@ export function usePeritagemSubmit() {
           variant: "destructive"
         });
         setIsSaving(false);
+        setErrorMessage("Selecione pelo menos um serviço");
         return false;
       }
 
@@ -74,6 +78,7 @@ export function usePeritagemSubmit() {
           variant: "destructive"
         });
         setIsSaving(false);
+        setErrorMessage("Adicione pelo menos uma foto para cada defeito selecionado");
         return false;
       }
 

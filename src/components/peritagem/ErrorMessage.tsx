@@ -2,17 +2,22 @@
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface ErrorMessageProps {
   message: string;
 }
 
 export default function ErrorMessage({ message }: ErrorMessageProps) {
+  const navigate = useNavigate();
+  
   if (!message) return null;
   
   // Criar mensagens mais amigáveis para erros comuns
   let displayMessage = message;
   let hint = "Se o erro persistir, entre em contato com o suporte técnico.";
+  let showLoginButton = false;
   
   if (message.includes("auth/invalid-email")) {
     displayMessage = "E-mail inválido. Verifique o formato do e-mail informado.";
@@ -38,9 +43,10 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
   } else if (message.includes("row level security")) {
     displayMessage = "Erro de permissão: você não tem autorização para realizar esta operação.";
     hint = "Verifique se você está logado corretamente ou se possui as permissões necessárias.";
-  } else if (message.includes("not authenticated")) {
+  } else if (message.includes("not authenticated") || message.includes("Não autenticado")) {
     displayMessage = "Você precisa estar logado para realizar esta operação.";
     hint = "Faça login para continuar.";
+    showLoginButton = true;
   }
   
   return (
@@ -50,6 +56,16 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
       <AlertDescription>
         <p>{displayMessage}</p>
         <p className="text-sm mt-2">{hint}</p>
+        {showLoginButton && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2" 
+            onClick={() => navigate('/login')}
+          >
+            Ir para o login
+          </Button>
+        )}
       </AlertDescription>
     </Alert>
   );
