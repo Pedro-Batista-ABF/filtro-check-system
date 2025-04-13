@@ -134,7 +134,11 @@ export default function SectorForm({
         exitObservations: false,
         scrapObservations: false,
         scrapDate: false,
-        scrapInvoice: false
+        scrapInvoice: false,
+        tagNumber: false,
+        tagPhoto: false,
+        entryInvoice: false,
+        entryDate: false
       };
       
       setFormErrors(errors);
@@ -150,7 +154,11 @@ export default function SectorForm({
         exitObservations: false,
         scrapObservations: isScrap && !scrapObservations,
         scrapDate: isScrap && !scrapDate,
-        scrapInvoice: isScrap && !scrapInvoice
+        scrapInvoice: isScrap && !scrapInvoice,
+        tagNumber: false,
+        tagPhoto: false,
+        entryInvoice: false,
+        entryDate: false
       };
       
       setFormErrors(errors);
@@ -425,6 +433,20 @@ export default function SectorForm({
                 {formErrors.entryDate && (
                   <p className="text-xs text-red-500">Data é obrigatória</p>
                 )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="peritagemDate">
+                  Data da Peritagem (auto-preenchida)
+                </Label>
+                <Input
+                  id="peritagemDate"
+                  value={format(new Date(), "dd/MM/yyyy")}
+                  readOnly
+                  disabled
+                  className="bg-gray-100"
+                />
+                <p className="text-xs text-gray-500">Data preenchida automaticamente</p>
               </div>
             </div>
             
@@ -863,11 +885,4 @@ export default function SectorForm({
             </>
           ) : (
             mode === 'scrap' 
-              ? (isScrap ? 'Confirmar Sucateamento' : 'Salvar') 
-              : (mode === 'quality' && qualityCompleted ? 'Finalizar Setor' : 'Salvar Alterações')
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
+              ? (isScrap ? 'Confirmar Sucateamento'

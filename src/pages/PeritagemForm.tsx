@@ -105,13 +105,16 @@ export default function PeritagemForm() {
     }
   };
 
+  // Definir a data da peritagem como a data atual no formato ISO
+  const currentDate = format(new Date(), 'yyyy-MM-dd');
+
   const defaultSector: Sector = {
     id: '',
     tagNumber: '',
     tagPhotoUrl: '',
     entryInvoice: '',
     entryDate: '',
-    peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+    peritagemDate: currentDate,
     services: services,
     beforePhotos: [],
     productionCompleted: false,
