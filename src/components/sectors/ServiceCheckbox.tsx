@@ -86,7 +86,6 @@ export default function ServiceCheckbox({
           {onPhotoUpload && (
             <div className="space-y-2">
               <PhotoUpload 
-                label="Fotos do Defeito (antes)" 
                 onChange={(files) => onPhotoUpload(service.id, files, "before")}
                 existingPhotos={service.photos?.filter(photo => 
                   typeof photo === 'object' && photo.type === 'before'

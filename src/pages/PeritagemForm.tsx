@@ -1,9 +1,8 @@
 
-import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
-import { Sector, Service, ServiceType } from "@/types";
+import { Sector, Service } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -49,11 +48,9 @@ export default function PeritagemForm() {
 
   if (loading) {
     return (
-      <PageLayout>
-        <div className="text-center py-12">
-          <h1 className="text-xl font-semibold">Carregando...</h1>
-        </div>
-      </PageLayout>
+      <div className="text-center py-12">
+        <h1 className="text-xl font-semibold">Carregando...</h1>
+      </div>
     );
   }
 
@@ -71,33 +68,31 @@ export default function PeritagemForm() {
   };
 
   return (
-    <PageLayout>
-      <div className="space-y-6">
-        <div className="flex items-center space-x-3 pb-2 border-b">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/peritagem')}
-            className="hover:bg-primary/10"
-          >
-            <ArrowLeft className="h-5 w-5 text-primary" />
-          </Button>
-          <h1 className="text-2xl font-bold text-primary">
-            {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
-          </h1>
-        </div>
-        
-        <Card className="border-none shadow-lg">
-          <div className="p-6">
-            <SectorForm 
-              defaultValues={sector}
-              services={services}
-              onSubmit={handleSubmit}
-              formType="entry"
-            />
-          </div>
-        </Card>
+    <div className="space-y-6">
+      <div className="flex items-center space-x-3 pb-2 border-b">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/peritagem')}
+          className="hover:bg-primary/10"
+        >
+          <ArrowLeft className="h-5 w-5 text-primary" />
+        </Button>
+        <h1 className="text-2xl font-bold text-primary">
+          {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
+        </h1>
       </div>
-    </PageLayout>
+      
+      <Card className="border-none shadow-lg">
+        <div className="p-6">
+          <SectorForm 
+            initialValues={sector}
+            services={services}
+            onSubmit={handleSubmit}
+            formType="entry"
+          />
+        </div>
+      </Card>
+    </div>
   );
 }
