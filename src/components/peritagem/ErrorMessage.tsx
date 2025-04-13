@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Camera } from "lucide-react";
+import { AlertCircle, Camera, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,7 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
   let hint = "Se o erro persistir, entre em contato com o suporte técnico.";
   let showLoginButton = false;
   let showTagPhotoHelp = false;
+  let showReloadButton = false;
   
   if (message.includes("auth/invalid-email")) {
     displayMessage = "E-mail inválido. Verifique o formato do e-mail informado.";
@@ -50,10 +51,16 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
     displayMessage = "Você precisa estar logado para realizar esta operação.";
     hint = "Faça login novamente para continuar.";
     showLoginButton = true;
-  } else if (message.includes("foto da TAG") || message.includes("TAG é obrigatória") || message.includes("TAG não encontrada") || message.includes("Foto do TAG")) {
+  } else if (message.includes("foto da TAG") || message.includes("TAG é obrigatória") || message.includes("TAG não encontrada") || message.includes("TAG inválida") || message.includes("Foto do TAG")) {
     displayMessage = "Foto do TAG não encontrada ou inválida.";
     hint = "Certifique-se de fazer o upload da foto do TAG antes de prosseguir. A foto é obrigatória para registro do setor.";
     showTagPhotoHelp = true;
+    showReloadButton = true;
+  } else if (message.includes("blob:") || message.includes("processada")) {
+    displayMessage = "Erro no processamento da foto do TAG.";
+    hint = "A foto do TAG precisa ser processada corretamente. Tente fazer o upload novamente.";
+    showTagPhotoHelp = true;
+    showReloadButton = true;
   }
   
   const handleLoginClick = async () => {
@@ -63,6 +70,11 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
       description: "Por favor, faça login para continuar."
     });
     navigate('/login');
+  };
+  
+  const handleReloadClick = () => {
+    // Recarregar a página para limpar qualquer estado problemático
+    window.location.reload();
   };
   
   return (
@@ -80,24 +92,38 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
               <span className="font-medium">Dicas para foto do TAG:</span>
             </div>
             <ul className="text-sm list-disc pl-5 space-y-1">
-              <li>Verifique se você selecionou uma imagem válida</li>
+              <li>Certifique-se de fazer o upload de uma foto válida do TAG</li>
               <li>A imagem deve estar nos formatos JPG, PNG ou GIF</li>
-              <li>Aguarde o upload completo da foto antes de prosseguir</li>
-              <li>Certifique-se de que a foto mostra claramente o TAG do setor</li>
+              <li>Aguarde o upload completo da foto antes de continuar</li>
+              <li>Se mesmo após fazer o upload corretamente o erro persistir, recarregue a página e tente novamente</li>
+              <li>Verifique se a foto mostra claramente o TAG do setor</li>
             </ul>
           </div>
         )}
         
-        {showLoginButton && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2" 
-            onClick={handleLoginClick}
-          >
-            Ir para o login
-          </Button>
-        )}
+        <div className="flex space-x-2 mt-3">
+          {showLoginButton && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLoginClick}
+            >
+              Ir para o login
+            </Button>
+          )}
+          
+          {showReloadButton && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleReloadClick}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Recarregar página
+            </Button>
+          )}
+        </div>
       </AlertDescription>
     </Alert>
   );

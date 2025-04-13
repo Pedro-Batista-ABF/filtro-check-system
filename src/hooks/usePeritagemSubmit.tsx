@@ -39,16 +39,8 @@ export function usePeritagemSubmit() {
 
       // Verificar se a foto da TAG está no formato blob
       if (data.tagPhotoUrl && data.tagPhotoUrl.startsWith('blob:')) {
-        console.log("Foto da TAG está em formato blob. Tentando processar...");
-        
-        try {
-          // Aqui você pode adicionar lógica para processar a foto
-          // Por enquanto, apenas continuamos com o URL do blob
-          console.log("Usando URL do blob temporariamente:", data.tagPhotoUrl);
-        } catch (photoError) {
-          console.error("Erro ao processar foto da TAG:", photoError);
-          throw new Error("Não foi possível processar a foto da TAG. Tente fazer o upload novamente.");
-        }
+        console.log("Erro: A foto da TAG está em formato blob:", data.tagPhotoUrl);
+        throw new Error("A foto da TAG precisa ser processada corretamente. Faça o upload novamente.");
       }
 
       // Verify services
@@ -92,30 +84,21 @@ export function usePeritagemSubmit() {
                   throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
                 }
               } else if (photo.url) {
-                // Se a foto já tem URL, adicione-a como está (garantindo que não tenha file)
-                processedPhotos.push({
-                  id: photo.id,
-                  url: photo.url,
-                  type: photo.type,
-                  serviceId: photo.serviceId
-                });
+                // Se já está como URL e não é blob, usar diretamente
+                if (!photo.url.startsWith('blob:')) {
+                  processedPhotos.push({
+                    id: photo.id,
+                    url: photo.url,
+                    type: photo.type,
+                    serviceId: photo.serviceId
+                  });
+                } else {
+                  console.error('Erro: Foto de serviço com URL blob:', photo.url);
+                  // Não adicionar fotos com URL blob
+                }
               }
             }
           }
-        }
-      }
-
-      // Garantir que a foto da TAG está processada corretamente
-      let tagPhotoUrl = data.tagPhotoUrl;
-      if (tagPhotoUrl && tagPhotoUrl.startsWith('blob:')) {
-        try {
-          // Tente fazer upload da foto da TAG
-          console.log("Tentando fazer upload da foto da TAG do blob:", tagPhotoUrl);
-          // Aqui poderia ter um código para converter o blob em arquivo e fazer upload
-          // Por enquanto, apenas mantemos o blob
-        } catch (tagPhotoError) {
-          console.error("Erro ao processar foto da TAG:", tagPhotoError);
-          throw new Error("Não foi possível processar a foto da TAG. Tente fazer o upload novamente.");
         }
       }
 
@@ -173,9 +156,10 @@ export function usePeritagemSubmit() {
             });
           } else if (errorMsg.includes("foto da TAG") || 
                      errorMsg.includes("TAG é obrigatória") ||
-                     errorMsg.includes("TAG não encontrada")) {
+                     errorMsg.includes("TAG não encontrada") ||
+                     errorMsg.includes("blob:")) {
             toast.error("Foto da TAG inválida", {
-              description: "A foto da TAG é obrigatória. Verifique se você fez o upload corretamente.",
+              description: "A foto da TAG é obrigatória. Faça o upload novamente.",
               duration: 5000
             });
             // Explicitamente definir o erro para ser mais específico

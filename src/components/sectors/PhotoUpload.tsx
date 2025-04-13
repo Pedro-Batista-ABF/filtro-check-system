@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { ImagePlus, CheckCircle, AlertCircle } from "lucide-react";
 import { Photo } from "@/types";
 import { toast } from "sonner";
+import { useApi } from "@/contexts/ApiContextExtended";
 
 interface PhotoUploadProps {
   id?: string;
@@ -42,6 +43,7 @@ export default function PhotoUpload({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<string[]>(photos || []);
+  const api = useApi();
 
   // Se photos props mudar, atualize o estado local
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function PhotoUpload({
   }, [value, photoUrls]);
 
   // Função que lida com os dois tipos de callbacks
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setIsUploading(true);
       setUploadError(null);
@@ -70,15 +72,65 @@ export default function PhotoUpload({
       try {
         console.log("Arquivos selecionados:", e.target.files.length);
         
-        // Criar URLs temporárias para as imagens selecionadas
-        const newUrls = Array.from(e.target.files).map(file => URL.createObjectURL(file));
-        setPhotoUrls([...photoUrls, ...newUrls]);
+        // Processar arquivos
+        const files = Array.from(e.target.files);
         
-        if (onChange) {
-          onChange(e.target.files);
-        }
-        if (onPhotoUpload) {
-          onPhotoUpload(e, type);
+        // Se for foto da TAG, precisamos processar o upload imediatamente
+        if (type === 'tag') {
+          const file = files[0];
+          try {
+            // Upload do arquivo para o storage e obter URL permanente
+            const uploadedUrl = await api.uploadPhoto(file, 'tag');
+            console.log("TAG foto processada com sucesso:", uploadedUrl);
+            
+            // Adicionar URL processada à lista
+            setPhotoUrls([uploadedUrl]);
+            
+            // Criar um objeto File simulado para passar para os callbacks
+            const processedFileList = new DataTransfer();
+            processedFileList.items.add(file);
+            
+            if (onChange) {
+              onChange(processedFileList.files);
+            }
+            if (onPhotoUpload) {
+              // Forçar a URL processada no evento
+              const modifiedEvent = {
+                ...e,
+                currentTarget: {
+                  ...e.currentTarget,
+                  dataset: {
+                    processedUrl: uploadedUrl
+                  }
+                },
+                target: {
+                  ...e.target,
+                  dataset: {
+                    processedUrl: uploadedUrl
+                  },
+                  files: processedFileList.files
+                }
+              };
+              onPhotoUpload(modifiedEvent, type);
+            }
+          } catch (uploadError) {
+            console.error("Erro ao processar foto da TAG:", uploadError);
+            setUploadError("Erro ao processar foto da TAG. Tente novamente.");
+            toast.error("Erro ao processar foto da TAG");
+            setIsUploading(false);
+            return;
+          }
+        } else {
+          // Para outros tipos de fotos, criar URLs temporárias
+          const newUrls = files.map(file => URL.createObjectURL(file));
+          setPhotoUrls([...photoUrls, ...newUrls]);
+          
+          if (onChange) {
+            onChange(e.target.files);
+          }
+          if (onPhotoUpload) {
+            onPhotoUpload(e, type);
+          }
         }
         
         // Simular conclusão do upload para feedback visual
@@ -156,7 +208,7 @@ export default function PhotoUpload({
                 Clique para adicionar fotos
               </span>
               <span className="text-xs text-gray-500 mt-1">
-                Você pode selecionar múltiplas fotos
+                {type === 'tag' ? 'Adicione a foto do TAG do setor' : 'Você pode selecionar múltiplas fotos'}
               </span>
             </>
           )}
@@ -164,7 +216,7 @@ export default function PhotoUpload({
         <Input
           id={id}
           type="file"
-          multiple
+          multiple={type !== 'tag'}
           accept="image/*"
           className="hidden"
           onChange={handleChange}

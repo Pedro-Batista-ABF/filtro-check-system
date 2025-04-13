@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Service } from "@/types";
 import ServiceCheckbox from "../ServiceCheckbox";
 import PhotoUpload from "../PhotoUpload";
+import { useApi } from "@/contexts/ApiContextExtended";
 
 interface ReviewFormProps {
   tagNumber: string;
@@ -61,9 +62,37 @@ export default function ReviewForm({
   photoRequired
 }: ReviewFormProps) {
   const [tagPhotoUploaded, setTagPhotoUploaded] = useState(!!tagPhotoUrl);
+  const api = useApi();
 
-  const handleTagPhotoSuccess = () => {
-    setTagPhotoUploaded(true);
+  // Efeito para monitorar mudanças na tagPhotoUrl
+  useEffect(() => {
+    if (tagPhotoUrl && !tagPhotoUrl.startsWith('blob:')) {
+      setTagPhotoUploaded(true);
+    }
+  }, [tagPhotoUrl]);
+
+  // Função personalizada para lidar com o upload da foto da TAG
+  const handleDirectTagPhotoUpload = async (files: FileList) => {
+    if (files && files.length > 0) {
+      try {
+        // Fazer upload usando API
+        const file = files[0];
+        const uploadedUrl = await api.uploadPhoto(file, 'tag');
+        
+        // Enviar URL processada para o componente pai
+        // Criar um novo FileList simulado para passar para handleTagPhotoUpload
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        
+        // Chamar o callback original com os arquivos
+        handleTagPhotoUpload(dt.files);
+        
+        // Também definir manualmente o estado para esta URL processada
+        setTagPhotoUploaded(true);
+      } catch (error) {
+        console.error("Erro ao processar foto da TAG:", error);
+      }
+    }
   };
 
   return (
@@ -161,15 +190,19 @@ export default function ReviewForm({
             <PhotoUpload
               id="tagPhoto"
               label="Foto do TAG"
-              onChange={handleTagPhotoUpload}
-              photos={tagPhotoUrl ? [tagPhotoUrl] : []}
+              onChange={handleDirectTagPhotoUpload}
+              photos={tagPhotoUrl && !tagPhotoUrl.startsWith('blob:') ? [tagPhotoUrl] : []}
               required={photoRequired}
               error={formErrors.tagPhoto}
-              onSuccess={handleTagPhotoSuccess}
-              value={tagPhotoUrl}
+              onSuccess={() => setTagPhotoUploaded(true)}
+              value={tagPhotoUrl && !tagPhotoUrl.startsWith('blob:') ? tagPhotoUrl : null}
+              type="tag"
             />
             {formErrors.tagPhoto && (
               <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
+            )}
+            {tagPhotoUrl && tagPhotoUrl.startsWith('blob:') && (
+              <p className="text-xs text-amber-500">A foto da TAG precisa ser processada. Faça o upload novamente.</p>
             )}
           </div>
 

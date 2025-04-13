@@ -1,12 +1,14 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { useApi as useApiOriginal } from './ApiContext';
 import { Sector, Photo } from '@/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Reexportando o hook useApi para manter compatibilidade
 export const useApi = () => {
   const api = useApiOriginal();
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   
   // Wrap das funções para garantir que estão sendo exportadas corretamente
   return {
@@ -19,8 +21,51 @@ export const useApi = () => {
         ...updates
       } as Sector);
     },
+    // Função específica para processar fotos da TAG
+    uploadPhoto: async (file: File, type: 'tag' | 'before' | 'after'): Promise<string> => {
+      try {
+        setIsProcessingPhoto(true);
+        console.log(`Processando upload de foto do tipo ${type}:`, file.name);
+        
+        if (!file) {
+          throw new Error("Arquivo de foto inválido");
+        }
+        
+        // Gerar um nome único para o arquivo
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${type}/${fileName}`;
+        
+        // Upload para o Supabase Storage
+        const { data, error } = await supabase.storage
+          .from('sector_photos')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (error) {
+          console.error("Erro no upload para o Supabase:", error);
+          throw new Error(`Erro no upload da foto: ${error.message}`);
+        }
+        
+        // Obter a URL pública do arquivo
+        const { data: urlData } = supabase.storage
+          .from('sector_photos')
+          .getPublicUrl(filePath);
+        
+        console.log("Upload concluído com sucesso. URL:", urlData.publicUrl);
+        
+        return urlData.publicUrl;
+      } catch (error) {
+        console.error("Erro no processamento de foto:", error);
+        throw error;
+      } finally {
+        setIsProcessingPhoto(false);
+      }
+    },
     // Garantir que addSector está disponível e trata corretamente os erros
-    addSector: async (sectorData: Omit<Sector, 'id'>) => {
+    addSector: async (sectorData: Omit<Sector, 'id'>): Promise<string | Sector> => {
       console.log('ApiContextExtended.addSector chamado com:', sectorData);
       
       try {
@@ -94,27 +139,6 @@ export const useApi = () => {
           toast.error("Erro desconhecido ao cadastrar setor");
         }
         
-        throw error;
-      }
-    },
-    // Adicionar uma nova função para processar fotos da TAG
-    processTagPhoto: async (file: File): Promise<string> => {
-      try {
-        if (!file) {
-          throw new Error("Arquivo de foto inválido");
-        }
-        
-        console.log("Processando foto da TAG:", file.name);
-        
-        // Aqui você pode adicionar lógica para upload para o servidor
-        // Por exemplo, usando supabase storage ou outra solução
-        
-        // Para este exemplo, retornamos uma URL temporária
-        const url = URL.createObjectURL(file);
-        return url;
-      } catch (error) {
-        console.error("Erro ao processar foto da TAG:", error);
-        toast.error("Erro ao processar foto da TAG");
         throw error;
       }
     }
