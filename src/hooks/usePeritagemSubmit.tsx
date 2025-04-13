@@ -84,12 +84,11 @@ export function usePeritagemSubmit() {
                   const photoUrl = await uploadPhoto(photoWithFile.file, 'before');
                   
                   // Criar objeto Photo simples sem a propriedade file
-                  // Correção: Usando service.id em vez de serviceId que não existe no tipo Service
                   const processedPhoto: Photo = {
                     id: photo.id || `${service.id}-${Date.now()}`,
                     url: photoUrl,
                     type: 'before',
-                    serviceId: service.id
+                    serviceId: service.id // Usar service.id para serviceId
                   };
                   
                   processedPhotos.push(processedPhoto);
@@ -99,12 +98,11 @@ export function usePeritagemSubmit() {
                 }
               } else if (photo.url) {
                 // Se a foto já tem URL, adicione-a como está (garantindo que não tenha file)
-                // Correção: Usando service.id em vez de photo.serviceId que pode não ser definido
                 processedPhotos.push({
                   id: photo.id,
                   url: photo.url,
                   type: photo.type,
-                  serviceId: service.id
+                  serviceId: service.id // Usar service.id para serviceId
                 });
               }
             }
@@ -117,7 +115,10 @@ export function usePeritagemSubmit() {
       const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
 
       // Para evitar chaves duplicadas, gerar um número aleatório para cycleCount se for um novo setor
-      const cycleCount = isEditing ? (data.cycleCount || 1) : Math.floor(Math.random() * 1000) + 1;
+      // Usa timestamp + random para garantir que seja único
+      const cycleCount = isEditing 
+        ? (data.cycleCount || 1) 
+        : Math.floor(Date.now() % 10000) + Math.floor(Math.random() * 1000);
 
       // Prepare sector data com dados mínimos necessários
       const sectorData = {
@@ -155,6 +156,12 @@ export function usePeritagemSubmit() {
         } catch (retryError) {
           attempt++;
           console.warn(`Tentativa ${attempt} falhou:`, retryError);
+          
+          // Se o erro for de duplicação, podemos tentar com outro cycleCount
+          if (!isEditing && attempt < maxRetries) {
+            console.log("Tentando com outro cycleCount...");
+            sectorData.cycleCount = Math.floor(Date.now() % 10000) + Math.floor(Math.random() * 1000) + attempt;
+          }
           
           if (attempt >= maxRetries) {
             throw retryError; // Lançar o erro se todas as tentativas falharem
