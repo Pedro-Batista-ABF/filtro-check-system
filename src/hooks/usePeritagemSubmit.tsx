@@ -15,6 +15,43 @@ export function usePeritagemSubmit() {
   const navigate = useNavigate();
   const { addSector, updateSector, uploadPhoto } = useApi();
 
+  const ensureUserProfile = async () => {
+    // Verificar se o usuário está autenticado
+    const { data: session } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      throw new Error("Não autenticado. Faça login para continuar.");
+    }
+    
+    // Verificar se o perfil já existe
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', session.user.id)
+      .maybeSingle();
+    
+    // Se o perfil não existir, crie-o
+    if (!existingProfile) {
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: session.user.id,
+          email: session.user.email || '',
+          full_name: session.user.user_metadata?.full_name || 'Usuário',
+          role: 'producao'
+        });
+      
+      if (insertError) {
+        console.error("Erro ao criar perfil:", insertError);
+        throw new Error("Não foi possível criar o perfil do usuário");
+      }
+      
+      console.log("Perfil de usuário criado com sucesso");
+    }
+    
+    return session.user.id;
+  };
+
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
       setIsSaving(true);
@@ -24,6 +61,18 @@ export function usePeritagemSubmit() {
       console.log("Submission Data:", JSON.stringify(data, null, 2));
       console.log("Is Editing:", isEditing);
       console.log("Sector ID:", sectorId);
+      
+      // Garantir que o perfil do usuário existe antes de continuar
+      try {
+        await ensureUserProfile();
+        console.log("Perfil de usuário verificado com sucesso");
+      } catch (profileError) {
+        console.error("Erro ao verificar/criar perfil:", profileError);
+        toast.error("Erro de autenticação", {
+          description: profileError instanceof Error ? profileError.message : "Erro desconhecido de autenticação"
+        });
+        throw profileError;
+      }
       
       // Verificação de autenticação
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
