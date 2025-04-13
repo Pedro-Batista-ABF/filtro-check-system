@@ -1,9 +1,8 @@
 
-import { Photo, PhotoWithFile } from '@/types';
+import { Photo } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
 import { useApiOriginal } from '@/contexts/ApiContext';
-import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Service for photo operations
@@ -18,16 +17,9 @@ export const usePhotoService = () => {
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      // Verificar autenticação
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado");
-      }
+      // Authentication check removed
 
-      // Primeiro, busca o setor atual
+      // First, busca o setor atual
       const sector = await api.getSectorById(sectorId);
       if (!sector) {
         throw new Error("Setor não encontrado");

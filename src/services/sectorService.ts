@@ -1,9 +1,8 @@
 
-import { Sector, Photo, PhotoWithFile, ServiceType, SectorStatus, CycleOutcome } from '@/types';
+import { Sector, Photo, ServiceType, SectorStatus, CycleOutcome } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
 import { useApiOriginal } from '@/contexts/ApiContext';
-import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Service for sector operations
@@ -13,14 +12,7 @@ export const useSectorService = () => {
 
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
-      // Verificar autenticação primeiro
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado");
-      }
+      // Authentication check removed
 
       // Garantir que os tipos estejam corretos
       const status: SectorStatus = sectorData.status || 'peritagemPendente';
@@ -76,14 +68,7 @@ export const useSectorService = () => {
 
   const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
     try {
-      // Verificar autenticação primeiro
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado");
-      }
+      // Authentication check removed
 
       // Primeiro, busca o setor atual
       const currentSector = await api.getSectorById(id);
