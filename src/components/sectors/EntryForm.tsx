@@ -1,302 +1,306 @@
 
-import { useState, ChangeEvent } from "react";
-import { Sector, Service, ServiceType, Cycle, Photo } from "@/types";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Service, Cycle, Photo, CycleOutcome } from "@/types";
+import ServiceCheckbox from "./ServiceCheckbox";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import ServiceCheckbox from "./ServiceCheckbox";
-import QuantityInput from "./QuantityInput";
-import PhotoUpload from "./PhotoUpload";
+import { Switch } from "@/components/ui/switch";
 
 interface EntryFormProps {
-  tagNumber: string;
-  setTagNumber: (value: string) => void;
-  entryInvoice: string;
-  setEntryInvoice: (value: string) => void;
-  observations: string;
-  setObservations: (value: string) => void;
-  selectedServices: Service[];
-  handleServiceChange: (id: string, checked: boolean) => void;
-  handleServiceQuantityChange: (id: ServiceType, quantity: number) => void;
-  handleServiceObservationChange: (id: ServiceType, observation: string) => void;
-  handleServicePhotoUpload: (id: ServiceType, files: FileList, type: 'before' | 'after') => void;
-  tagPhotoUrl?: string;
-  handleImageUpload: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit' | 'scrap') => void;
-  entryPhotos: Photo[];
-  defaultValues?: Partial<Sector>;
-  today: string;
-  entryDate: Date;
-  setEntryDate: (date: Date) => void;
-  isScrap: boolean;
-  setIsScrap: (value: boolean) => void;
-  scrapObservations: string;
-  setScrapObservations: (value: string) => void;
-  scrapPhotos: Photo[];
-  cycleHistory: Cycle[];
+  onSubmit: (formData: {
+    tagNumber: string;
+    entryInvoice: string;
+    entryDate: string;
+    services: Service[];
+    status: string;
+    cycles: Cycle[];
+  }) => void;
+  initialData?: {
+    tagNumber: string;
+    entryInvoice: string;
+    entryDate: string;
+    services: Service[];
+    status: string;
+    cycles: Cycle[];
+  };
+  services: Service[];
+  loading?: boolean;
+  mode?: "create" | "edit";
 }
 
-export default function EntryForm({
-  tagNumber,
-  setTagNumber,
-  entryInvoice,
-  setEntryInvoice,
-  observations,
-  setObservations,
-  selectedServices,
-  handleServiceChange,
-  handleServiceQuantityChange,
-  handleServiceObservationChange,
-  handleServicePhotoUpload,
-  tagPhotoUrl,
-  handleImageUpload,
-  entryPhotos,
-  defaultValues,
-  today,
-  entryDate,
-  setEntryDate,
-  isScrap,
-  setIsScrap,
-  scrapObservations,
-  setScrapObservations,
-  scrapPhotos,
-  cycleHistory
-}: EntryFormProps) {
-  const [activeTab, setActiveTab] = useState<'services' | 'scrap'>(isScrap ? 'scrap' : 'services');
+export default function EntryForm({ onSubmit, initialData, services, loading, mode = "create" }: EntryFormProps) {
+  const [tagNumber, setTagNumber] = useState(initialData?.tagNumber || "");
+  const [entryInvoice, setEntryInvoice] = useState(initialData?.entryInvoice || "");
+  const [entryDate, setEntryDate] = useState<Date | undefined>(
+    initialData?.entryDate ? new Date(initialData.entryDate) : new Date()
+  );
+  const [isScrap, setIsScrap] = useState(false);
+  const [scrapReason, setScrapReason] = useState("");
+  const [selectedServices, setSelectedServices] = useState<Service[]>(
+    initialData?.services || services.map(service => ({ ...service, selected: false, quantity: 1 }))
+  );
 
-  // Set the active tab when isScrap changes
-  const handleScrapChange = (value: boolean) => {
-    setIsScrap(value);
-    setActiveTab(value ? 'scrap' : 'services');
+  // Form validation
+  const [formErrors, setFormErrors] = useState({
+    tagNumber: false,
+    entryInvoice: false,
+    entryDate: false,
+    services: false,
+    scrapReason: false
+  });
+
+  useEffect(() => {
+    if (initialData?.services) {
+      setSelectedServices(initialData.services);
+    } else if (services) {
+      setSelectedServices(services.map(service => ({ ...service, selected: false, quantity: 1 })));
+    }
+  }, [initialData?.services, services]);
+
+  const handleServiceChange = (id: string, checked: boolean) => {
+    setSelectedServices(prev => 
+      prev.map(service => 
+        service.id === id 
+          ? { ...service, selected: checked } 
+          : service
+      )
+    );
+  };
+
+  const handleQuantityChange = (id: string, quantity: number) => {
+    setSelectedServices(prev => 
+      prev.map(service => 
+        service.id === id 
+          ? { ...service, quantity } 
+          : service
+      )
+    );
+  };
+
+  const handleObservationChange = (id: string, observations: string) => {
+    setSelectedServices(prev => 
+      prev.map(service => 
+        service.id === id 
+          ? { ...service, observations } 
+          : service
+      )
+    );
+  };
+
+  const handlePhotoUpload = (id: string, files: FileList, type: "before" | "after") => {
+    setSelectedServices(prev => 
+      prev.map(service => {
+        if (service.id === id) {
+          const existingPhotos = service.photos || [];
+          const newPhotos: Photo[] = Array.from(files).map((file, index) => ({
+            id: `${id}-${Date.now()}-${index}`,
+            url: URL.createObjectURL(file),
+            file,
+            type
+          }));
+          
+          return { 
+            ...service, 
+            photos: [...existingPhotos, ...newPhotos] 
+          };
+        }
+        return service;
+      })
+    );
+  };
+
+  const validateForm = () => {
+    const errors = {
+      tagNumber: !tagNumber,
+      entryInvoice: !entryInvoice,
+      entryDate: !entryDate,
+      services: !isScrap && !selectedServices.some(s => s.selected),
+      scrapReason: isScrap && !scrapReason
+    };
+    
+    setFormErrors(errors);
+    return !Object.values(errors).some(Boolean);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    let status = "peritagemPendente";
+    let cycles: Cycle[] = [];
+    
+    if (isScrap) {
+      status = "sucateadoPendente";
+      cycles = [{
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        outcome: "scrapped" as CycleOutcome,
+        comments: scrapReason,
+        technicianId: "sistema"
+      }];
+    }
+    
+    onSubmit({
+      tagNumber,
+      entryInvoice,
+      entryDate: entryDate ? format(entryDate, 'yyyy-MM-dd') : '',
+      services: selectedServices,
+      status,
+      cycles: initialData?.cycles || cycles
+    });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-lg font-medium mb-4">Dados do Setor</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="tagNumber">TAG do Setor *</Label>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações do Setor</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="tagNumber" className={formErrors.tagNumber ? "text-red-500" : ""}>
+                Número da TAG*
+              </Label>
               <Input
                 id="tagNumber"
                 value={tagNumber}
                 onChange={(e) => setTagNumber(e.target.value)}
-                className="mt-1"
-                required
+                placeholder="Ex: ABC-123"
+                className={formErrors.tagNumber ? "border-red-500" : ""}
               />
+              {formErrors.tagNumber && (
+                <p className="text-xs text-red-500">TAG é obrigatória</p>
+              )}
             </div>
             
-            <PhotoUpload
-              id="tagPhoto"
-              title="Foto da TAG do Setor *"
-              onPhotoUpload={(e) => handleImageUpload(e, 'tag')}
-              type="tag"
-              photos={tagPhotoUrl ? [tagPhotoUrl] : []}
-            />
-
-            {cycleHistory.length > 0 && (
-              <Card className="mt-4">
-                <CardContent className="p-4">
-                  <div className="flex items-center mb-2">
-                    <span className="text-sm font-medium">
-                      Este setor já foi recuperado anteriormente {cycleHistory.length} vez(es)
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    {cycleHistory.map((cycle, index) => (
-                      <div key={index} className={`p-2 rounded ${cycle.outcome === 'recovered' ? 'bg-green-50' : cycle.outcome === 'scrapped' ? 'bg-red-50' : 'bg-gray-50'}`}>
-                        <div>
-                          <span className="font-medium">Data: </span>
-                          {cycle.entryDate}
-                        </div>
-                        <div>
-                          <span className="font-medium">Resultado: </span>
-                          <span className={cycle.outcome === 'recovered' ? 'text-green-600' : cycle.outcome === 'scrapped' ? 'text-red-600' : 'text-gray-600'}>
-                            {cycle.outcome === 'recovered' ? 'Recuperado' : cycle.outcome === 'scrapped' ? 'Sucateado' : 'Pendente'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium mb-4">Dados da Peritagem</h3>
-          
-          <div>
-            <Label htmlFor="entryInvoice">Número da Nota Fiscal *</Label>
-            <Input
-              id="entryInvoice"
-              value={entryInvoice}
-              onChange={(e) => setEntryInvoice(e.target.value)}
-              className="mt-1"
-              required
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="entryDate">Data de Entrada *</Label>
-            <div className="mt-1">
+            <div className="space-y-2">
+              <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
+                Nota Fiscal de Entrada*
+              </Label>
+              <Input
+                id="entryInvoice"
+                value={entryInvoice}
+                onChange={(e) => setEntryInvoice(e.target.value)}
+                placeholder="Ex: NF-12345"
+                className={formErrors.entryInvoice ? "border-red-500" : ""}
+              />
+              {formErrors.entryInvoice && (
+                <p className="text-xs text-red-500">Nota fiscal é obrigatória</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="entryDate" className={formErrors.entryDate ? "text-red-500" : ""}>
+                Data de Entrada*
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !entryDate && "text-muted-foreground"
+                      !entryDate && "text-muted-foreground",
+                      formErrors.entryDate && "border-red-500"
                     )}
                   >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {entryDate ? format(entryDate, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {entryDate ? format(entryDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
                     mode="single"
                     selected={entryDate}
-                    onSelect={(date) => date && setEntryDate(date)}
+                    onSelect={setEntryDate}
                     initialFocus
-                    locale={ptBR}
-                    className="p-3"
                   />
                 </PopoverContent>
               </Popover>
+              {formErrors.entryDate && (
+                <p className="text-xs text-red-500">Data é obrigatória</p>
+              )}
             </div>
-          </div>
-          
-          <div>
-            <Label>Data da Peritagem</Label>
-            <div className="mt-1 p-2 bg-gray-100 border border-gray-300 rounded-md">
-              {today}
-            </div>
-          </div>
-          
-          <div className="border rounded-md p-4 mt-6">
-            <Label className="flex items-center space-x-2 font-medium mb-4">
-              <Checkbox id="isScrap" checked={isScrap} onCheckedChange={(checked) => handleScrapChange(checked as boolean)} />
-              <span>Setor deve ser sucateado (não há possibilidade de recuperação)</span>
-            </Label>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t pt-6">
-        {activeTab === 'services' ? (
-          <>
-            <h3 className="text-lg font-medium mb-4">Serviços a Executar</h3>
             
-            <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="isScrap" 
+                  checked={isScrap} 
+                  onCheckedChange={setIsScrap} 
+                />
+                <Label htmlFor="isScrap">Marcar como Sucateado</Label>
+              </div>
+              <p className="text-xs text-gray-500">
+                Marque esta opção se o setor já chegou sucateado ou não pode ser recuperado
+              </p>
+            </div>
+          </div>
+          
+          {isScrap && (
+            <div className="space-y-2">
+              <Label htmlFor="scrapReason" className={formErrors.scrapReason ? "text-red-500" : ""}>
+                Motivo do Sucateamento*
+              </Label>
+              <Textarea
+                id="scrapReason"
+                value={scrapReason}
+                onChange={(e) => setScrapReason(e.target.value)}
+                placeholder="Descreva o motivo pelo qual o setor deve ser sucateado"
+                className={formErrors.scrapReason ? "border-red-500" : ""}
+              />
+              {formErrors.scrapReason && (
+                <p className="text-xs text-red-500">O motivo do sucateamento é obrigatório</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {!isScrap && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Serviços Necessários</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {formErrors.services && (
+              <p className="text-xs text-red-500 mb-4">Selecione pelo menos um serviço</p>
+            )}
+            
+            <div className="space-y-2">
               {selectedServices.map((service) => (
                 <ServiceCheckbox
                   key={service.id}
                   service={service}
                   onServiceChange={handleServiceChange}
-                  onQuantityChange={service.id === 'substituicao_parafusos' ? handleServiceQuantityChange : undefined}
-                  onObservationChange={handleServiceObservationChange}
-                  onPhotoUpload={handleServicePhotoUpload}
+                  onQuantityChange={handleQuantityChange}
+                  onObservationChange={handleObservationChange}
+                  onPhotoUpload={handlePhotoUpload}
                 />
               ))}
-              
-              <div>
-                <Label htmlFor="observations">
-                  Observações Gerais (opcional)
-                </Label>
-                <Textarea
-                  id="observations"
-                  value={observations}
-                  onChange={(e) => setObservations(e.target.value)}
-                  placeholder="Observações adicionais sobre o setor..."
-                  className="min-h-[100px] mt-1"
-                />
-              </div>
             </div>
-          </>
-        ) : (
-          <>
-            <h3 className="text-lg font-medium mb-4">Dados do Sucateamento</h3>
-            
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="scrapObservations" className="text-red-600">
-                  Motivo do Sucateamento *
-                </Label>
-                <Textarea
-                  id="scrapObservations"
-                  value={scrapObservations}
-                  onChange={(e) => setScrapObservations(e.target.value)}
-                  placeholder="Descreva detalhadamente o motivo pelo qual o setor deve ser sucateado..."
-                  className="min-h-[100px] mt-1"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label className="text-red-600">
-                  Fotos do Defeito Irreversível *
-                </Label>
-                <p className="text-sm text-gray-500 mb-4">
-                  Tire fotos que evidenciem claramente o dano irreversível do setor
-                </p>
-                <div className="mt-1">
-                  <Label 
-                    htmlFor="scrapPhotos" 
-                    className="cursor-pointer flex flex-col items-center justify-center bg-gray-50 border border-dashed border-red-300 rounded-lg p-8 hover:bg-gray-100 transition-colors"
-                  >
-                    <span className="text-sm font-medium text-gray-700">
-                      Clique para adicionar fotos do defeito
-                    </span>
-                    <span className="text-xs text-gray-500 mt-1">
-                      Você pode selecionar múltiplas fotos
-                    </span>
-                  </Label>
-                  <Input
-                    id="scrapPhotos"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleImageUpload(e, 'scrap')}
-                  />
-                </div>
-                
-                {scrapPhotos.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium mb-3 text-gray-700">
-                      {scrapPhotos.length} foto(s) adicionada(s):
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {scrapPhotos.map((photo, index) => (
-                        <div key={index} className="relative h-28 bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                          <img 
-                            src={photo.url} 
-                            alt={`Foto ${index + 1}`} 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+          </CardContent>
+        </Card>
+      )}
+      
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" type="button" onClick={() => window.history.back()}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Salvando..." : mode === "create" ? "Registrar Setor" : "Atualizar Setor"}
+        </Button>
       </div>
-    </div>
+    </form>
   );
 }
