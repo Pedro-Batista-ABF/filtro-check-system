@@ -89,10 +89,32 @@ export default function PeritagemForm() {
         return;
       }
 
+      // Verificar se todos os serviços selecionados têm pelo menos uma foto de defeito
+      const missingPhotoServices = data.services?.filter(
+        service => service.selected && (!service.photos || !service.photos.some(p => typeof p === 'object' && p.type === 'before'))
+      );
+
+      if (missingPhotoServices && missingPhotoServices.length > 0) {
+        toast({
+          title: "Fotos de defeito obrigatórias",
+          description: `Adicione pelo menos uma foto para cada defeito selecionado: ${missingPhotoServices.map(s => s.name).join(', ')}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
       if (isEditing && sector) {
         await updateSector(sector.id, data);
+        toast({
+          title: "Peritagem atualizada",
+          description: "A peritagem foi atualizada com sucesso."
+        });
       } else {
         await addSector(data as Omit<Sector, 'id'>);
+        toast({
+          title: "Peritagem registrada",
+          description: "Nova peritagem registrada com sucesso."
+        });
       }
       navigate('/peritagem');
     } catch (error) {

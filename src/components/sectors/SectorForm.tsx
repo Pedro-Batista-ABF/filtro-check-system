@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -120,53 +119,24 @@ export default function SectorForm({
     return allPhotosValid;
   };
 
-  const validateForm = () => {
-    if (mode === 'production') {
-      // Para produção, verificamos se pelo menos um serviço foi marcado como concluído
-      return true;
-    } 
-    else if (mode === 'quality') {
-      // Para qualidade, verificamos se data de saída, NF e fotos "depois" foram incluídas
-      const errors = {
-        services: false,
-        photos: !checkServicePhotos(),
-        exitDate: !exitDate,
-        exitInvoice: !exitInvoice,
-        exitObservations: false,
-        scrapObservations: false,
-        scrapDate: false,
-        scrapInvoice: false,
-        tagNumber: false,
-        tagPhoto: false,
-        entryInvoice: false,
-        entryDate: false
-      };
-      
-      setFormErrors(errors);
-      return !Object.values(errors).some(Boolean);
-    }
-    else if (mode === 'scrap') {
-      // Para sucateamento, verificamos se informações de sucateamento foram preenchidas
-      const errors = {
-        services: false,
-        photos: false,
-        exitDate: false,
-        exitInvoice: false,
-        exitObservations: false,
-        scrapObservations: isScrap && !scrapObservations,
-        scrapDate: isScrap && !scrapDate,
-        scrapInvoice: isScrap && !scrapInvoice,
-        tagNumber: false,
-        tagPhoto: false,
-        entryInvoice: false,
-        entryDate: false
-      };
-      
-      setFormErrors(errors);
-      return !Object.values(errors).some(Boolean);
-    }
+  // Verifica se os serviços selecionados têm fotos (para modo peritagem)
+  const checkBeforePhotos = () => {
+    if (mode !== 'review') return true;
     
-    return true;
+    let allValid = true;
+    const selectedServices = services.filter(s => s.selected);
+    
+    // Se não há serviços selecionados, não é necessário validar fotos
+    if (selectedServices.length === 0) return true;
+    
+    selectedServices.forEach(service => {
+      const hasBeforePhoto = service.photos?.some(p => typeof p === 'object' && p.type === 'before');
+      if (!hasBeforePhoto) {
+        allValid = false;
+      }
+    });
+    
+    return allValid;
   };
 
   const handleServiceChange = (id: string, checked: boolean) => {
@@ -269,7 +239,8 @@ export default function SectorForm({
       tagPhoto: photoRequired && !tagPhotoUrl,
       entryInvoice: !entryInvoice,
       entryDate: !entryDate,
-      services: mode === 'review' && !services.some(s => s.selected)
+      services: mode === 'review' && !services.some(s => s.selected),
+      photos: mode === 'review' && !checkBeforePhotos() // Verifica fotos apenas se houver serviços selecionados
     };
     
     setFormErrors(errors);

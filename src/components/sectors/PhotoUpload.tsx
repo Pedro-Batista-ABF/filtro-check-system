@@ -1,9 +1,10 @@
 
-import { ChangeEvent } from "react";
+import { ChangeEvent, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, CheckCircle } from "lucide-react";
 import { Photo } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 interface PhotoUploadProps {
   id?: string;
@@ -16,6 +17,7 @@ interface PhotoUploadProps {
   label?: string;
   onChange?: (files: FileList) => void;
   existingPhotos?: Photo[];
+  required?: boolean;
 }
 
 export default function PhotoUpload({
@@ -27,37 +29,87 @@ export default function PhotoUpload({
   disabled = false,
   label,
   onChange,
-  existingPhotos = []
+  existingPhotos = [],
+  required = false
 }: PhotoUploadProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const { toast } = useToast();
+
   // Função que lida com os dois tipos de callbacks
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
+      setIsUploading(true);
+      
       if (onChange) {
         onChange(e.target.files);
       }
       if (onPhotoUpload) {
         onPhotoUpload(e, type);
       }
+      
+      // Simular conclusão do upload para feedback visual
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadSuccess(true);
+        
+        toast({
+          title: "Upload concluído",
+          description: `${e.target.files?.length} foto(s) adicionada(s) com sucesso.`,
+        });
+        
+        // Reset do estado de sucesso após 3 segundos
+        setTimeout(() => {
+          setUploadSuccess(false);
+        }, 3000);
+      }, 1000);
     }
   };
+
+  const hasPhotos = photos.length > 0 || existingPhotos.length > 0;
 
   return (
     <div className="space-y-4">
       {title && <h3 className="text-lg font-medium">{title}</h3>}
-      {label && <div className="text-sm font-medium text-gray-700 mb-2">{label}</div>}
+      {label && (
+        <div className="text-sm font-medium text-gray-700 mb-2">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </div>
+      )}
       
       <div className="mt-1">
         <Label 
           htmlFor={id} 
-          className={`cursor-pointer flex flex-col items-center justify-center bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 hover:bg-gray-100 transition-colors ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+          className={`cursor-pointer flex flex-col items-center justify-center bg-gray-50 border ${required && !hasPhotos ? 'border-red-500' : 'border-dashed border-gray-300'} rounded-lg p-8 hover:bg-gray-100 transition-colors ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
         >
-          <ImagePlus className="h-10 w-10 mb-3 text-primary" />
-          <span className="text-sm font-medium text-gray-700">
-            Clique para adicionar fotos
-          </span>
-          <span className="text-xs text-gray-500 mt-1">
-            Você pode selecionar múltiplas fotos
-          </span>
+          {isUploading ? (
+            <>
+              <div className="animate-pulse text-primary">
+                <ImagePlus className="h-10 w-10 mb-3" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">
+                Enviando fotos...
+              </span>
+            </>
+          ) : uploadSuccess ? (
+            <>
+              <CheckCircle className="h-10 w-10 mb-3 text-green-500" />
+              <span className="text-sm font-medium text-green-600">
+                Fotos enviadas com sucesso!
+              </span>
+            </>
+          ) : (
+            <>
+              <ImagePlus className="h-10 w-10 mb-3 text-primary" />
+              <span className="text-sm font-medium text-gray-700">
+                Clique para adicionar fotos
+              </span>
+              <span className="text-xs text-gray-500 mt-1">
+                Você pode selecionar múltiplas fotos
+              </span>
+            </>
+          )}
         </Label>
         <Input
           id={id}
@@ -66,7 +118,7 @@ export default function PhotoUpload({
           accept="image/*"
           className="hidden"
           onChange={handleChange}
-          disabled={disabled}
+          disabled={disabled || isUploading}
         />
       </div>
 
