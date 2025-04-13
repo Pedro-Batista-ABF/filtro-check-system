@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
-import { Sector, Service } from "@/types";
+import { Sector } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -12,7 +12,6 @@ export default function CheckagemForm() {
   const navigate = useNavigate();
   const { getSectorById, updateSector } = useApi();
   const [sector, setSector] = useState<Sector | undefined>(undefined);
-  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Buscar dados ao carregar o componente
@@ -21,10 +20,6 @@ export default function CheckagemForm() {
       if (id) {
         const sectorData = await getSectorById(id);
         setSector(sectorData);
-        // Utilizamos os serviços já disponíveis no setor
-        if (sectorData?.services) {
-          setServices(sectorData.services);
-        }
       }
       setLoading(false);
     };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,7 +41,7 @@ export default function SectorForm({
   services: initialServices
 }: SectorFormProps) {
   const [sector, setSector] = useState<Sector>(initialSector);
-  const [services, setServices] = useState<Service[]>(initialServices || initialSector.services);
+  const [services, setServices] = useState<Service[]>(initialServices || initialSector.services || []);
   const [exitDate, setExitDate] = useState<Date | undefined>(
     sector.exitDate ? new Date(sector.exitDate) : undefined
   );
@@ -282,9 +283,40 @@ export default function SectorForm({
     onSubmit(updatedSector);
   };
 
+  // Renderização condicional para o modo 'review' (peritagem)
+  const renderReviewMode = () => {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Serviços Necessários</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {services.map((service) => (
+              <ServiceCheckbox
+                key={service.id}
+                service={service}
+                checked={service.selected}
+                onChecked={handleServiceChange}
+                onQuantityChange={handleQuantityChange}
+                onObservationChange={handleObservationChange}
+                onPhotoUpload={handlePhotoUpload}
+                photoType="before"
+                required={true}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   // Renderização condicional com base no modo
   const renderModeContent = () => {
     switch (mode) {
+      case 'review':
+        return renderReviewMode();
+        
       case 'production':
         return (
           <div className="space-y-6">
