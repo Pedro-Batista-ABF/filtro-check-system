@@ -7,11 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Service } from "@/types";
 import ServiceCheckbox from "../ServiceCheckbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ReviewFormProps {
   tagNumber: string;
@@ -59,6 +60,16 @@ export default function ReviewForm({
   formErrors,
   photoRequired
 }: ReviewFormProps) {
+  // Verifica se algum serviço está sem foto
+  const getServicesWithoutPhotos = () => {
+    return services
+      .filter(service => service.selected && (!service.photos || service.photos.length === 0))
+      .map(service => service.name);
+  };
+
+  const servicesWithoutPhotos = getServicesWithoutPhotos();
+  const hasServicesWithoutPhotos = servicesWithoutPhotos.length > 0;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -192,11 +203,31 @@ export default function ReviewForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {formErrors.services && (
-            <p className="text-xs text-red-500 mb-4">Selecione pelo menos um serviço</p>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>Selecione pelo menos um serviço</AlertDescription>
+            </Alert>
           )}
+          
           {formErrors.photos && (
-            <p className="text-xs text-red-500 mb-4">Cada serviço selecionado deve ter pelo menos uma foto</p>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Cada serviço selecionado deve ter pelo menos uma foto
+                {hasServicesWithoutPhotos && (
+                  <div className="mt-1">
+                    <strong>Serviços sem fotos:</strong>
+                    <ul className="list-disc pl-5 mt-1">
+                      {servicesWithoutPhotos.map((serviceName, index) => (
+                        <li key={index}>{serviceName}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
           )}
+          
           {services.map((service) => (
             <ServiceCheckbox
               key={service.id}
