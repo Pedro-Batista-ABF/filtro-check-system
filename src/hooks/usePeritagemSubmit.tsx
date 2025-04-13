@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector, PhotoWithFile, Photo } from "@/types";
+import { Sector, Photo } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,8 +27,7 @@ export function usePeritagemSubmit() {
       
       // Verificação de autenticação
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log("Session Details:", session);
-      console.log("Session Error:", sessionError);
+      console.log("Session Details:", session?.user?.id ? "Autenticado" : "Não autenticado");
       
       if (sessionError || !session) {
         console.error("Authentication Failed", sessionError);
@@ -38,9 +37,6 @@ export function usePeritagemSubmit() {
         throw new Error("Não autenticado. Faça login para continuar.");
       }
       
-      const user = session.user;
-      console.log("Current User:", user);
-
       // Validate required fields
       if (!data.tagNumber) {
         throw new Error("Número do TAG é obrigatório");
@@ -65,33 +61,35 @@ export function usePeritagemSubmit() {
       for (const service of servicesToProcess) {
         if (service.selected && service.photos && service.photos.length > 0) {
           for (const photo of service.photos) {
-            // Garantir que temos um objeto de foto válido e que ele tem um arquivo
-            if (photo && 'file' in photo && photo.file instanceof File) {
-              try {
-                // Upload da foto e obter URL
-                const photoUrl = await uploadPhoto(photo.file, 'before');
-                
-                // Criar um novo objeto de foto com a URL obtida - sem a propriedade file para evitar recursão
-                const processedPhoto: Photo = {
-                  id: photo.id || `${service.id}-${Date.now()}`,
-                  url: photoUrl,
-                  type: 'before',
-                  serviceId: service.id
-                };
-                
-                processedPhotos.push(processedPhoto);
-              } catch (uploadError) {
-                console.error('Foto Upload Error:', uploadError);
-                throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
+            // Garantir que temos um objeto de foto válido
+            if (photo) {
+              if ('file' in photo && photo.file instanceof File) {
+                try {
+                  // Upload da foto e obter URL
+                  const photoUrl = await uploadPhoto(photo.file, 'before');
+                  
+                  // Criar objeto Photo simples sem a propriedade file
+                  const processedPhoto: Photo = {
+                    id: photo.id || `${service.id}-${Date.now()}`,
+                    url: photoUrl,
+                    type: 'before',
+                    serviceId: service.id
+                  };
+                  
+                  processedPhotos.push(processedPhoto);
+                } catch (uploadError) {
+                  console.error('Foto Upload Error:', uploadError);
+                  throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
+                }
+              } else if (photo.url) {
+                // Se a foto já tem URL, adicione-a como está (garantindo que não tenha file)
+                processedPhotos.push({
+                  id: photo.id,
+                  url: photo.url,
+                  type: photo.type,
+                  serviceId: photo.serviceId
+                });
               }
-            } else if (photo && photo.url) {
-              // Se a foto já tem URL, adicione-a como está (sem a propriedade file)
-              processedPhotos.push({
-                id: photo.id,
-                url: photo.url,
-                type: photo.type,
-                serviceId: photo.serviceId
-              });
             }
           }
         }
@@ -100,16 +98,21 @@ export function usePeritagemSubmit() {
       // Atribuir as fotos processadas ao objeto de setor
       data.beforePhotos = processedPhotos;
 
-      // Prepare sector data with retry logic
-      const sectorData: Omit<Sector, 'id'> = {
-        ...data,
+      // Prepare sector data com dados mínimos necessários
+      const sectorData = {
+        tagNumber: data.tagNumber,
+        tagPhotoUrl: data.tagPhotoUrl,
+        entryInvoice: data.entryInvoice,
+        entryDate: data.entryDate || format(new Date(), 'yyyy-MM-dd'),
+        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+        services: data.services || [],
         status: 'peritagemPendente',
         outcome: 'EmAndamento',
-        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-        cycleCount: 1,
+        beforePhotos: processedPhotos,
+        afterPhotos: [],
         productionCompleted: false,
-        afterPhotos: [] // Garantir que este campo existe para novos setores
-      } as Omit<Sector, 'id'>;
+        cycleCount: 1
+      };
 
       console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));
 

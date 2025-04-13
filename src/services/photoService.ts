@@ -33,67 +33,48 @@ export const usePhotoService = () => {
         throw new Error("Setor não encontrado");
       }
       
-      // Implementar lógica sem recursão para adicionar fotos
-      // Para fotos "before", adiciona à lista de beforePhotos
+      // Criar um novo objeto Photo sem propriedades que possam causar recursão
+      const newPhoto: Photo = {
+        id: `${serviceId}-${Date.now()}`,
+        url: photoUrl,
+        type,
+        serviceId
+      };
+      
+      // Cria cópias simples das listas de fotos para evitar referências circulares
+      let updatedBeforePhotos = [...(sector.beforePhotos || [])];
+      let updatedAfterPhotos = [...(sector.afterPhotos || [])];
+      
+      // Adiciona a nova foto à lista apropriada
       if (type === 'before') {
-        const newPhoto: Photo = {
-          id: `${serviceId}-${Date.now()}`,
-          url: photoUrl,
-          type: 'before',
-          serviceId
-        };
-        
-        const beforePhotos = sector.beforePhotos || [];
-        const updatedBeforePhotos = [...beforePhotos, newPhoto];
-        
-        // Atualizar o setor garantindo que todas as propriedades obrigatórias estejam incluídas
-        await api.updateSector({
-          id: sector.id,
-          tagNumber: sector.tagNumber,
-          entryInvoice: sector.entryInvoice,
-          entryDate: sector.entryDate,
-          peritagemDate: sector.peritagemDate,
-          services: sector.services,
-          status: sector.status,
-          beforePhotos: updatedBeforePhotos,
-          afterPhotos: sector.afterPhotos || [],
-          productionCompleted: sector.productionCompleted || false,
-          outcome: sector.outcome || 'EmAndamento',
-          cycleCount: sector.cycleCount || 1
-        });
+        updatedBeforePhotos = [...updatedBeforePhotos, newPhoto];
+      } else {
+        updatedAfterPhotos = [...updatedAfterPhotos, newPhoto];
       }
-      // Para fotos "after", adiciona à lista de afterPhotos
-      else if (type === 'after') {
-        const newPhoto: Photo = {
-          id: `${serviceId}-${Date.now()}`,
-          url: photoUrl,
-          type: 'after',
-          serviceId
-        };
-        
-        const afterPhotos = sector.afterPhotos || [];
-        const updatedAfterPhotos = [...afterPhotos, newPhoto];
-        
-        // Atualizar o setor garantindo que todas as propriedades obrigatórias estejam incluídas
-        await api.updateSector({
-          id: sector.id,
-          tagNumber: sector.tagNumber,
-          entryInvoice: sector.entryInvoice,
-          entryDate: sector.entryDate,
-          peritagemDate: sector.peritagemDate,
-          services: sector.services,
-          status: sector.status,
-          beforePhotos: sector.beforePhotos || [],
-          afterPhotos: updatedAfterPhotos,
-          productionCompleted: sector.productionCompleted || false,
-          outcome: sector.outcome || 'EmAndamento',
-          cycleCount: sector.cycleCount || 1
-        });
-      }
+      
+      // Prepara um objeto simples para atualização, minimizando propriedades
+      const updateData = {
+        id: sector.id,
+        tagNumber: sector.tagNumber,
+        entryInvoice: sector.entryInvoice,
+        entryDate: sector.entryDate,
+        beforePhotos: updatedBeforePhotos,
+        afterPhotos: updatedAfterPhotos,
+        services: sector.services,
+        status: sector.status,
+        productionCompleted: sector.productionCompleted || false,
+        outcome: sector.outcome || 'EmAndamento',
+        cycleCount: sector.cycleCount || 1,
+        peritagemDate: sector.peritagemDate
+      };
+      
+      // Tenta atualizar o setor com um objeto simplificado
+      await api.updateSector(updateData);
       
       toast.success("Foto adicionada");
       return true;
     } catch (error) {
+      console.error("Erro ao adicionar foto:", error);
       const processedError = handleDatabaseError(error, "Não foi possível adicionar a foto");
       toast.error(processedError.message);
       throw processedError;
