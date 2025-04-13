@@ -47,7 +47,7 @@ export const useSectorService = () => {
         serviceId: photo.serviceId
       }));
 
-      // Garantir que todos os campos obrigatórios estejam presentes e no formato correto
+      // Adicionar campo updated_at para evitar o erro de "modified_at"
       const completeData = {
         tagNumber: sectorData.tagNumber,
         entryInvoice: sectorData.entryInvoice,
@@ -61,13 +61,17 @@ export const useSectorService = () => {
         outcome,
         cycleCount: sectorData.cycleCount || 1,
         tagPhotoUrl: sectorData.tagPhotoUrl,
-        entryObservations: sectorData.entryObservations
+        entryObservations: sectorData.entryObservations,
+        updated_at: new Date().toISOString() // Adicionar campo updated_at
       };
 
+      console.log("Enviando dados para criação de setor:", completeData);
       const newSector = await api.createSector(completeData);
+      console.log("Setor criado com sucesso:", newSector);
       toast.success("Setor cadastrado com sucesso!");
       return newSector.id;
     } catch (error) {
+      console.error("Erro detalhado ao adicionar setor:", error);
       const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
       toast.error(processedError.message);
       throw processedError;
@@ -137,14 +141,18 @@ export const useSectorService = () => {
         productionCompleted: updates.productionCompleted !== undefined ? updates.productionCompleted : currentSector.productionCompleted || false,
         outcome: outcome,
         cycleCount: updates.cycleCount || currentSector.cycleCount || 1,
-        tagPhotoUrl: updates.tagPhotoUrl || currentSector.tagPhotoUrl
+        tagPhotoUrl: updates.tagPhotoUrl || currentSector.tagPhotoUrl,
+        updated_at: new Date().toISOString() // Adicionar campo updated_at
       };
 
+      console.log("Enviando dados para atualização de setor:", safeUpdateData);
       // Atualiza o setor
       await api.updateSector(safeUpdateData);
+      console.log("Setor atualizado com sucesso!");
       toast.success("Setor atualizado com sucesso!");
       return true;
     } catch (error) {
+      console.error("Erro detalhado ao atualizar setor:", error);
       const processedError = handleDatabaseError(error, "Não foi possível atualizar o setor");
       toast.error(processedError.message);
       throw processedError;

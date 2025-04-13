@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, AlertCircle } from "lucide-react";
+import { CalendarIcon, AlertCircle, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Service } from "@/types";
@@ -69,6 +69,32 @@ export default function ReviewForm({
 
   const servicesWithoutPhotos = getServicesWithoutPhotos();
   const hasServicesWithoutPhotos = servicesWithoutPhotos.length > 0;
+  
+  // Função para facilitar o upload de fotos via câmera do dispositivo
+  const handleCameraCapture = (event: React.MouseEvent, serviceId?: string) => {
+    event.preventDefault();
+    
+    // Criar um input de arquivo invisível
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'environment'; // Use câmera traseira em dispositivos móveis
+    
+    // Adicionar event listener
+    fileInput.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        if (serviceId) {
+          handlePhotoUpload(serviceId, target.files, 'before');
+        } else {
+          handleTagPhotoUpload(target.files);
+        }
+      }
+    });
+    
+    // Simular clique no input
+    fileInput.click();
+  };
 
   return (
     <div className="space-y-6">
@@ -162,13 +188,23 @@ export default function ReviewForm({
             <Label htmlFor="tagPhoto" className={formErrors.tagPhoto ? "text-red-500" : ""}>
               Foto do TAG* {photoRequired && <span className="text-red-500">*</span>}
             </Label>
-            <Input
-              id="tagPhoto"
-              type="file"
-              accept="image/*"
-              onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
-              className={formErrors.tagPhoto ? "border-red-500" : ""}
-            />
+            <div className="flex space-x-2">
+              <Input
+                id="tagPhoto"
+                type="file"
+                accept="image/*"
+                onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
+                className={cn("flex-1", formErrors.tagPhoto ? "border-red-500" : "")}
+              />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={(e) => handleCameraCapture(e)}
+                title="Usar câmera"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
             {tagPhotoUrl && (
               <div className="mt-2">
                 <img 
@@ -239,6 +275,7 @@ export default function ReviewForm({
               onPhotoUpload={handlePhotoUpload}
               photoType="before"
               required={photoRequired}
+              onCameraCapture={(e) => handleCameraCapture(e, service.id)}
             />
           ))}
         </CardContent>

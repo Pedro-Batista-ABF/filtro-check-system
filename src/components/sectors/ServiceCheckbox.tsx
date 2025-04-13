@@ -1,226 +1,148 @@
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import QuantityInput from "./QuantityInput";
 import PhotoUpload from "./PhotoUpload";
-import { Service, Photo, ServiceType } from "@/types";
-import { useToast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Camera } from "lucide-react";
+import { Service, Photo } from "@/types";
 
 interface ServiceCheckboxProps {
   service: Service;
   checked?: boolean;
   onChecked?: (id: string, checked: boolean) => void;
-  onServiceChange?: (id: string, checked: boolean) => void;
+  onServiceChange?: (id: string, checked: boolean) => void; // Alias para compatibilidade
   onQuantityChange?: (id: string, quantity: number) => void;
   onObservationChange?: (id: string, observations: string) => void;
   onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
-  disabled?: boolean;
   photoType?: "before" | "after";
-  existingPhotos?: Photo[];
-  onChange?: (files: FileList) => void;
-  completedCheckboxId?: string;
-  isCompleted?: boolean;
-  key?: string;
-  photoRequired?: boolean;
   required?: boolean;
+  onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
-export default function ServiceCheckbox({
+const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
   service,
   checked = false,
   onChecked,
-  onServiceChange,
+  onServiceChange, // Alias para compatibilidade
   onQuantityChange,
   onObservationChange,
   onPhotoUpload,
-  disabled = false,
   photoType = "before",
-  existingPhotos = [],
-  completedCheckboxId,
-  isCompleted,
-  onChange,
-  photoRequired = false,
-  required = false
-}: ServiceCheckboxProps) {
-  const [isSelected, setIsSelected] = useState(checked || service.selected || false);
-  const [quantity, setQuantity] = useState(service.quantity || 1);
-  const [observations, setObservations] = useState(service.observations || "");
-  const [photoError, setPhotoError] = useState(false);
-  const { toast } = useToast();
-
-  // Verificar se existem fotos
-  const hasPhotos = () => {
-    const photos = service.photos || [];
-    return photos.some(photo => typeof photo === 'object' && photo.type === photoType);
-  };
-
-  // Efeito para atualizar estado local quando as props mudam
-  useEffect(() => {
-    setIsSelected(checked || service.selected || false);
-    setQuantity(service.quantity || 1);
-    setObservations(service.observations || "");
-  }, [checked, service]);
-
-  const handleChange = (checked: boolean) => {
-    setIsSelected(checked);
-    setPhotoError(false); // Reseta erro quando altera seleção
-    
+  required = false,
+  onCameraCapture
+}) => {
+  const handleCheckedChange = (checked: boolean) => {
     if (onChecked) {
       onChecked(service.id, checked);
-    }
-    if (onServiceChange) {
+    } else if (onServiceChange) {
       onServiceChange(service.id, checked);
     }
   };
 
-  const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newQuantity = parseInt(e.target.value) || 1;
-    setQuantity(newQuantity);
+  const handleQuantityChange = (quantity: number) => {
     if (onQuantityChange) {
-      onQuantityChange(service.id, newQuantity);
+      onQuantityChange(service.id, quantity);
     }
   };
 
   const handleObservationChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newObservation = e.target.value;
-    setObservations(newObservation);
     if (onObservationChange) {
-      onObservationChange(service.id, newObservation);
+      onObservationChange(service.id, e.target.value);
     }
   };
 
   const handlePhotoUpload = (files: FileList) => {
-    if (files.length > 0) {
-      setPhotoError(false);
-      
-      if (onPhotoUpload) {
-        onPhotoUpload(service.id, files, photoType);
-      }
-      if (onChange) {
-        onChange(files);
-      }
-      
-      toast({
-        title: "Foto adicionada",
-        description: `${files.length} foto(s) adicionada(s) ao serviço ${service.name}`,
-      });
+    if (onPhotoUpload) {
+      onPhotoUpload(service.id, files, photoType || "before");
     }
   };
 
-  // Verificar se o serviço já tem fotos
-  const servicePhotos = service.photos?.filter(photo => 
-    typeof photo === 'object' && photo.type === photoType
-  ) || [];
+  // Filtrar apenas as fotos do tipo atual (before/after)
+  const filteredPhotos = service.photos?.filter(
+    (photo) => typeof photo === "object" && photo.type === photoType
+  ) as Photo[];
 
-  // Só precisa de foto se o serviço estiver selecionado e photoRequired estiver ativo
-  const needsPhoto = isSelected && photoRequired && !hasPhotos();
+  // Verificar se este serviço tem fotos
+  const hasPhotos = filteredPhotos && filteredPhotos.length > 0;
 
   return (
-    <div className={`p-4 rounded-lg border ${isSelected ? 'bg-gray-50 border-primary/50' : 'bg-white'}`}>
-      <div className="flex items-start space-x-3">
-        <Checkbox 
-          id={`service-${service.id}`} 
-          checked={isSelected}
-          onCheckedChange={handleChange}
-          disabled={disabled}
-          // Serviço não é obrigatório
-        />
-        <div className="space-y-1.5 flex-1">
-          <Label 
-            htmlFor={`service-${service.id}`}
-            className="text-base font-medium cursor-pointer"
-          >
-            {service.name}
-          </Label>
-          
-          {isSelected && (
-            <div className="space-y-4 mt-3">
-              <div>
-                <Label 
-                  htmlFor={`quantity-${service.id}`}
-                  className="text-sm font-medium mb-1 block"
-                >
-                  Quantidade
-                </Label>
-                <Input 
-                  id={`quantity-${service.id}`}
-                  type="number" 
-                  value={quantity}
-                  min={1} 
+    <div className="border rounded-md p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-2">
+          <Checkbox
+            id={`service-${service.id}`}
+            checked={checked}
+            onCheckedChange={handleCheckedChange}
+          />
+          <div>
+            <Label
+              htmlFor={`service-${service.id}`}
+              className="font-medium cursor-pointer"
+            >
+              {service.name} {required && checked && <span className="text-red-500">*</span>}
+            </Label>
+            {checked && onQuantityChange && (
+              <div className="mt-2">
+                <QuantityInput
+                  value={service.quantity || 1}
                   onChange={handleQuantityChange}
-                  className="w-full max-w-[120px]"
-                  disabled={disabled}
+                  min={1}
+                  max={100}
                 />
               </div>
-              
-              <div>
-                <Label 
-                  htmlFor={`observations-${service.id}`}
-                  className="text-sm font-medium mb-1 block"
-                >
-                  Observações
-                </Label>
-                <Textarea 
-                  id={`observations-${service.id}`}
-                  value={observations}
-                  onChange={handleObservationChange}
-                  placeholder="Adicione observações sobre este serviço"
-                  className="w-full h-20"
-                  disabled={disabled}
-                />
-              </div>
-              
-              <div>
-                <Label 
-                  htmlFor={`photo-${service.id}`}
-                  className={`text-sm font-medium mb-1 block ${needsPhoto ? 'text-red-500' : ''}`}
-                >
-                  {`Fotos do ${photoType === "before" ? "Defeito" : "Serviço Concluído"}`}
-                  {photoRequired && isSelected && <span className="text-red-500 ml-1">*</span>}
-                </Label>
-                {needsPhoto && (
-                  <div className="flex items-center text-red-500 text-xs mb-2">
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    <span>É necessário adicionar pelo menos uma foto do defeito</span>
-                  </div>
-                )}
-                <Input
-                  id={`photo-${service.id}`}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => e.target.files && handlePhotoUpload(e.target.files)}
-                  className={`w-full ${needsPhoto ? 'border-red-500' : ''}`}
-                  disabled={disabled}
-                />
-                
-                {/* Exibir fotos existentes */}
-                {servicePhotos.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs text-gray-600 mb-2">{servicePhotos.length} foto(s) adicionada(s):</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {servicePhotos.map((photo, idx) => (
-                        typeof photo === 'object' && photo.url && (
-                          <div key={photo.id || idx} className="relative">
-                            <img
-                              src={photo.url}
-                              alt={`Foto ${idx + 1}`}
-                              className="h-20 w-20 object-cover rounded border"
-                            />
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
+
+      {checked && (
+        <div className="mt-4 space-y-4">
+          <div>
+            <Label htmlFor={`observation-${service.id}`}>Observações</Label>
+            <Textarea
+              id={`observation-${service.id}`}
+              value={service.observations || ""}
+              onChange={handleObservationChange}
+              placeholder="Observações sobre este serviço..."
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label className="block mb-2">
+              Fotos {required && <span className="text-red-500">*</span>}
+            </Label>
+            <div className="flex items-center space-x-2">
+              <PhotoUpload
+                onUpload={handlePhotoUpload}
+                photos={filteredPhotos}
+                required={required}
+                className="flex-1"
+              />
+              {onCameraCapture && (
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={onCameraCapture}
+                  title="Usar câmera"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {required && !hasPhotos && (
+              <p className="text-xs text-red-500 mt-1">
+                Foto obrigatória para este serviço
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default ServiceCheckbox;

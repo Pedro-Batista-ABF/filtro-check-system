@@ -18,24 +18,25 @@ export function usePeritagemSubmit() {
 
   // Função para gerar um cycleCount único
   const generateUniqueCycleCount = (attempt: number): number => {
-    // Diferentes estratégias para cada tentativa
+    // Base timestamp
     const timestamp = Date.now();
     
-    // Primeira tentativa: timestamp base + random
+    // Diferentes estratégias para cada tentativa
     if (attempt === 0) {
+      // Primeira tentativa: timestamp base + random
       const random = Math.floor(Math.random() * 10000);
       return timestamp + random;
     } 
-    // Última tentativa: UUID totalmente aleatório convertido para número
     else if (attempt >= 6) {
+      // Últimas tentativas: UUID totalmente aleatório convertido para número
       const randomUUID = crypto.randomUUID();
       const numericPart = parseInt(randomUUID.replace(/[^0-9]/g, '').slice(0, 8));
       const highRandomness = timestamp * 1000 + numericPart + Math.floor(Math.random() * 1000000);
       console.log(`Tentativa final (${attempt + 1}): gerando cycleCount totalmente aleatório: ${highRandomness}`);
       return highRandomness;
     } 
-    // Tentativas intermediárias: aumentando progressivamente a aleatoriedade
     else {
+      // Tentativas intermediárias: aumentando progressivamente a aleatoriedade
       const spacing = Math.pow(10, attempt + 2); // 100, 1000, 10000, etc.
       const randomFactor = Math.floor(Math.random() * spacing);
       return timestamp + randomFactor + (attempt * 10000);
@@ -88,6 +89,10 @@ export function usePeritagemSubmit() {
         throw new Error("Nota fiscal de entrada é obrigatória");
       }
 
+      if (!data.tagPhotoUrl) {
+        throw new Error("Foto do TAG é obrigatória");
+      }
+
       // Verify services
       const selectedServices = data.services?.filter(service => service.selected) || [];
       if (selectedServices.length === 0) {
@@ -96,16 +101,13 @@ export function usePeritagemSubmit() {
 
       // Verificar se todos os serviços selecionados possuem pelo menos uma foto
       if (!isEditing) {
-        let missingPhotos = false;
-        for (const service of selectedServices) {
-          if (!service.photos || service.photos.length === 0) {
-            missingPhotos = true;
-            break;
-          }
-        }
+        const servicesWithoutPhotos = selectedServices.filter(
+          service => !service.photos || service.photos.length === 0
+        );
         
-        if (missingPhotos) {
-          throw new Error("Cada serviço selecionado deve ter pelo menos uma foto");
+        if (servicesWithoutPhotos.length > 0) {
+          const serviceNames = servicesWithoutPhotos.map(s => s.name).join(", ");
+          throw new Error(`Serviços sem fotos: ${serviceNames}. Cada serviço selecionado deve ter pelo menos uma foto.`);
         }
       }
 
@@ -158,7 +160,7 @@ export function usePeritagemSubmit() {
       const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
 
       // Implementa tentativas de adicionar o setor com cycleCount único
-      const maxRetries = 10; // Aumentamos para 10 tentativas
+      const maxRetries = 15; // Aumentamos para 15 tentativas
       let attempt = 0;
       let result;
       let lastError;
@@ -173,7 +175,7 @@ export function usePeritagemSubmit() {
           console.log(`Tentativa ${attempt + 1}/${maxRetries} - cycleCount: ${cycleCount}`);
           console.log(`TAG: ${data.tagNumber}, Time: ${new Date().toISOString()}, Attempt: ${attempt + 1}`);
 
-          // Prepare sector data com dados mínimos necessários
+          // Prepare sector data com dados mínimos necessários e campo updated_at para evitar erro
           const sectorData = {
             tagNumber: data.tagNumber,
             tagPhotoUrl: data.tagPhotoUrl,
@@ -187,7 +189,8 @@ export function usePeritagemSubmit() {
             afterPhotos: [],
             productionCompleted: data.productionCompleted || false,
             cycleCount: cycleCount,
-            entryObservations: data.entryObservations || ''
+            entryObservations: data.entryObservations || '',
+            updated_at: new Date().toISOString() // Adicionado para evitar erro de modified_at
           };
 
           if (isEditing && sectorId) {
@@ -219,8 +222,15 @@ export function usePeritagemSubmit() {
             await new Promise(resolve => setTimeout(resolve, delayMs));
           } else {
             console.warn(`Tentativa ${attempt} falhou com erro diferente de duplicação:`, error);
+            console.error("Erro completo:", error);
             
-            // Se o erro não for de duplicação, desistimos imediatamente
+            // Se o erro for relacionado ao campo modified_at
+            if (error?.message?.includes('modified_at')) {
+              console.log("Detectado erro de modified_at, adicionando campo...");
+              continue; // Tentar novamente com o campo updated_at adicionado
+            }
+            
+            // Se o erro não for de duplicação ou related to modified_at, desistimos imediatamente
             break;
           }
           
