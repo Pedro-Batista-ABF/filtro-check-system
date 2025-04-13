@@ -70,7 +70,8 @@ export function usePeritagemSubmit() {
                   const photoUrl = await uploadPhoto(photo.file, 'before');
                   processedPhotos.push({
                     ...photo,
-                    url: photoUrl
+                    url: photoUrl,
+                    file: photo.file
                   });
                 } catch (uploadError) {
                   console.error('Foto Upload Error:', uploadError);
