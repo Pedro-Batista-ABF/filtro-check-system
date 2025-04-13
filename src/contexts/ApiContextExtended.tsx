@@ -16,11 +16,11 @@ export const useApi = () => {
       return api.updateSector({
         id,
         ...updates
-      });
+      } as Sector); // Force cast to Sector since we know id is provided
     },
     // Garantir que addSector está disponível
     addSector: (sectorData: Omit<Sector, 'id'>) => {
-      return api.createSector(sectorData);
+      return api.createSector(sectorData as any); // Use proper function from ApiContext
     }
   };
 };

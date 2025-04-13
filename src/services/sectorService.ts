@@ -51,12 +51,13 @@ export const useSectorService = () => {
         outcome,
         cycleCount: sectorData.cycleCount || 1,
         tagPhotoUrl: sectorData.tagPhotoUrl,
-        entryObservations: sectorData.entryObservations
+        entryObservations: sectorData.entryObservations || ''
       };
 
-      const newSector = await api.addSector(completeData);
+      const result = await api.addSector(completeData);
       toast.success("Setor cadastrado com sucesso!");
-      return newSector;
+      // Ensure we return a string for the sector ID
+      return typeof result === 'object' && result.id ? result.id : result as string;
     } catch (error) {
       const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
       toast.error(processedError.message);

@@ -3,14 +3,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Sector, Photo, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
-import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
   const api = useApi();
 
@@ -116,7 +114,8 @@ export function usePeritagemSubmit() {
           if (isEditing && sectorId) {
             result = await api.updateSector(sectorId, sectorData);
           } else {
-            result = await api.addSector(sectorData);
+            // Make sure we're calling the correct function
+            result = await api.addSector(sectorData as Omit<Sector, 'id'>);
           }
           // Se chegar aqui, a operação foi bem-sucedida
           break;
