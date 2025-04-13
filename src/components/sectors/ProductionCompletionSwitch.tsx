@@ -21,13 +21,15 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
       // Update the status to checagemFinalPendente if switching to completed
       const newStatus = checked ? 'checagemFinalPendente' : 'emExecucao';
       
-      await updateSector(sector.id, {
+      const success = await updateSector(sector.id, {
         productionCompleted: checked,
         status: newStatus
       });
       
-      setIsCompleted(checked);
-      toast.success(`Setor ${checked ? 'liberado para checagem' : 'retornado para produção'}`);
+      if (success) {
+        setIsCompleted(checked);
+        toast.success(`Setor ${checked ? 'liberado para checagem' : 'retornado para produção'}`);
+      }
     } catch (error) {
       toast.error('Erro ao atualizar status de conclusão');
       // Revert UI state on error

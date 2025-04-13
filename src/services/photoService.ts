@@ -1,14 +1,15 @@
 
-import { Photo } from '@/types';
+import { Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
-import { useApi } from '@/contexts/ApiContextExtended';
+import { useApiOriginal } from '@/contexts/ApiContext';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Service for photo operations
  */
 export const usePhotoService = () => {
-  const api = useApi();
+  const api = useApiOriginal();
 
   const updateServicePhotos = async (
     sectorId: string,
@@ -17,7 +18,16 @@ export const usePhotoService = () => {
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      // First, busca o setor atual
+      // Verificar autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Não autenticado", {
+          description: "Você precisa estar logado para realizar esta operação"
+        });
+        throw new Error("Não autenticado");
+      }
+
+      // Primeiro, busca o setor atual
       const sector = await api.getSectorById(sectorId);
       if (!sector) {
         throw new Error("Setor não encontrado");
@@ -40,11 +50,24 @@ export const usePhotoService = () => {
         ? [...(sector.afterPhotos || []), newPhoto]
         : [...(sector.afterPhotos || [])];
       
-      // Usar o método updateSector atualizado
-      await api.updateSector(sector.id, {
+      // Preparar objeto simplificado para atualização com tipos corretos
+      const updateData = {
+        id: sector.id,
+        tagNumber: sector.tagNumber,
+        entryInvoice: sector.entryInvoice,
+        entryDate: sector.entryDate,
         beforePhotos: updatedBeforePhotos,
-        afterPhotos: updatedAfterPhotos
-      });
+        afterPhotos: updatedAfterPhotos,
+        services: sector.services || [],
+        status: sector.status,
+        productionCompleted: sector.productionCompleted || false,
+        outcome: sector.outcome || 'EmAndamento',
+        cycleCount: sector.cycleCount || 1,
+        peritagemDate: sector.peritagemDate
+      };
+      
+      // Tenta atualizar o setor
+      await api.updateSector(updateData);
       
       toast.success("Foto adicionada");
       return true;

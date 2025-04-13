@@ -1,160 +1,80 @@
 
-import React, { createContext, useContext, useState } from 'react';
-import { useApi as useApiOriginal } from './ApiContext';
-import { Sector, Photo } from '@/types';
+import React, { createContext, useContext } from 'react';
+import { Sector, Service, Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
+import { useApiOriginal } from './ApiContext';
+import { useSectorService } from '@/services/sectorService';
+import { usePhotoService } from '@/services/photoService';
 
-// Reexportando o hook useApi para manter compatibilidade
-export const useApi = () => {
-  const api = useApiOriginal();
-  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+interface ApiContextValue {
+  sectors: Sector[];
+  loading: boolean;
+  addSector: (sector: Omit<Sector, 'id'>) => Promise<string>;
+  updateSector: (id: string, updates: Partial<Sector>) => Promise<boolean>;
+  getSectorById: (id: string) => Promise<Sector | undefined>;
+  getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
+  getDefaultServices: () => Promise<Service[]>;
+  updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
+  uploadPhoto: (file: File, folder?: string) => Promise<string>;
   
-  // Wrap das funções para garantir que estão sendo exportadas corretamente
-  return {
-    ...api,
-    // Garantir que updateSector aceita o formato correto (id, updates)
-    updateSector: (id: string, updates: Partial<Sector>) => {
-      // Combinar id com updates para o formato esperado pelo ApiContext
-      return api.updateSector({
-        id,
-        ...updates
-      } as Sector);
-    },
-    // Função específica para processar fotos da TAG e outras
-    uploadPhoto: async (file: File, type: 'tag' | 'before' | 'after'): Promise<string> => {
-      try {
-        setIsProcessingPhoto(true);
-        console.log(`Processando upload de foto do tipo ${type}:`, file.name);
-        
-        if (!file) {
-          throw new Error("Arquivo de foto inválido");
-        }
+  // Auth properties and methods from AuthContext
+  user: { id: string; email: string; } | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
+  registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
+}
 
-        console.log("Tamanho do arquivo:", Math.round(file.size / 1024), "KB");
-        
-        // Gerar um nome único para o arquivo
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${type}_${Date.now()}.${fileExt}`;
-        const filePath = `${type}/${fileName}`;
-        
-        console.log("Preparando upload para caminho:", filePath);
-        
-        // Upload para o Supabase Storage
-        const { data, error } = await supabase.storage
-          .from('sector_photos')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-        
-        if (error) {
-          console.error("Erro no upload para o Supabase:", error);
-          throw new Error(`Erro no upload da foto: ${error.message}`);
-        }
-        
-        // Obter a URL pública do arquivo
-        const { data: urlData } = supabase.storage
-          .from('sector_photos')
-          .getPublicUrl(filePath);
-        
-        console.log("Upload concluído com sucesso. URL:", urlData.publicUrl);
-        
-        // Garantir que a URL retornada é válida
-        if (!urlData.publicUrl) {
-          throw new Error("URL da foto não foi gerada corretamente");
-        }
-        
-        return urlData.publicUrl;
-      } catch (error) {
-        console.error("Erro no processamento de foto:", error);
-        throw error;
-      } finally {
-        setIsProcessingPhoto(false);
-      }
-    },
-    // Garantir que addSector está disponível e trata corretamente os erros
-    addSector: async (sectorData: Omit<Sector, 'id'>): Promise<string | Sector> => {
-      console.log('ApiContextExtended.addSector chamado com:', sectorData);
-      
-      try {
-        // Verificar se temos o tagNumber e entryInvoice como requisitos mínimos
-        if (!sectorData.tagNumber || !sectorData.entryInvoice) {
-          throw new Error("Número da TAG e Nota Fiscal são obrigatórios");
-        }
-        
-        // Verificar se a tagPhotoUrl é válida e está presente
-        if (!sectorData.tagPhotoUrl) {
-          console.warn("ERRO CRÍTICO: Setor sendo cadastrado sem foto da TAG");
-          throw new Error("Foto da TAG é obrigatória");
-        }
-        
-        // Verificar se a foto da TAG é um blob
-        if (sectorData.tagPhotoUrl.startsWith('blob:')) {
-          console.error("Erro: Tentativa de salvar com foto em formato blob:", sectorData.tagPhotoUrl);
-          throw new Error("A foto da TAG precisa ser processada antes de salvar o setor.");
-        }
-        
-        // Limpar e formatar os dados para evitar erros
-        const cleanedData = {
-          ...sectorData,
-          // Garantir que não há propriedades 'file' nos objetos de fotos
-          beforePhotos: sectorData.beforePhotos?.map(photo => ({
-            id: photo.id,
-            url: photo.url,
-            type: photo.type,
-            serviceId: photo.serviceId
-          })) || [],
-          afterPhotos: sectorData.afterPhotos?.map(photo => ({
-            id: photo.id,
-            url: photo.url,
-            type: photo.type,
-            serviceId: photo.serviceId
-          })) || []
-        };
-        
-        // Validação final antes do envio
-        if (!cleanedData.tagPhotoUrl || cleanedData.tagPhotoUrl === '') {
-          console.error("Erro crítico: tagPhotoUrl está vazio após limpeza");
-          throw new Error("Foto da TAG inválida ou não encontrada");
-        }
-        
-        console.log("Dados limpos para envio:", cleanedData);
-        const result = await api.createSector(cleanedData);
-        return result;
-      } catch (error) {
-        console.error("Erro no ApiContextExtended.addSector:", error);
-        
-        // Melhorar mensagem de erro para problemas específicos
-        if (error instanceof Error) {
-          if (error.message.includes("infinite recursion")) {
-            toast.error("Erro de permissão no banco de dados", {
-              description: "Contacte o administrador do sistema para verificar as políticas de RLS"
-            });
-          } else if (error.message.includes("not authenticated")) {
-            toast.error("Erro de autenticação", {
-              description: "Você precisa estar logado para cadastrar um setor"
-            });
-          } else if (error.message.includes("foto da TAG") || error.message.includes("TAG é obrigatória")) {
-            toast.error("Foto da TAG inválida", {
-              description: "A foto da TAG é obrigatória e não foi encontrada"
-            });
-          } else {
-            toast.error("Erro ao cadastrar setor", {
-              description: error.message
-            });
-          }
-        } else {
-          toast.error("Erro desconhecido ao cadastrar setor");
-        }
-        
-        throw error;
-      }
-    }
+// Create a new context that extends the original ApiContext
+const ApiContextExtended = createContext<ApiContextValue | undefined>(undefined);
+
+// This provider will combine both original API functionality and authentication
+export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Use the original api context
+  const api = useApiOriginal();
+  
+  // Use the auth context for authentication functionality
+  const auth = useAuth();
+
+  // Use our new service modules
+  const sectorService = useSectorService();
+  const photoService = usePhotoService();
+
+  // Simplify user object to match expected API
+  const userInfo = auth.user ? {
+    id: auth.user.id,
+    email: auth.user.email || ''
+  } : null;
+
+  // Combine the original API context with authentication context and our new services
+  const value: ApiContextValue = {
+    sectors: api.sectors,
+    loading: api.loading,
+    addSector: sectorService.addSector,
+    updateSector: sectorService.updateSector,
+    getSectorById: api.getSectorById,
+    getSectorsByTag: api.getSectorsByTag,
+    getDefaultServices: api.getDefaultServices,
+    updateServicePhotos: photoService.updateServicePhotos,
+    uploadPhoto: api.uploadPhoto,
+    
+    // Include auth properties and methods
+    user: userInfo,
+    isAuthenticated: auth.isAuthenticated,
+    login: auth.login,
+    logout: auth.logout,
+    registerUser: auth.registerUser,
   };
+
+  return <ApiContextExtended.Provider value={value}>{children}</ApiContextExtended.Provider>;
 };
 
-// Componente wrapper simples para compatibilidade
-export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <>{children}</>;
+// Create a custom hook for using the extended API context
+export const useApi = (): ApiContextValue => {
+  const context = useContext(ApiContextExtended);
+  if (context === undefined) {
+    throw new Error('useApi must be used within an ApiProvider');
+  }
+  return context;
 };

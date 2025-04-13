@@ -1,146 +1,72 @@
 
-import { ChangeEvent, useState, useEffect } from "react";
+import { ChangeEvent, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ImagePlus, CheckCircle, AlertCircle } from "lucide-react";
+import { ImagePlus, CheckCircle } from "lucide-react";
 import { Photo } from "@/types";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface PhotoUploadProps {
   id?: string;
   title?: string;
+  onPhotoUpload?: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit') => void;
   type?: 'tag' | 'entry' | 'exit';
   photos?: string[];
   disabled?: boolean;
+  // Propriedades adicionais para compatibilidade
   label?: string;
-  onChange?: (url: string) => void;
+  onChange?: (files: FileList) => void;
   existingPhotos?: Photo[];
   required?: boolean;
-  value?: string | null;
-  onSuccess?: (url: string) => void;
-  error?: boolean;
-  onPhotoUpload?: (e: ChangeEvent<HTMLInputElement>, type: "tag" | "entry" | "exit") => void;
 }
 
 export default function PhotoUpload({
   id = "photo-upload",
   title,
+  onPhotoUpload,
   type = 'entry',
   photos = [],
   disabled = false,
   label,
   onChange,
   existingPhotos = [],
-  required = false,
-  value,
-  onSuccess,
-  error = false,
-  onPhotoUpload
+  required = false
 }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [photoUrls, setPhotoUrls] = useState<string[]>(photos || []);
+  const { toast } = useToast();
 
-  // Se photos props mudar, atualize o estado local
-  useEffect(() => {
-    if (photos && photos.length > 0) {
-      setPhotoUrls(photos);
-      setUploadSuccess(true);
-    } else if (value && !photoUrls.includes(value)) {
-      setPhotoUrls([value]);
-      setUploadSuccess(true);
-    }
-  }, [photos, value, photoUrls]);
-
-  const uploadToSupabase = async (file: File): Promise<string> => {
-    try {
-      // Gerar um nome único para o arquivo
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${type}_${Date.now()}.${fileExt}`;
-      const filePath = `${type}/${fileName}`;
-      
-      console.log("Preparando upload para caminho:", filePath);
-      
-      // Upload para o Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('sector_photos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      if (error) {
-        console.error("Erro no upload para o Supabase:", error);
-        throw new Error(`Erro no upload da foto: ${error.message}`);
-      }
-      
-      // Obter a URL pública do arquivo
-      const { data: urlData } = supabase.storage
-        .from('sector_photos')
-        .getPublicUrl(filePath);
-      
-      console.log("Upload concluído com sucesso. URL:", urlData.publicUrl);
-      
-      if (!urlData.publicUrl) {
-        throw new Error("URL da foto não foi gerada corretamente");
-      }
-      
-      return urlData.publicUrl;
-    } catch (error) {
-      console.error("Erro no upload:", error);
-      throw error;
-    }
-  };
-
-  const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    // Se temos um manipulador personalizado, use-o
-    if (onPhotoUpload) {
-      onPhotoUpload(e, type);
-      return;
-    }
-
+  // Função que lida com os dois tipos de callbacks
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setIsUploading(true);
-      setUploadError(null);
       
-      try {
-        const file = e.target.files[0];
-        
-        // Upload direto para o Supabase
-        const uploadedUrl = await uploadToSupabase(file);
-        
-        // Atualizar estado local
-        setPhotoUrls([uploadedUrl]);
-        
-        // Notificar que upload foi concluído
-        if (onChange) {
-          onChange(uploadedUrl);
-        }
-        
-        if (onSuccess) {
-          onSuccess(uploadedUrl);
-        }
-        
+      if (onChange) {
+        onChange(e.target.files);
+      }
+      if (onPhotoUpload) {
+        onPhotoUpload(e, type);
+      }
+      
+      // Simular conclusão do upload para feedback visual
+      setTimeout(() => {
+        setIsUploading(false);
         setUploadSuccess(true);
-        toast.success(`Foto enviada com sucesso`);
+        
+        toast({
+          title: "Upload concluído",
+          description: `${e.target.files?.length} foto(s) adicionada(s) com sucesso.`,
+        });
         
         // Reset do estado de sucesso após 3 segundos
         setTimeout(() => {
           setUploadSuccess(false);
         }, 3000);
-      } catch (error) {
-        setUploadError(error instanceof Error ? error.message : "Erro ao fazer upload da foto");
-        toast.error("Erro ao fazer upload da foto");
-        console.error("Erro no upload da foto:", error);
-      } finally {
-        setIsUploading(false);
-      }
+      }, 1000);
     }
   };
 
-  const hasPhotos = photoUrls.length > 0 || existingPhotos.length > 0;
+  const hasPhotos = photos.length > 0 || existingPhotos.length > 0;
 
   return (
     <div className="space-y-4">
@@ -155,7 +81,7 @@ export default function PhotoUpload({
       <div className="mt-1">
         <Label 
           htmlFor={id} 
-          className={`cursor-pointer flex flex-col items-center justify-center bg-gray-50 border ${(required && !hasPhotos) || error ? 'border-red-500' : 'border-dashed border-gray-300'} rounded-lg p-8 hover:bg-gray-100 transition-colors ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+          className={`cursor-pointer flex flex-col items-center justify-center bg-gray-50 border ${required && !hasPhotos ? 'border-red-500' : 'border-dashed border-gray-300'} rounded-lg p-8 hover:bg-gray-100 transition-colors ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
         >
           {isUploading ? (
             <>
@@ -163,34 +89,24 @@ export default function PhotoUpload({
                 <ImagePlus className="h-10 w-10 mb-3" />
               </div>
               <span className="text-sm font-medium text-gray-700">
-                Enviando foto...
+                Enviando fotos...
               </span>
             </>
           ) : uploadSuccess ? (
             <>
               <CheckCircle className="h-10 w-10 mb-3 text-green-500" />
               <span className="text-sm font-medium text-green-600">
-                Foto enviada com sucesso!
-              </span>
-            </>
-          ) : (error || (required && !hasPhotos)) ? (
-            <>
-              <AlertCircle className="h-10 w-10 mb-3 text-red-500" />
-              <span className="text-sm font-medium text-red-600">
-                Foto obrigatória não encontrada
-              </span>
-              <span className="text-xs text-red-500 mt-1">
-                Clique para adicionar uma foto
+                Fotos enviadas com sucesso!
               </span>
             </>
           ) : (
             <>
               <ImagePlus className="h-10 w-10 mb-3 text-primary" />
               <span className="text-sm font-medium text-gray-700">
-                Clique para adicionar foto
+                Clique para adicionar fotos
               </span>
               <span className="text-xs text-gray-500 mt-1">
-                {type === 'tag' ? 'Adicione a foto do TAG do setor' : 'Selecione uma foto para upload'}
+                Você pode selecionar múltiplas fotos
               </span>
             </>
           )}
@@ -198,28 +114,22 @@ export default function PhotoUpload({
         <Input
           id={id}
           type="file"
-          multiple={false}
+          multiple
           accept="image/*"
           className="hidden"
           onChange={handleChange}
           disabled={disabled || isUploading}
         />
       </div>
-      
-      {uploadError && (
-        <div className="mt-2 text-sm text-red-500">
-          Erro: {uploadError}
-        </div>
-      )}
 
       {/* Exibir fotos existentes como URLs */}
-      {photoUrls.length > 0 && (
+      {photos.length > 0 && (
         <div className="mt-4">
           <p className="text-sm font-medium mb-3 text-gray-700">
-            Foto adicionada:
+            {photos.length} foto(s) adicionada(s):
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {photoUrls.map((photo, index) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {photos.map((photo, index) => (
               <div key={index} className="relative h-28 bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <img 
                   src={photo} 
@@ -236,9 +146,9 @@ export default function PhotoUpload({
       {existingPhotos.length > 0 && (
         <div className="mt-4">
           <p className="text-sm font-medium mb-3 text-gray-700">
-            Fotos existentes:
+            {existingPhotos.length} foto(s) adicionada(s):
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {existingPhotos.map((photo) => (
               <div key={photo.id} className="relative h-28 bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <img 

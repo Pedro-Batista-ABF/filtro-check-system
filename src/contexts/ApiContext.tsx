@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Sector, Service } from '@/types';
 import { supabaseService } from '@/services/supabaseService';
 import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
 
 interface ApiContextType {
   sectors: Sector[];
@@ -15,13 +16,6 @@ interface ApiContextType {
   deleteSector: (id: string) => Promise<void>;
   getDefaultServices: () => Promise<Service[]>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
-  
-  // Mock auth related properties for compatibility
-  user: { id: string; email: string; } | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
-  registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -30,13 +24,16 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Mock auth state
-  const [isAuthenticated] = useState<boolean>(true);
-  const mockUser = { id: 'mock-user-id', email: 'mock@example.com' };
+  const auth = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!auth.isAuthenticated) {
+        setSectors([]);
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
         const data = await supabaseService.getAllSectors();
@@ -52,7 +49,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     fetchData();
-  }, []);
+  }, [auth.isAuthenticated]);
 
   const getSectorById = async (id: string): Promise<Sector | undefined> => {
     try {
@@ -178,19 +175,6 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Mock auth methods
-  const login = async (): Promise<boolean> => {
-    return true;
-  };
-
-  const logout = async (): Promise<void> => {
-    return;
-  };
-
-  const registerUser = async (): Promise<boolean> => {
-    return true;
-  };
-
   const contextValue: ApiContextType = {
     sectors,
     loading,
@@ -201,14 +185,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSector,
     deleteSector,
     getDefaultServices,
-    uploadPhoto,
-    
-    // Mock auth properties and methods
-    user: mockUser,
-    isAuthenticated,
-    login,
-    logout,
-    registerUser
+    uploadPhoto
   };
 
   return (
@@ -218,7 +195,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-// Renomeando para compatibilidade
+// Renamed from useApi to useApiOriginal to avoid name conflict
 export const useApiOriginal = (): ApiContextType => {
   const context = useContext(ApiContext);
   if (context === undefined) {
@@ -226,6 +203,3 @@ export const useApiOriginal = (): ApiContextType => {
   }
   return context;
 };
-
-// Adicionar esse alias para compatibilidade
-export const useApi = useApiOriginal;

@@ -3,14 +3,17 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Sector, Photo, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
-  const api = useApi();
+  const { addSector, updateSector, uploadPhoto } = useApi();
 
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
@@ -22,6 +25,18 @@ export function usePeritagemSubmit() {
       console.log("Is Editing:", isEditing);
       console.log("Sector ID:", sectorId);
       
+      // Verificação de autenticação
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("Session Details:", session?.user?.id ? "Autenticado" : "Não autenticado");
+      
+      if (sessionError || !session) {
+        console.error("Authentication Failed", sessionError);
+        toast.error("Não autenticado", {
+          description: "Você precisa estar logado para realizar esta operação"
+        });
+        throw new Error("Não autenticado. Faça login para continuar.");
+      }
+      
       // Validate required fields
       if (!data.tagNumber) {
         throw new Error("Número do TAG é obrigatório");
@@ -29,18 +44,6 @@ export function usePeritagemSubmit() {
 
       if (!data.entryInvoice) {
         throw new Error("Nota fiscal de entrada é obrigatória");
-      }
-
-      // Verificar foto da tag - deve ser validação rigorosa
-      if (!data.tagPhotoUrl) {
-        console.error("Foto da TAG não encontrada");
-        throw new Error("Foto da TAG é obrigatória");
-      }
-
-      // Verificar se a foto da TAG está no formato blob
-      if (data.tagPhotoUrl && data.tagPhotoUrl.startsWith('blob:')) {
-        console.error("Erro: A foto da TAG está em formato blob:", data.tagPhotoUrl);
-        throw new Error("A foto da TAG precisa ser processada corretamente. Faça o upload novamente.");
       }
 
       // Verify services
@@ -55,7 +58,6 @@ export function usePeritagemSubmit() {
       const processedPhotos: Photo[] = [];
       const servicesToProcess = data.services || [];
       
-      // Esse é um processamento crucial
       for (const service of servicesToProcess) {
         if (service.selected && service.photos && service.photos.length > 0) {
           for (const photo of service.photos) {
@@ -65,9 +67,7 @@ export function usePeritagemSubmit() {
                 try {
                   // Upload da foto e obter URL
                   const photoWithFile = photo as PhotoWithFile;
-                  console.log("Enviando foto para upload:", photoWithFile.file.name);
-                  const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
-                  console.log("URL da foto obtida:", photoUrl);
+                  const photoUrl = await uploadPhoto(photoWithFile.file, 'before');
                   
                   // Criar objeto Photo simples sem a propriedade file
                   const processedPhoto: Photo = {
@@ -79,26 +79,17 @@ export function usePeritagemSubmit() {
                   
                   processedPhotos.push(processedPhoto);
                 } catch (uploadError) {
-                  console.error('Erro no upload de foto:', uploadError);
-                  toast.error("Erro ao fazer upload de foto de serviço");
+                  console.error('Foto Upload Error:', uploadError);
                   throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
                 }
               } else if (photo.url) {
-                // Se já está como URL e não é blob, usar diretamente
-                if (!photo.url.startsWith('blob:')) {
-                  processedPhotos.push({
-                    id: photo.id,
-                    url: photo.url,
-                    type: photo.type,
-                    serviceId: photo.serviceId
-                  });
-                } else {
-                  console.error('Erro: Foto de serviço com URL blob:', photo.url);
-                  toast.error("Foto de serviço precisa ser processada novamente", {
-                    description: "Faça o upload novamente para a foto com URL temporária"
-                  });
-                  throw new Error("Foto de serviço com URL temporária. Faça o upload novamente.");
-                }
+                // Se a foto já tem URL, adicione-a como está (garantindo que não tenha file)
+                processedPhotos.push({
+                  id: photo.id,
+                  url: photo.url,
+                  type: photo.type,
+                  serviceId: photo.serviceId
+                });
               }
             }
           }
@@ -128,65 +119,31 @@ export function usePeritagemSubmit() {
 
       console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));
 
+      // Implementar tentativas com atraso exponencial
+      const maxRetries = 3;
+      let attempt = 0;
       let result;
       
-      try {
-        if (isEditing && sectorId) {
-          result = await api.updateSector(sectorId, sectorData);
-        } else {
-          console.log("Chamando api.addSector com dados processados");
-          // Chamando a função addSector diretamente do api
-          result = await api.addSector(sectorData);
-          console.log("Resposta da API após addSector:", result);
-        }
-      } catch (apiError) {
-        console.error("Erro na chamada da API:", apiError);
-        
-        // Verificar se é um erro conhecido e tratar adequadamente
-        if (apiError instanceof Error) {
-          let errorMsg = apiError.message;
-          
-          if (errorMsg.includes("infinite recursion") || 
-              errorMsg.includes("policy for relation")) {
-            toast.error("Erro de permissão no banco de dados", {
-              description: "Contacte o administrador do sistema para verificar as políticas de RLS",
-              duration: 5000
-            });
-          } else if (errorMsg.includes("not authenticated") || 
-                     errorMsg.includes("Não autenticado")) {
-            toast.error("Erro de autenticação", {
-              description: "Você precisa estar logado para cadastrar um setor",
-              duration: 5000
-            });
-          } else if (errorMsg.includes("foto da TAG") || 
-                     errorMsg.includes("TAG é obrigatória") ||
-                     errorMsg.includes("TAG não encontrada") ||
-                     errorMsg.includes("blob:")) {
-            toast.error("Foto da TAG inválida", {
-              description: "A foto da TAG é obrigatória. Faça o upload novamente.",
-              duration: 5000
-            });
-            // Explicitamente definir o erro para ser mais específico
-            errorMsg = "Foto da TAG não encontrada ou inválida. Faça o upload novamente.";
+      while (attempt < maxRetries) {
+        try {
+          if (isEditing && sectorId) {
+            result = await updateSector(sectorId, sectorData);
           } else {
-            toast.error("Erro ao processar setor", {
-              description: errorMsg,
-              duration: 5000
-            });
+            result = await addSector(sectorData);
+          }
+          // Se chegar aqui, a operação foi bem-sucedida
+          break;
+        } catch (retryError) {
+          attempt++;
+          console.warn(`Tentativa ${attempt} falhou:`, retryError);
+          
+          if (attempt >= maxRetries) {
+            throw retryError; // Lançar o erro se todas as tentativas falharem
           }
           
-          // Atualizar a mensagem de erro para exibição
-          setErrorMessage(errorMsg);
-        } else {
-          const genericError = "Erro desconhecido ao processar o setor";
-          toast.error("Erro desconhecido", {
-            description: genericError,
-            duration: 5000
-          });
-          setErrorMessage(genericError);
+          // Espera exponencial antes da próxima tentativa (500ms, 1000ms, 2000ms)
+          await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
         }
-        
-        throw apiError;
       }
 
       console.log("Submission Result:", result);
@@ -204,16 +161,12 @@ export function usePeritagemSubmit() {
       console.group('Sector Submission Error');
       console.error('Submission Error:', error);
       
-      const errorMsg = error instanceof Error 
+      const errorMessage = error instanceof Error 
         ? error.message 
         : 'Erro desconhecido ao processar o setor';
       
-      setErrorMessage(errorMsg);
-      
-      // Não exibir toast duplicado se já foi exibido no try/catch anterior
-      if (!errorMsg.includes("TAG")) {
-        toast.error("Erro ao salvar", { description: errorMsg });
-      }
+      setErrorMessage(errorMessage);
+      toast.error("Erro ao salvar", { description: errorMessage });
       
       console.groupEnd();
       return false;

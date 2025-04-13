@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
@@ -11,9 +12,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Service } from "@/types";
 import ServiceCheckbox from "../ServiceCheckbox";
-import PhotoUpload from "../PhotoUpload";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 interface ReviewFormProps {
   tagNumber: string;
@@ -23,7 +21,7 @@ interface ReviewFormProps {
   entryDate: Date | undefined;
   setEntryDate: (date: Date | undefined) => void;
   tagPhotoUrl: string | undefined;
-  handleTagPhotoUpload: (url: string) => void;
+  handleTagPhotoUpload: (files: FileList) => void;
   entryObservations: string;
   setEntryObservations: (value: string) => void;
   services: Service[];
@@ -61,26 +59,6 @@ export default function ReviewForm({
   formErrors,
   photoRequired
 }: ReviewFormProps) {
-  const [photoUrl, setPhotoUrl] = useState<string | undefined>(tagPhotoUrl);
-
-  // Se a prop tagPhotoUrl mudar, atualize o estado local
-  useEffect(() => {
-    if (tagPhotoUrl) {
-      setPhotoUrl(tagPhotoUrl);
-    }
-  }, [tagPhotoUrl]);
-
-  // Manipulador simplificado para o upload de foto
-  const handlePhotoUrlChange = (url: string) => {
-    console.log("Foto do TAG carregada com sucesso:", url);
-    setPhotoUrl(url);
-    
-    // Chamar o callback original com a URL processada
-    handleTagPhotoUpload(url);
-    
-    toast.success("Foto do TAG processada com sucesso!");
-  };
-
   return (
     <div className="space-y-6">
       <Card>
@@ -171,18 +149,24 @@ export default function ReviewForm({
           
           <div className="space-y-2">
             <Label htmlFor="tagPhoto" className={formErrors.tagPhoto ? "text-red-500" : ""}>
-              Foto do TAG {photoRequired && <span className="text-red-500">*</span>}
+              Foto do TAG* {photoRequired && <span className="text-red-500">*</span>}
             </Label>
-            <PhotoUpload
+            <Input
               id="tagPhoto"
-              label="Foto do TAG"
-              onChange={handlePhotoUrlChange}
-              photos={photoUrl ? [photoUrl] : []}
-              required={photoRequired}
-              error={formErrors.tagPhoto}
-              value={photoUrl || null}
-              type="tag"
+              type="file"
+              accept="image/*"
+              onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
+              className={formErrors.tagPhoto ? "border-red-500" : ""}
             />
+            {tagPhotoUrl && (
+              <div className="mt-2">
+                <img 
+                  src={tagPhotoUrl} 
+                  alt="TAG do Setor" 
+                  className="w-32 h-32 object-cover rounded-md border"
+                />
+              </div>
+            )}
             {formErrors.tagPhoto && (
               <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
             )}
@@ -210,25 +194,19 @@ export default function ReviewForm({
           {formErrors.services && (
             <p className="text-xs text-red-500 mb-4">Selecione pelo menos um serviço</p>
           )}
-          {services.length > 0 ? (
-            services.map((service) => (
-              <ServiceCheckbox
-                key={service.id}
-                service={service}
-                checked={service.selected}
-                onChecked={handleServiceChange}
-                onQuantityChange={handleQuantityChange}
-                onObservationChange={handleObservationChange}
-                onPhotoUpload={handlePhotoUpload}
-                photoType="before"
-                required={true}
-              />
-            ))
-          ) : (
-            <div className="p-4 border border-yellow-300 bg-yellow-50 rounded-md">
-              <p className="text-yellow-700">Nenhum serviço encontrado. Verifique a conexão com o banco de dados.</p>
-            </div>
-          )}
+          {services.map((service) => (
+            <ServiceCheckbox
+              key={service.id}
+              service={service}
+              checked={service.selected}
+              onChecked={handleServiceChange}
+              onQuantityChange={handleQuantityChange}
+              onObservationChange={handleObservationChange}
+              onPhotoUpload={handlePhotoUpload}
+              photoType="before"
+              required={true}
+            />
+          ))}
         </CardContent>
       </Card>
     </div>

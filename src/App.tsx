@@ -16,7 +16,9 @@ import SectorReport from "@/pages/SectorReport";
 import ScrapValidation from "@/pages/ScrapValidation";
 import ScrapValidationForm from "@/pages/ScrapValidationForm";
 import Login from "@/pages/Login";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ConsolidatedReport from "@/pages/ConsolidatedReport";
+import UserInfo from "@/components/auth/UserInfo";
 import Checagem from "@/pages/Checagem";
 
 const App = () => {
@@ -26,15 +28,17 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         
         <Route path="/" element={
-          <div className="min-h-screen flex flex-col bg-gray-50">
-            <Header HeaderExtra={null} />
-            <main className="flex-1 container mx-auto px-4 py-8">
-              <Outlet />
-            </main>
-            <footer className="bg-gray-100 py-4 text-center text-gray-600 text-sm">
-              <p>© {new Date().getFullYear()} Controle de Recuperação de Setores</p>
-            </footer>
-          </div>
+          <ProtectedRoute>
+            <div className="min-h-screen flex flex-col bg-gray-50">
+              <Header HeaderExtra={<UserInfo />} />
+              <main className="flex-1 container mx-auto px-4 py-8">
+                <Outlet />
+              </main>
+              <footer className="bg-gray-100 py-4 text-center text-gray-600 text-sm">
+                <p>© {new Date().getFullYear()} Controle de Recuperação de Setores</p>
+              </footer>
+            </div>
+          </ProtectedRoute>
         }>
           <Route index element={<Index />} />
           <Route path="peritagem" element={<Peritagem />} />
