@@ -5,6 +5,11 @@ import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { useApiOriginal } from './ApiContext';
 
+// Interface estendida para trabalhar com uploads de fotos
+interface PhotoWithFile extends Photo {
+  file?: File;
+}
+
 interface ApiContextValue {
   sectors: Sector[];
   loading: boolean;
@@ -93,15 +98,15 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (sectorData.beforePhotos && sectorData.beforePhotos.length > 0) {
         const processedPhotos: Photo[] = [];
         
-        for (const photo of sectorData.beforePhotos) {
-          if (photo.file) {
+        for (const photoWithFile of sectorData.beforePhotos as PhotoWithFile[]) {
+          if (photoWithFile.file) {
             try {
               // Fazer upload da imagem e obter URL
-              const photoUrl = await api.uploadPhoto(photo.file, 'before');
+              const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
               processedPhotos.push({
-                ...photo,
+                ...photoWithFile,
                 url: photoUrl,
-                file: undefined // Remover o arquivo após o upload
+                // Não incluiremos a propriedade file no objeto processado
               });
             } catch (uploadError) {
               console.error('Erro ao fazer upload de foto:', uploadError);
@@ -109,7 +114,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           } else {
             // Se já é uma URL válida, apenas adicionar
-            processedPhotos.push(photo);
+            processedPhotos.push(photoWithFile);
           }
         }
         
@@ -146,15 +151,15 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (updates.beforePhotos && updates.beforePhotos.length > 0) {
         const processedPhotos: Photo[] = [];
         
-        for (const photo of updates.beforePhotos) {
-          if (photo.file) {
+        for (const photoWithFile of updates.beforePhotos as PhotoWithFile[]) {
+          if (photoWithFile.file) {
             try {
               // Fazer upload da imagem e obter URL
-              const photoUrl = await api.uploadPhoto(photo.file, 'before');
+              const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
               processedPhotos.push({
-                ...photo,
+                ...photoWithFile,
                 url: photoUrl,
-                file: undefined // Remover o arquivo após o upload
+                // Não incluiremos a propriedade file no objeto processado
               });
             } catch (uploadError) {
               console.error('Erro ao fazer upload de foto:', uploadError);
@@ -162,7 +167,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           } else {
             // Se já é uma URL válida, apenas adicionar
-            processedPhotos.push(photo);
+            processedPhotos.push(photoWithFile);
           }
         }
         

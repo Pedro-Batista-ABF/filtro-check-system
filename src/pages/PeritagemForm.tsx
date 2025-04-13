@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
@@ -152,40 +151,42 @@ export default function PeritagemForm() {
         }
       }
 
-      if (isEditing && sector) {
-        await updateSector(sector.id, data);
-        toast({
-          title: "Peritagem atualizada",
-          description: "A peritagem foi atualizada com sucesso."
-        });
-      } else {
-        await addSector(data as Omit<Sector, 'id'>);
-        toast({
-          title: "Peritagem registrada",
-          description: "Nova peritagem registrada com sucesso."
-        });
-      }
-      navigate('/peritagem');
-    } catch (error) {
-      console.error('Error saving sector:', error);
-      
-      // Mensagem de erro mais específica
-      let errorMsg = "Ocorreu um erro ao salvar os dados do setor";
-      
-      if (error instanceof Error) {
-        errorMsg = error.message;
-        setErrorMessage(errorMsg);
-      }
-      
+    console.log("Dados do setor antes de salvar:", data);
+
+    if (isEditing && sector) {
+      await updateSector(sector.id, data);
       toast({
-        title: "Erro ao salvar",
-        description: errorMsg,
-        variant: "destructive"
+        title: "Peritagem atualizada",
+        description: "A peritagem foi atualizada com sucesso."
       });
-    } finally {
-      setIsSaving(false);
+    } else {
+      await addSector(data as Omit<Sector, 'id'>);
+      toast({
+        title: "Peritagem registrada",
+        description: "Nova peritagem registrada com sucesso."
+      });
     }
-  };
+    navigate('/peritagem');
+  } catch (error) {
+    console.error('Error saving sector:', error);
+    
+    // Mensagem de erro mais específica
+    let errorMsg = "Ocorreu um erro ao salvar os dados do setor";
+    
+    if (error instanceof Error) {
+      errorMsg = error.message;
+      setErrorMessage(errorMsg);
+    }
+    
+    toast({
+      title: "Erro ao salvar",
+      description: errorMsg,
+      variant: "destructive"
+    });
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // Definir a data da peritagem como a data atual no formato ISO
   const currentDate = format(new Date(), 'yyyy-MM-dd');
