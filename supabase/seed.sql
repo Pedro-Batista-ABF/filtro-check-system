@@ -9,24 +9,33 @@ BEGIN
         -- Criar o bucket se não existir
         INSERT INTO storage.buckets (id, name, public)
         VALUES ('sector_photos', 'Fotos dos Setores', true);
-        
-        -- Criar políticas de acesso público para o bucket
-        -- Permitir leitura a todos
-        INSERT INTO storage.policies (name, definition, bucket_id)
-        VALUES (
-            'Public Read Access',
-            '(bucket_id = ''sector_photos''::text)',
-            'sector_photos'
-        );
-        
-        -- Permitir inserção a todos
-        INSERT INTO storage.policies (name, definition, bucket_id, operation)
-        VALUES (
-            'Public Insert Access',
-            '(bucket_id = ''sector_photos''::text)',
-            'sector_photos',
-            'INSERT'
-        );
     END IF;
 END
 $$;
+
+-- Adicionar políticas de acesso público diretamente na tabela objects para o bucket sector_photos
+-- Estas substituem as políticas antigas que podiam usar tables diferentes dependendo da versão do Supabase
+
+-- Permitir SELECT a todos
+DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
+CREATE POLICY "Allow public read access" 
+    ON storage.objects FOR SELECT 
+    USING (bucket_id = 'sector_photos');
+
+-- Permitir INSERT a todos
+DROP POLICY IF EXISTS "Allow public insert access" ON storage.objects;
+CREATE POLICY "Allow public insert access" 
+    ON storage.objects FOR INSERT 
+    WITH CHECK (bucket_id = 'sector_photos');
+
+-- Permitir UPDATE a todos 
+DROP POLICY IF EXISTS "Allow public update access" ON storage.objects;
+CREATE POLICY "Allow public update access" 
+    ON storage.objects FOR UPDATE
+    USING (bucket_id = 'sector_photos');
+
+-- Permitir DELETE a todos
+DROP POLICY IF EXISTS "Allow public delete access" ON storage.objects;
+CREATE POLICY "Allow public delete access" 
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'sector_photos');

@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-// Import our new component files
+// Import our component files
 import ReviewForm from "./forms/ReviewForm";
 import ProductionForm from "./forms/ProductionForm";
 import QualityForm from "./forms/QualityForm";
@@ -61,8 +62,6 @@ export default function SectorForm({
   );
   const [scrapInvoice, setScrapInvoice] = useState(sector.scrapReturnInvoice || "");
 
-  const { toast } = useToast();
-
   // Form validation
   const [formErrors, setFormErrors] = useState({
     services: false,
@@ -79,12 +78,13 @@ export default function SectorForm({
     entryDate: false
   });
 
-  // Manipulador para upload de foto do TAG
-  const handleTagPhotoUpload = (files: FileList) => {
-    if (files.length > 0) {
-      const file = files[0];
-      const url = URL.createObjectURL(file);
+  // Manipulador para upload de foto do TAG (nova versão simplificada)
+  const handleTagPhotoUpload = (url: string) => {
+    console.log("Recebendo URL da foto do TAG:", url);
+    if (url && !url.startsWith('blob:')) {
       setTagPhotoUrl(url);
+    } else {
+      console.warn("URL de foto inválida recebida:", url);
     }
   };
 
@@ -219,7 +219,7 @@ export default function SectorForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar campos obrigatórios
+    // Verificar se há valores obrigatórios faltando
     const errors = {
       ...formErrors,
       tagNumber: !tagNumber,
@@ -233,11 +233,18 @@ export default function SectorForm({
     setFormErrors(errors);
     
     if (Object.values(errors).some(Boolean)) {
-      toast({
-        title: "Formulário Incompleto",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive"
+      toast.error("Formulário Incompleto", {
+        description: "Por favor, preencha todos os campos obrigatórios."
       });
+      return;
+    }
+    
+    // Validação específica para a foto do TAG
+    if (photoRequired && (!tagPhotoUrl || tagPhotoUrl.startsWith('blob:'))) {
+      toast.error("Foto do TAG inválida", {
+        description: "É necessário fazer o upload da foto do TAG."
+      });
+      setFormErrors(prev => ({ ...prev, tagPhoto: true }));
       return;
     }
     
