@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -83,6 +84,7 @@ export function usePeritagemSubmit() {
                   const photoUrl = await uploadPhoto(photoWithFile.file, 'before');
                   
                   // Criar objeto Photo simples sem a propriedade file
+                  // Correção: Usando service.id em vez de serviceId que não existe no tipo Service
                   const processedPhoto: Photo = {
                     id: photo.id || `${service.id}-${Date.now()}`,
                     url: photoUrl,
@@ -97,11 +99,12 @@ export function usePeritagemSubmit() {
                 }
               } else if (photo.url) {
                 // Se a foto já tem URL, adicione-a como está (garantindo que não tenha file)
+                // Correção: Usando service.id em vez de photo.serviceId que pode não ser definido
                 processedPhotos.push({
                   id: photo.id,
                   url: photo.url,
                   type: photo.type,
-                  serviceId: service.serviceId
+                  serviceId: service.id
                 });
               }
             }
@@ -112,6 +115,9 @@ export function usePeritagemSubmit() {
       // Garantir que status e outcome sejam valores válidos nos tipos corretos
       const status: SectorStatus = (data.status as SectorStatus) || 'peritagemPendente';
       const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
+
+      // Para evitar chaves duplicadas, gerar um número aleatório para cycleCount se for um novo setor
+      const cycleCount = isEditing ? (data.cycleCount || 1) : Math.floor(Math.random() * 1000) + 1;
 
       // Prepare sector data com dados mínimos necessários
       const sectorData = {
@@ -126,7 +132,7 @@ export function usePeritagemSubmit() {
         beforePhotos: processedPhotos,
         afterPhotos: [],
         productionCompleted: data.productionCompleted || false,
-        cycleCount: data.cycleCount || 1,
+        cycleCount: cycleCount,
         entryObservations: data.entryObservations || ''
       };
 
