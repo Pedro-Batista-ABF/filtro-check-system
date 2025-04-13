@@ -16,15 +16,23 @@ export function usePeritagemSubmit() {
   const navigate = useNavigate();
   const { addSector, updateSector, uploadPhoto } = useApi();
 
+  // Função para gerar um cycleCount único e aleatório
+  const generateUniqueCycleCount = () => {
+    // Timestamp atual (últimos 5 dígitos) + número aleatório (3 dígitos)
+    return Math.floor(Date.now() % 100000) + Math.floor(Math.random() * 1000);
+  };
+
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
       setIsSaving(true);
       setErrorMessage(null);
       
-      console.group('Sector Submission Debug');
-      console.log("Submission Data:", JSON.stringify(data, null, 2));
-      console.log("Is Editing:", isEditing);
-      console.log("Sector ID:", sectorId);
+      console.log("Submitting sector data:", {
+        isEditing,
+        sectorId,
+        tagNumber: data.tagNumber,
+        services: data.services?.filter(s => s.selected).length
+      });
       
       // Garantir que o perfil do usuário existe antes de continuar
       try {
@@ -114,66 +122,64 @@ export function usePeritagemSubmit() {
       const status: SectorStatus = (data.status as SectorStatus) || 'peritagemPendente';
       const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
 
-      // Para evitar chaves duplicadas, gerar um número aleatório para cycleCount se for um novo setor
-      // Usa timestamp + random para garantir que seja único
-      const cycleCount = isEditing 
-        ? (data.cycleCount || 1) 
-        : Math.floor(Date.now() % 10000) + Math.floor(Math.random() * 1000);
-
-      // Prepare sector data com dados mínimos necessários
-      const sectorData = {
-        tagNumber: data.tagNumber,
-        tagPhotoUrl: data.tagPhotoUrl,
-        entryInvoice: data.entryInvoice,
-        entryDate: data.entryDate || format(new Date(), 'yyyy-MM-dd'),
-        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-        services: data.services || [],
-        status: status,
-        outcome: outcome,
-        beforePhotos: processedPhotos,
-        afterPhotos: [],
-        productionCompleted: data.productionCompleted || false,
-        cycleCount: cycleCount,
-        entryObservations: data.entryObservations || ''
-      };
-
-      console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));
-
-      // Implementar tentativas com atraso exponencial
-      const maxRetries = 3;
+      // Implementa tentativas de adicionar o setor com cycleCount único
+      const maxRetries = 5;
       let attempt = 0;
       let result;
+      let lastError;
       
       while (attempt < maxRetries) {
         try {
+          // Para evitar chaves duplicadas, gerar um número aleatório para cycleCount se for um novo setor
+          const cycleCount = isEditing 
+            ? (data.cycleCount || 1) 
+            : generateUniqueCycleCount() + attempt; // Adicionar o número da tentativa para garantir unicidade
+
+          // Prepare sector data com dados mínimos necessários
+          const sectorData = {
+            tagNumber: data.tagNumber,
+            tagPhotoUrl: data.tagPhotoUrl,
+            entryInvoice: data.entryInvoice,
+            entryDate: data.entryDate || format(new Date(), 'yyyy-MM-dd'),
+            peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+            services: data.services || [],
+            status: status,
+            outcome: outcome,
+            beforePhotos: processedPhotos,
+            afterPhotos: [],
+            productionCompleted: data.productionCompleted || false,
+            cycleCount: cycleCount,
+            entryObservations: data.entryObservations || ''
+          };
+
+          console.log(`Tentativa ${attempt + 1} - cycleCount: ${cycleCount}`);
+
           if (isEditing && sectorId) {
             result = await updateSector(sectorId, sectorData);
           } else {
             result = await addSector(sectorData);
           }
+          
           // Se chegar aqui, a operação foi bem-sucedida
+          console.log("Setor salvo com sucesso:", result);
           break;
-        } catch (retryError) {
+        } catch (error) {
           attempt++;
-          console.warn(`Tentativa ${attempt} falhou:`, retryError);
+          lastError = error;
+          console.warn(`Tentativa ${attempt} falhou:`, error);
           
-          // Se o erro for de duplicação, podemos tentar com outro cycleCount
-          if (!isEditing && attempt < maxRetries) {
-            console.log("Tentando com outro cycleCount...");
-            sectorData.cycleCount = Math.floor(Date.now() % 10000) + Math.floor(Math.random() * 1000) + attempt;
-          }
-          
+          // Se já chegou ao número máximo de tentativas, desiste
           if (attempt >= maxRetries) {
-            throw retryError; // Lançar o erro se todas as tentativas falharem
+            console.error(`Todas as ${maxRetries} tentativas falharam. Último erro:`, lastError);
+            throw lastError;
           }
           
-          // Espera exponencial antes da próxima tentativa (500ms, 1000ms, 2000ms)
-          await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+          // Espera exponencial antes da próxima tentativa (500ms, 1000ms, 2000ms...)
+          const delayMs = 500 * Math.pow(2, attempt - 1);
+          console.log(`Aguardando ${delayMs}ms antes da próxima tentativa...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
-
-      console.log("Submission Result:", result);
-      console.groupEnd();
 
       toast.success(isEditing ? "Peritagem atualizada" : "Peritagem registrada", {
         description: isEditing 
@@ -184,8 +190,7 @@ export function usePeritagemSubmit() {
       navigate('/peritagem');
       return true;
     } catch (error) {
-      console.group('Sector Submission Error');
-      console.error('Submission Error:', error);
+      console.error('Erro ao salvar setor:', error);
       
       const errorMessage = error instanceof Error 
         ? error.message 
@@ -194,7 +199,6 @@ export function usePeritagemSubmit() {
       setErrorMessage(errorMessage);
       toast.error("Erro ao salvar", { description: errorMessage });
       
-      console.groupEnd();
       return false;
     } finally {
       setIsSaving(false);
