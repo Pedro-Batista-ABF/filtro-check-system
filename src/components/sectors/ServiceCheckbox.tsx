@@ -12,6 +12,10 @@ export interface ServiceCheckboxProps {
   onObservationChange?: (id: string, observation: string) => void;
   onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
   onServiceChange?: (id: string, checked: boolean) => void;
+  isCompleted?: boolean;
+  completedCheckboxId?: string;
+  photoType?: string;
+  required?: boolean;
 }
 
 export default function ServiceCheckbox({
@@ -19,7 +23,11 @@ export default function ServiceCheckbox({
   onQuantityChange,
   onObservationChange,
   onPhotoUpload,
-  onServiceChange
+  onServiceChange,
+  isCompleted,
+  completedCheckboxId,
+  photoType,
+  required
 }: ServiceCheckboxProps) {
   const [isChecked, setIsChecked] = useState(service.selected);
   
@@ -86,10 +94,10 @@ export default function ServiceCheckbox({
           {onPhotoUpload && (
             <div className="space-y-2">
               <PhotoUpload 
-                onChange={(files) => onPhotoUpload(service.id, files, "before")}
                 existingPhotos={service.photos?.filter(photo => 
                   typeof photo === 'object' && photo.type === 'before'
                 ) || []}
+                onChange={(files) => onPhotoUpload(service.id, files, "before")}
               />
             </div>
           )}

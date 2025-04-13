@@ -82,13 +82,13 @@ export default function ScrapValidationForm() {
     );
   }
 
-  const handleSubmit = async (data: Omit<Sector, 'id'>) => {
+  const handleSubmit = async (data: Partial<Sector>) => {
     try {
       const updates = {
         ...data,
         status: 'sucateado' as const
       };
-      await updateSector(sector.id, updates as Partial<Sector>);
+      await updateSector(sector.id, updates);
       toast.success('Sucateamento validado com sucesso!');
       navigate('/sucateamento');
     } catch (error) {
@@ -123,7 +123,7 @@ export default function ScrapValidationForm() {
       
       <div className="form-container">
         <SectorForm 
-          initialValues={sector}
+          sector={sector}
           services={services}
           onSubmit={handleSubmit}
           formType="scrap-validation"

@@ -13,7 +13,7 @@ export default function Header({ HeaderExtra }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
-    return location.pathname === path ? "bg-primary/20" : "";
+    return location.pathname.startsWith(path) ? "bg-primary/20" : "";
   };
 
   return (
@@ -32,6 +32,7 @@ export default function Header({ HeaderExtra }: HeaderProps) {
           <button 
             className="md:hidden bg-primary-foreground/10 rounded p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Menu de navegação"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -93,10 +94,10 @@ export default function Header({ HeaderExtra }: HeaderProps) {
           </Button>
           <Button 
             variant="ghost" 
-            className={`text-white hover:bg-primary/30 ${isActive('/relatorios')}`}
+            className={`text-white hover:bg-primary/30 ${isActive('/relatorio')}`}
             asChild
           >
-            <Link to="/relatorios" className="flex items-center space-x-2">
+            <Link to="/relatorio" className="flex items-center space-x-2">
               <FileText className="h-4 w-4" />
               <span>Relatórios</span>
             </Link>
@@ -150,8 +151,8 @@ export default function Header({ HeaderExtra }: HeaderProps) {
               <span>Sucateamento</span>
             </Link>
             <Link 
-              to="/relatorios" 
-              className={`flex items-center space-x-2 py-2 px-4 rounded ${isActive('/relatorios')}`}
+              to="/relatorio" 
+              className={`flex items-center space-x-2 py-2 px-4 rounded ${isActive('/relatorio')}`}
               onClick={() => setIsMenuOpen(false)}
             >
               <FileText className="h-5 w-5" />

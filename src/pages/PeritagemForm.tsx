@@ -54,12 +54,12 @@ export default function PeritagemForm() {
     );
   }
 
-  const handleSubmit = async (data: Omit<Sector, 'id'>) => {
+  const handleSubmit = async (data: Partial<Sector>) => {
     try {
       if (isEditing && sector) {
-        await updateSector(sector.id, data as Partial<Sector>);
+        await updateSector(sector.id, data);
       } else {
-        await addSector(data);
+        await addSector(data as Omit<Sector, 'id'>);
       }
       navigate('/peritagem');
     } catch (error) {
@@ -86,7 +86,7 @@ export default function PeritagemForm() {
       <Card className="border-none shadow-lg">
         <div className="p-6">
           <SectorForm 
-            initialValues={sector}
+            sector={sector}
             services={services}
             onSubmit={handleSubmit}
             formType="entry"

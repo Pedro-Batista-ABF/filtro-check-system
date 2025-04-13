@@ -72,9 +72,9 @@ export default function CheckagemForm() {
     );
   }
 
-  const handleSubmit = async (data: Omit<Sector, 'id'>) => {
+  const handleSubmit = async (data: Partial<Sector>) => {
     try {
-      await updateSector(sector.id, data as Partial<Sector>);
+      await updateSector(sector.id, data);
       navigate('/checagem');
     } catch (error) {
       console.error('Error updating sector:', error);
@@ -96,7 +96,7 @@ export default function CheckagemForm() {
       
       <div className="form-container">
         <SectorForm 
-          initialValues={sector}
+          sector={sector}
           services={services}
           onSubmit={handleSubmit}
           formType="exit"
