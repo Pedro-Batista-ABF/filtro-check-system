@@ -2,13 +2,13 @@
 import { Photo } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
-import { useApiOriginal } from '@/contexts/ApiContext';
+import { useApi } from '@/contexts/ApiContextExtended';
 
 /**
  * Service for photo operations
  */
 export const usePhotoService = () => {
-  const api = useApiOriginal();
+  const api = useApi();
 
   const updateServicePhotos = async (
     sectorId: string,
@@ -40,24 +40,11 @@ export const usePhotoService = () => {
         ? [...(sector.afterPhotos || []), newPhoto]
         : [...(sector.afterPhotos || [])];
       
-      // Preparar objeto simplificado para atualização com tipos corretos
-      const updateData = {
-        id: sector.id,
-        tagNumber: sector.tagNumber,
-        entryInvoice: sector.entryInvoice,
-        entryDate: sector.entryDate,
+      // Usar o método updateSector atualizado
+      await api.updateSector(sector.id, {
         beforePhotos: updatedBeforePhotos,
-        afterPhotos: updatedAfterPhotos,
-        services: sector.services || [],
-        status: sector.status,
-        productionCompleted: sector.productionCompleted || false,
-        outcome: sector.outcome || 'EmAndamento',
-        cycleCount: sector.cycleCount || 1,
-        peritagemDate: sector.peritagemDate
-      };
-      
-      // Tenta atualizar o setor
-      await api.updateSector(updateData);
+        afterPhotos: updatedAfterPhotos
+      });
       
       toast.success("Foto adicionada");
       return true;

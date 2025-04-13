@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Sector, Photo, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -12,7 +12,7 @@ export function usePeritagemSubmit() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
-  const { addSector, updateSector, uploadPhoto } = useApi();
+  const api = useApi();
 
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
@@ -23,8 +23,6 @@ export function usePeritagemSubmit() {
       console.log("Submission Data:", JSON.stringify(data, null, 2));
       console.log("Is Editing:", isEditing);
       console.log("Sector ID:", sectorId);
-      
-      // Removed authentication check
       
       // Validate required fields
       if (!data.tagNumber) {
@@ -56,7 +54,7 @@ export function usePeritagemSubmit() {
                 try {
                   // Upload da foto e obter URL
                   const photoWithFile = photo as PhotoWithFile;
-                  const photoUrl = await uploadPhoto(photoWithFile.file, 'before');
+                  const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
                   
                   // Criar objeto Photo simples sem a propriedade file
                   const processedPhoto: Photo = {
@@ -116,9 +114,9 @@ export function usePeritagemSubmit() {
       while (attempt < maxRetries) {
         try {
           if (isEditing && sectorId) {
-            result = await updateSector(sectorId, sectorData);
+            result = await api.updateSector(sectorId, sectorData);
           } else {
-            result = await addSector(sectorData);
+            result = await api.addSector(sectorData);
           }
           // Se chegar aqui, a operação foi bem-sucedida
           break;

@@ -2,13 +2,13 @@
 import { Sector, Photo, ServiceType, SectorStatus, CycleOutcome } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
-import { useApiOriginal } from '@/contexts/ApiContext';
+import { useApi } from '@/contexts/ApiContextExtended';
 
 /**
  * Service for sector operations
  */
 export const useSectorService = () => {
-  const api = useApiOriginal();
+  const api = useApi();
 
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
@@ -54,9 +54,9 @@ export const useSectorService = () => {
         entryObservations: sectorData.entryObservations
       };
 
-      const newSector = await api.createSector(completeData);
+      const newSector = await api.addSector(completeData);
       toast.success("Setor cadastrado com sucesso!");
-      return newSector.id;
+      return newSector;
     } catch (error) {
       const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
       toast.error(processedError.message);
@@ -66,63 +66,8 @@ export const useSectorService = () => {
 
   const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
     try {
-      // Primeiro, busca o setor atual
-      const currentSector = await api.getSectorById(id);
-      if (!currentSector) {
-        throw new Error("Setor não encontrado");
-      }
-
-      // Garantir tipagem correta
-      const status: SectorStatus = (updates.status as SectorStatus) || currentSector.status;
-      const outcome: CycleOutcome = (updates.outcome as CycleOutcome) || currentSector.outcome || 'EmAndamento';
-
-      // Certifique-se de que todos os serviços atualizados tenham o campo 'type' definido corretamente
-      const processedServices = updates.services?.map(service => ({
-        ...service,
-        type: service.id as ServiceType,
-        // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
-        photos: service.photos?.map(photo => ({
-          id: photo.id,
-          url: photo.url,
-          type: photo.type,
-          serviceId: photo.serviceId
-        })) || []
-      })) || currentSector.services;
-
-      // Garantir que as fotos estejam no formato correto sem propriedades extras
-      const processedBeforePhotos = (updates.beforePhotos || currentSector.beforePhotos || []).map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.serviceId
-      }));
-
-      const processedAfterPhotos = (updates.afterPhotos || currentSector.afterPhotos || []).map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.serviceId
-      }));
-
-      // Garantir que apenas os campos necessários sejam modificados (para reduzir problemas com RLS)
-      const safeUpdateData: Sector = {
-        id: currentSector.id,
-        tagNumber: updates.tagNumber || currentSector.tagNumber,
-        entryInvoice: updates.entryInvoice || currentSector.entryInvoice,
-        entryDate: updates.entryDate || currentSector.entryDate,
-        peritagemDate: updates.peritagemDate || currentSector.peritagemDate,
-        services: processedServices,
-        status: status,
-        beforePhotos: processedBeforePhotos,
-        afterPhotos: processedAfterPhotos,
-        productionCompleted: updates.productionCompleted !== undefined ? updates.productionCompleted : currentSector.productionCompleted || false,
-        outcome: outcome,
-        cycleCount: updates.cycleCount || currentSector.cycleCount || 1,
-        tagPhotoUrl: updates.tagPhotoUrl || currentSector.tagPhotoUrl
-      };
-
-      // Atualiza o setor
-      await api.updateSector(safeUpdateData);
+      // Usando a versão atualizada do updateSector que aceita id e updates separadamente
+      await api.updateSector(id, updates);
       toast.success("Setor atualizado com sucesso!");
       return true;
     } catch (error) {
