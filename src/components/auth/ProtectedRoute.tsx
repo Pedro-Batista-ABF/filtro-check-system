@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -19,6 +20,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         if (error) {
           console.error("Erro ao verificar sessão:", error);
           setIsUserAuthenticated(false);
+          toast.error("Erro de autenticação", {
+            description: "Ocorreu um erro ao verificar sua sessão. Por favor, faça login novamente."
+          });
           return;
         }
         
@@ -31,6 +35,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           if (!user) {
             console.warn("Token inválido, usuário não encontrado");
             setIsUserAuthenticated(false);
+            toast.error("Sessão expirada", {
+              description: "Sua sessão expirou. Por favor, faça login novamente."
+            });
           }
         } else {
           console.log("Nenhuma sessão encontrada");

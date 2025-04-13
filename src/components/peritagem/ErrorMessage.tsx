@@ -5,6 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ErrorMessageProps {
   message: string;
@@ -53,6 +54,9 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
   const handleLoginClick = async () => {
     // Fazer logout antes de redirecionar para o login
     await supabase.auth.signOut();
+    toast.info("Redirecionando para a página de login", {
+      description: "Por favor, faça login para continuar."
+    });
     navigate('/login');
   };
   

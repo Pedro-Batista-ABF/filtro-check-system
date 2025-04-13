@@ -21,7 +21,9 @@ export const usePhotoService = () => {
       // Verificar autenticação
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("Não autenticado", "Você precisa estar logado para realizar esta operação");
+        toast.error("Não autenticado", {
+          description: "Você precisa estar logado para realizar esta operação"
+        });
         throw new Error("Não autenticado");
       }
 
@@ -66,7 +68,7 @@ export const usePhotoService = () => {
         });
       }
       
-      toast.success("Foto adicionada com sucesso");
+      toast.success("Foto adicionada");
       return true;
     } catch (error) {
       const processedError = handleDatabaseError(error, "Não foi possível adicionar a foto");

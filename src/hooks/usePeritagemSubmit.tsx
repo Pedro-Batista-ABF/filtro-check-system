@@ -6,12 +6,12 @@ import { Sector, PhotoWithFile } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { toast as sonnerToast } from "sonner";
+import { toast } from "sonner";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
   const { addSector, updateSector, uploadPhoto } = useApi();
 
@@ -32,7 +32,9 @@ export function usePeritagemSubmit() {
       }
       
       if (!sessionData?.session) {
-        sonnerToast.error("Não autenticado", "Você precisa estar logado para realizar esta operação");
+        toast.error("Não autenticado", {
+          description: "Você precisa estar logado para realizar esta operação"
+        });
         throw new Error("Não autenticado. Faça login para continuar.");
       }
       
@@ -40,7 +42,9 @@ export function usePeritagemSubmit() {
       
       // Verificar se a foto do TAG foi adicionada
       if (!data.tagPhotoUrl) {
-        sonnerToast.error("Foto do TAG obrigatória", "Por favor, adicione uma foto do TAG do setor");
+        toast.error("Foto do TAG obrigatória", {
+          description: "Por favor, adicione uma foto do TAG do setor"
+        });
         throw new Error("Foto do TAG obrigatória");
       }
 
@@ -55,7 +59,9 @@ export function usePeritagemSubmit() {
       // Verificar se pelo menos um serviço foi selecionado
       const hasSelectedService = data.services?.some(service => service.selected);
       if (!hasSelectedService) {
-        sonnerToast.error("Serviço obrigatório", "Selecione pelo menos um serviço");
+        toast.error("Serviço obrigatório", {
+          description: "Selecione pelo menos um serviço"
+        });
         throw new Error("Selecione pelo menos um serviço");
       }
 
@@ -65,10 +71,9 @@ export function usePeritagemSubmit() {
       );
 
       if (missingPhotoServices && missingPhotoServices.length > 0) {
-        sonnerToast.error(
-          "Fotos de defeito obrigatórias", 
-          `Adicione pelo menos uma foto para cada defeito selecionado: ${missingPhotoServices.map(s => s.name).join(', ')}`
-        );
+        toast.error("Fotos de defeito obrigatórias", {
+          description: `Adicione pelo menos uma foto para cada defeito selecionado: ${missingPhotoServices.map(s => s.name).join(', ')}`
+        });
         throw new Error("Adicione pelo menos uma foto para cada defeito selecionado");
       }
 
@@ -146,12 +151,16 @@ export function usePeritagemSubmit() {
       if (isEditing && sectorId) {
         console.log("Atualizando setor existente:", sectorId);
         await updateSector(sectorId, data);
-        sonnerToast.success("Peritagem atualizada", "A peritagem foi atualizada com sucesso.");
+        toast.success("Peritagem atualizada", {
+          description: "A peritagem foi atualizada com sucesso."
+        });
       } else {
         console.log("Criando novo setor");
         const result = await addSector(data as Omit<Sector, 'id'>);
         console.log("Resultado da criação:", result);
-        sonnerToast.success("Peritagem registrada", "Nova peritagem registrada com sucesso.");
+        toast.success("Peritagem registrada", {
+          description: "Nova peritagem registrada com sucesso."
+        });
       }
       
       navigate('/peritagem');
@@ -192,7 +201,9 @@ export function usePeritagemSubmit() {
       
       console.error("Detalhes do erro:", errorMsg);
       setErrorMessage(errorMsg);
-      sonnerToast.error("Erro ao salvar", errorMsg);
+      toast.error("Erro ao salvar", {
+        description: errorMsg
+      });
       return false;
     } finally {
       setIsSaving(false);
