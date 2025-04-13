@@ -58,23 +58,29 @@ export function usePeritagemSubmit() {
 
       console.log("Selected Services:", selectedServices);
       
-      // Process before photos
+      // Process before photos from services
       const processedPhotos: PhotoWithFile[] = [];
-      if (data.beforePhotos && data.beforePhotos.length > 0) {
-        for (const photo of data.beforePhotos) {
-          if (photo.file) {
-            try {
-              const photoUrl = await uploadPhoto(photo.file, 'before');
-              processedPhotos.push({
-                ...photo,
-                url: photoUrl
-              });
-            } catch (uploadError) {
-              console.error('Foto Upload Error:', uploadError);
-              throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
+      if (data.services) {
+        for (const service of data.services) {
+          if (service.selected && service.photos) {
+            for (const photo of service.photos) {
+              // Verificar se a foto tem a propriedade 'file' antes de usá-la
+              if ('file' in photo && photo.file instanceof File) {
+                try {
+                  const photoUrl = await uploadPhoto(photo.file, 'before');
+                  processedPhotos.push({
+                    ...photo,
+                    url: photoUrl
+                  });
+                } catch (uploadError) {
+                  console.error('Foto Upload Error:', uploadError);
+                  throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
+                }
+              } else if (photo.url) {
+                // Se a foto já tem URL mas não tem file, simplesmente a adicione
+                processedPhotos.push(photo as PhotoWithFile);
+              }
             }
-          } else if (photo.url) {
-            processedPhotos.push(photo);
           }
         }
       }
