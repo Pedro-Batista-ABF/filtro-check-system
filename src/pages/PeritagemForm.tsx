@@ -86,10 +86,20 @@ export default function PeritagemForm() {
       <Card className="border-none shadow-lg">
         <div className="p-6">
           <SectorForm 
-            sector={sector}
-            services={services}
+            sector={sector || {
+              id: '',
+              tagNumber: '',
+              entryInvoice: '',
+              entryDate: '',
+              peritagemDate: '',
+              services: services,
+              beforePhotos: [],
+              productionCompleted: false,
+              cycleCount: 1,
+              status: 'peritagemPendente'
+            }}
             onSubmit={handleSubmit}
-            formType="entry"
+            mode="review"
           />
         </div>
       </Card>

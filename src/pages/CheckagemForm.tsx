@@ -97,9 +97,8 @@ export default function CheckagemForm() {
       <div className="form-container">
         <SectorForm 
           sector={sector}
-          services={services}
           onSubmit={handleSubmit}
-          formType="exit"
+          mode="quality"
         />
       </div>
     </div>

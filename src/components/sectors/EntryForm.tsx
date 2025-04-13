@@ -8,7 +8,6 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -141,13 +140,27 @@ export default function EntryForm({ onSubmit, initialData, services, loading, mo
     
     if (isScrap) {
       status = "sucateadoPendente";
-      cycles = [{
+      
+      const formattedEntryDate = entryDate ? format(entryDate, 'yyyy-MM-dd') : '';
+      
+      // Criar um ciclo completo para sucateamento
+      const newCycle: Cycle = {
         id: Date.now().toString(),
         createdAt: new Date().toISOString(),
         outcome: "scrapped" as CycleOutcome,
         comments: scrapReason,
-        technicianId: "sistema"
-      }];
+        technicianId: "sistema",
+        tagNumber,
+        entryInvoice,
+        entryDate: formattedEntryDate,
+        peritagemDate: formattedEntryDate,
+        services: selectedServices,
+        beforePhotos: [],
+        productionCompleted: false,
+        status: "sucateadoPendente"
+      };
+      
+      cycles = [newCycle];
     }
     
     onSubmit({

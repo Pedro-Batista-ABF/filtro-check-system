@@ -3,27 +3,48 @@ import { ChangeEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImagePlus } from "lucide-react";
+import { Photo } from "@/types";
 
 interface PhotoUploadProps {
-  id: string;
-  title: string;
-  onPhotoUpload: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit') => void;
-  type: 'tag' | 'entry' | 'exit';
+  id?: string;
+  title?: string;
+  onPhotoUpload?: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit') => void;
+  type?: 'tag' | 'entry' | 'exit';
   photos?: string[];
   disabled?: boolean;
+  // Propriedades adicionais para compatibilidade
+  label?: string;
+  onChange?: (files: FileList) => void;
+  existingPhotos?: Photo[];
 }
 
 export default function PhotoUpload({
-  id,
+  id = "photo-upload",
   title,
   onPhotoUpload,
-  type,
+  type = 'entry',
   photos = [],
-  disabled = false
+  disabled = false,
+  label,
+  onChange,
+  existingPhotos = []
 }: PhotoUploadProps) {
+  // Função que lida com os dois tipos de callbacks
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      if (onChange) {
+        onChange(e.target.files);
+      }
+      if (onPhotoUpload) {
+        onPhotoUpload(e, type);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       {title && <h3 className="text-lg font-medium">{title}</h3>}
+      {label && <div className="text-sm font-medium text-gray-700 mb-2">{label}</div>}
       
       <div className="mt-1">
         <Label 
@@ -44,11 +65,12 @@ export default function PhotoUpload({
           multiple
           accept="image/*"
           className="hidden"
-          onChange={(e) => onPhotoUpload(e, type)}
+          onChange={handleChange}
           disabled={disabled}
         />
       </div>
 
+      {/* Exibir fotos existentes como URLs */}
       {photos.length > 0 && (
         <div className="mt-4">
           <p className="text-sm font-medium mb-3 text-gray-700">
@@ -60,6 +82,26 @@ export default function PhotoUpload({
                 <img 
                   src={photo} 
                   alt={`Foto ${index + 1}`} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Exibir fotos existentes como objetos Photo */}
+      {existingPhotos.length > 0 && (
+        <div className="mt-4">
+          <p className="text-sm font-medium mb-3 text-gray-700">
+            {existingPhotos.length} foto(s) adicionada(s):
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {existingPhotos.map((photo) => (
+              <div key={photo.id} className="relative h-28 bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <img 
+                  src={photo.url} 
+                  alt={`Foto`} 
                   className="w-full h-full object-cover"
                 />
               </div>

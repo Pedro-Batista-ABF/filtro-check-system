@@ -131,8 +131,8 @@ export default function ExitForm({
               <ServiceCheckbox 
                 key={service.id}
                 service={updatedService}
-                onChange={handleCompletedServiceChange}
-                onPhotoUpload={handleCompletedServicePhotoUpload}
+                onServiceChange={handleCompletedServiceChange}
+                onPhotoUpload={(id, files, type) => handleCompletedServicePhotoUpload(id as ServiceType, files, type)}
                 isCompleted={completedServices.some(s => s.id === service.id)}
                 completedCheckboxId={`completed-${service.id}`}
                 photoType="after"

@@ -28,6 +28,8 @@ interface SectorFormProps {
   onSubmit: (sector: Sector) => void;
   loading?: boolean;
   mode: 'review' | 'production' | 'quality' | 'scrap';
+  services?: Service[]; // Adicionando propriedade services
+  formType?: string;    // Adicionando propriedade formType
 }
 
 export default function SectorForm({
@@ -35,14 +37,15 @@ export default function SectorForm({
   onSubmit,
   loading = false,
   mode,
+  services: initialServices
 }: SectorFormProps) {
   const [sector, setSector] = useState<Sector>(initialSector);
-  const [services, setServices] = useState<Service[]>(initialSector.services);
+  const [services, setServices] = useState<Service[]>(initialServices || initialSector.services);
   const [exitDate, setExitDate] = useState<Date | undefined>(
     sector.exitDate ? new Date(sector.exitDate) : undefined
   );
   const [exitInvoice, setExitInvoice] = useState(sector.exitInvoice || "");
-  const [observations, setObservations] = useState(sector.observations || "");
+  const [exitObservations, setExitObservations] = useState(sector.exitObservations || "");
   const [selectedTab, setSelectedTab] = useState("services");
   const [productionCompleted, setProductionCompleted] = useState(
     initialSector.status === "checagemFinalPendente" || 
@@ -56,9 +59,11 @@ export default function SectorForm({
 
   // Para sucateamento
   const [isScrap, setIsScrap] = useState(false);
-  const [scrapReason, setScrapReason] = useState("");
-  const [scrapDate, setScrapDate] = useState<Date | undefined>(new Date());
-  const [scrapInvoice, setScrapInvoice] = useState("");
+  const [scrapObservations, setScrapObservations] = useState(sector.scrapObservations || "");
+  const [scrapDate, setScrapDate] = useState<Date | undefined>(
+    sector.scrapReturnDate ? new Date(sector.scrapReturnDate) : new Date()
+  );
+  const [scrapInvoice, setScrapInvoice] = useState(sector.scrapReturnInvoice || "");
 
   const { toast } = useToast();
 
@@ -68,8 +73,8 @@ export default function SectorForm({
     photos: false,
     exitDate: false,
     exitInvoice: false,
-    observations: false,
-    scrapReason: false,
+    exitObservations: false,
+    scrapObservations: false,
     scrapDate: false,
     scrapInvoice: false
   });
@@ -104,8 +109,8 @@ export default function SectorForm({
         photos: !checkServicePhotos(),
         exitDate: !exitDate,
         exitInvoice: !exitInvoice,
-        observations: false,
-        scrapReason: false,
+        exitObservations: false,
+        scrapObservations: false,
         scrapDate: false,
         scrapInvoice: false
       };
@@ -120,8 +125,8 @@ export default function SectorForm({
         photos: false,
         exitDate: false,
         exitInvoice: false,
-        observations: false,
-        scrapReason: isScrap && !scrapReason,
+        exitObservations: false,
+        scrapObservations: isScrap && !scrapObservations,
         scrapDate: isScrap && !scrapDate,
         scrapInvoice: isScrap && !scrapInvoice
       };
@@ -205,16 +210,22 @@ export default function SectorForm({
     }
   };
 
-  const createCycle = (type: "recovered" | "scrapped") => {
-    const newCycle: Cycle = {
+  const createCycle = (type: "recovered" | "scrapped", comments: string): Cycle => {
+    return {
       id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
+      tagNumber: sector.tagNumber,
+      entryInvoice: sector.entryInvoice,
+      entryDate: sector.entryDate,
+      peritagemDate: sector.peritagemDate,
+      services: sector.services,
+      beforePhotos: sector.beforePhotos || [],
+      status: type === "recovered" ? "concluido" : "sucateado",
       outcome: type as CycleOutcome,
-      comments: type === "recovered" ? observations : scrapReason,
-      technicianId: "sistema" // Considere pegar do usuário atual em um sistema real
+      createdAt: new Date().toISOString(),
+      comments,
+      technicianId: "sistema", // Considere pegar do usuário atual em um sistema real
+      productionCompleted: true
     };
-    
-    return [...(sector.cycles || []), newCycle];
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -249,8 +260,8 @@ export default function SectorForm({
           status: "concluido",
           exitDate: exitDate ? format(exitDate, 'yyyy-MM-dd') : undefined,
           exitInvoice,
-          observations,
-          cycles: createCycle("recovered")
+          exitObservations,
+          cycles: [...(sector.cycles || []), createCycle("recovered", exitObservations || "")]
         };
       }
     }
@@ -260,10 +271,10 @@ export default function SectorForm({
         updatedSector = {
           ...updatedSector,
           status: "sucateado",
-          scrapReason,
-          scrapDate: scrapDate ? format(scrapDate, 'yyyy-MM-dd') : undefined,
-          scrapInvoice,
-          cycles: createCycle("scrapped")
+          scrapObservations,
+          scrapReturnDate: scrapDate ? format(scrapDate, 'yyyy-MM-dd') : undefined,
+          scrapReturnInvoice: scrapInvoice,
+          cycles: [...(sector.cycles || []), createCycle("scrapped", scrapObservations || "")]
         };
       }
     }
@@ -391,13 +402,26 @@ export default function SectorForm({
                         
                         <div>
                           <h4 className="text-sm font-medium mb-2">Fotos Depois</h4>
-                          <PhotoUpload 
-                            label="" 
-                            onChange={(files) => handlePhotoUpload(service.id, files, "after")}
-                            existingPhotos={service.photos?.filter(photo => 
-                              typeof photo === 'object' && photo.type === 'after'
-                            ) || []}
+                          <Input
+                            id={`photo-after-${service.id}`}
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => e.target.files && handlePhotoUpload(service.id, e.target.files, "after")}
+                            className="w-full"
                           />
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {service.photos?.filter(photo => typeof photo === 'object' && photo.type === 'after').map(photo => (
+                              typeof photo === 'object' && photo.url && (
+                                <img 
+                                  key={photo.id} 
+                                  src={photo.url} 
+                                  alt={service.name} 
+                                  className="w-20 h-20 object-cover rounded border"
+                                />
+                              )
+                            ))}
+                          </div>
                         </div>
                       </div>
                       
@@ -470,13 +494,13 @@ export default function SectorForm({
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="observations">
+                      <Label htmlFor="exitObservations">
                         Observações Adicionais
                       </Label>
                       <Textarea
-                        id="observations"
-                        value={observations}
-                        onChange={(e) => setObservations(e.target.value)}
+                        id="exitObservations"
+                        value={exitObservations}
+                        onChange={(e) => setExitObservations(e.target.value)}
                         placeholder="Registre observações sobre a qualidade do setor..."
                       />
                     </div>
@@ -535,17 +559,17 @@ export default function SectorForm({
                   {isScrap && (
                     <div className="pl-6 space-y-4 pt-2">
                       <div className="space-y-2">
-                        <Label htmlFor="scrapReason" className={formErrors.scrapReason ? "text-red-500" : ""}>
+                        <Label htmlFor="scrapObservations" className={formErrors.scrapObservations ? "text-red-500" : ""}>
                           Comentários Adicionais*
                         </Label>
                         <Textarea
-                          id="scrapReason"
-                          value={scrapReason}
-                          onChange={(e) => setScrapReason(e.target.value)}
+                          id="scrapObservations"
+                          value={scrapObservations}
+                          onChange={(e) => setScrapObservations(e.target.value)}
                           placeholder="Adicione comentários sobre o sucateamento..."
-                          className={formErrors.scrapReason ? "border-red-500" : ""}
+                          className={formErrors.scrapObservations ? "border-red-500" : ""}
                         />
-                        {formErrors.scrapReason && (
+                        {formErrors.scrapObservations && (
                           <p className="text-xs text-red-500">Comentários são obrigatórios</p>
                         )}
                       </div>

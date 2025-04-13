@@ -124,9 +124,8 @@ export default function ScrapValidationForm() {
       <div className="form-container">
         <SectorForm 
           sector={sector}
-          services={services}
           onSubmit={handleSubmit}
-          formType="scrap-validation"
+          mode="scrap"
         />
       </div>
     </div>

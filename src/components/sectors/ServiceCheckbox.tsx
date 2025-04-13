@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import PhotoUpload from "./PhotoUpload";
-import { Service, Photo } from "@/types";
+import { Service, Photo, ServiceType } from "@/types";
 
 export interface ServiceCheckboxProps {
   service: Service;
@@ -12,6 +12,7 @@ export interface ServiceCheckboxProps {
   onObservationChange?: (id: string, observation: string) => void;
   onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
   onServiceChange?: (id: string, checked: boolean) => void;
+  onChange?: (id: string, checked: boolean) => void; // Adicionando para compatibilidade
   isCompleted?: boolean;
   completedCheckboxId?: string;
   photoType?: string;
@@ -24,6 +25,7 @@ export default function ServiceCheckbox({
   onObservationChange,
   onPhotoUpload,
   onServiceChange,
+  onChange,
   isCompleted,
   completedCheckboxId,
   photoType,
@@ -39,6 +41,9 @@ export default function ServiceCheckbox({
     setIsChecked(checked);
     if (onServiceChange) {
       onServiceChange(service.id, checked);
+    }
+    if (onChange) {
+      onChange(service.id, checked);
     }
   };
 
@@ -93,11 +98,30 @@ export default function ServiceCheckbox({
           
           {onPhotoUpload && (
             <div className="space-y-2">
-              <PhotoUpload 
-                existingPhotos={service.photos?.filter(photo => 
-                  typeof photo === 'object' && photo.type === 'before'
-                ) || []}
-                onChange={(files) => onPhotoUpload(service.id, files, "before")}
+              <div className="text-xs font-medium text-gray-700 mb-1">
+                Fotos {photoType === "after" ? "depois do serviço" : "do defeito"}
+              </div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {service.photos?.filter(photo => 
+                  typeof photo === 'object' && photo.type === (photoType === "after" ? 'after' : 'before')
+                ).map((photo) => (
+                  typeof photo === 'object' && photo.url && (
+                    <img 
+                      key={photo.id} 
+                      src={photo.url} 
+                      alt={service.name} 
+                      className="w-20 h-20 object-cover rounded border"
+                    />
+                  )
+                ))}
+              </div>
+              <Input
+                id={`photo-${service.id}`}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => e.target.files && onPhotoUpload(service.id, e.target.files, photoType === "after" ? "after" : "before")}
+                className="w-full"
               />
             </div>
           )}
