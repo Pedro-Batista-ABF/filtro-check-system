@@ -11,12 +11,13 @@ interface PhotoComparisonProps {
 
 const PhotoComparison: React.FC<PhotoComparisonProps> = ({ sector, service }) => {
   // Filtrar fotos relacionadas a este serviço específico
+  // Melhorado: filtragem precisa por serviceId garantindo a associação correta
   const beforePhotos = sector.beforePhotos?.filter(photo => 
-    photo.serviceId === service.id || photo.type === 'before'
+    photo.serviceId === service.id
   ) || [];
   
   const afterPhotos = sector.afterPhotos?.filter(photo => 
-    photo.serviceId === service.id || photo.type === 'after'
+    photo.serviceId === service.id
   ) || [];
 
   if (beforePhotos.length === 0 && afterPhotos.length === 0) {
@@ -45,7 +46,7 @@ const PhotoComparison: React.FC<PhotoComparisonProps> = ({ sector, service }) =>
                   <div key={photo.id} className="border rounded-md overflow-hidden">
                     <img 
                       src={photo.url} 
-                      alt="Foto antes do serviço" 
+                      alt={`Foto antes do serviço: ${service.name}`} 
                       className="w-full h-48 object-cover"
                     />
                   </div>
@@ -64,7 +65,7 @@ const PhotoComparison: React.FC<PhotoComparisonProps> = ({ sector, service }) =>
                   <div key={photo.id} className="border rounded-md overflow-hidden">
                     <img 
                       src={photo.url} 
-                      alt="Foto depois do serviço" 
+                      alt={`Foto depois do serviço: ${service.name}`} 
                       className="w-full h-48 object-cover"
                     />
                   </div>

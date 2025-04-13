@@ -131,9 +131,16 @@ export function usePeritagemSubmit() {
       while (attempt < maxRetries) {
         try {
           // Para evitar chaves duplicadas, gerar um número aleatório para cycleCount se for um novo setor
-          const cycleCount = isEditing 
+          let cycleCount = isEditing 
             ? (data.cycleCount || 1) 
             : generateUniqueCycleCount() + attempt; // Adicionar o número da tentativa para garantir unicidade
+
+          // NOVA FUNCIONALIDADE: Na última tentativa, usar uma estratégia diferente
+          if (attempt === 4) { // Última tentativa (0-indexado)
+            const randomUUID = crypto.randomUUID().slice(0, 8);
+            cycleCount = Date.now() + Math.floor(Math.random() * 10000) + parseInt(randomUUID.replace(/[^0-9]/g, '').slice(0, 4));
+            console.log(`Última tentativa: gerando cycleCount totalmente aleatório: ${cycleCount}`);
+          }
 
           // Prepare sector data com dados mínimos necessários
           const sectorData = {
@@ -163,10 +170,16 @@ export function usePeritagemSubmit() {
           // Se chegar aqui, a operação foi bem-sucedida
           console.log("Setor salvo com sucesso:", result);
           break;
-        } catch (error) {
+        } catch (error: any) {
           attempt++;
           lastError = error;
-          console.warn(`Tentativa ${attempt} falhou:`, error);
+          
+          // NOVA FUNCIONALIDADE: Log específico para erros de duplicação
+          if (error?.code === '23505') {
+            console.warn(`CycleCount duplicado, tentando novamente... Tentativa ${attempt} de ${maxRetries}`, error);
+          } else {
+            console.warn(`Tentativa ${attempt} falhou:`, error);
+          }
           
           // Se já chegou ao número máximo de tentativas, desiste
           if (attempt >= maxRetries) {

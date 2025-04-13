@@ -1,3 +1,4 @@
+
 import PageLayout from "@/components/layout/PageLayout";
 import { useState } from "react";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -92,7 +93,7 @@ export default function ConsolidatedReport() {
       return;
     }
     
-    // Navigate to the preview page with selected sector IDs
+    // Navegar para a página de prévia do relatório com os IDs dos setores selecionados
     navigate(`/relatorio-preview?sectors=${selectedSectors.join(',')}`);
   };
 
@@ -254,6 +255,12 @@ export default function ConsolidatedReport() {
                           {format(new Date(sector.entryDate), "dd/MM/yyyy", { locale: ptBR })}
                           {sector.exitDate ? ` - ${format(new Date(sector.exitDate), "dd/MM/yyyy", { locale: ptBR })}` : ''}
                         </div>
+                        {sector.entryInvoice && (
+                          <div className="text-xs text-muted-foreground">
+                            NF Entrada: {sector.entryInvoice}
+                            {sector.exitInvoice ? ` | NF Saída: ${sector.exitInvoice}` : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
                     
