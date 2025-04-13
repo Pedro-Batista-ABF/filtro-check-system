@@ -2,7 +2,7 @@
 import { Route, Routes, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 
-import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
+import Header from "@/components/layout/Header";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import Peritagem from "@/pages/Peritagem";
@@ -18,6 +18,8 @@ import ScrapValidationForm from "@/pages/ScrapValidationForm";
 import Login from "@/pages/Login";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ConsolidatedReport from "@/pages/ConsolidatedReport";
+import UserInfo from "@/components/auth/UserInfo";
+import Checagem from "@/pages/Checagem";
 
 const App = () => {
   return (
@@ -27,9 +29,15 @@ const App = () => {
         
         <Route path="/" element={
           <ProtectedRoute>
-            <PageLayoutWrapper>
-              <Outlet />
-            </PageLayoutWrapper>
+            <div className="min-h-screen flex flex-col bg-gray-50">
+              <Header HeaderExtra={<UserInfo />} />
+              <main className="flex-1 container mx-auto px-4 py-8">
+                <Outlet />
+              </main>
+              <footer className="bg-gray-100 py-4 text-center text-gray-600 text-sm">
+                <p>© {new Date().getFullYear()} Controle de Recuperação de Setores</p>
+              </footer>
+            </div>
           </ProtectedRoute>
         }>
           <Route index element={<Index />} />
@@ -38,7 +46,8 @@ const App = () => {
           <Route path="peritagem/editar/:id" element={<PeritagemForm />} />
           <Route path="execucao" element={<Execucao />} />
           <Route path="execucao/:id" element={<ExecucaoDetails />} />
-          <Route path="checagem" element={<CheckagemFinal />} />
+          <Route path="checagem" element={<Checagem />} />
+          <Route path="checagem-final" element={<CheckagemFinal />} />
           <Route path="checagem/:id" element={<CheckagemForm />} />
           <Route path="concluidos" element={<Concluidos />} />
           <Route path="sucateamento" element={<ScrapValidation />} />
