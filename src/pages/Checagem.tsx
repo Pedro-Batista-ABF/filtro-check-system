@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { SectorStatus } from "@/types";
+import { SectorStatus, Sector } from "@/types";
 import { useNavigate } from "react-router-dom";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isAfter, isBefore, isWithinInterval, parse } from "date-fns";
 
 export default function Checagem() {
   const { sectors, loading } = useApi();
@@ -23,22 +23,88 @@ export default function Checagem() {
   const [tagFilter, setTagFilter] = useState("");
   const [invoiceFilter, setInvoiceFilter] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
+  const [filteredSectors, setFilteredSectors] = useState<Sector[]>([]);
+  
+  // Aplicar filtros
+  useEffect(() => {
+    let result = [...sectors];
+    
+    // Filtrar por TAG
+    if (tagFilter) {
+      result = result.filter(sector => 
+        sector.tagNumber.toLowerCase().includes(tagFilter.toLowerCase())
+      );
+    }
+    
+    // Filtrar por nota fiscal
+    if (invoiceFilter) {
+      result = result.filter(sector => 
+        (sector.entryInvoice && sector.entryInvoice.toLowerCase().includes(invoiceFilter.toLowerCase())) ||
+        (sector.exitInvoice && sector.exitInvoice.toLowerCase().includes(invoiceFilter.toLowerCase()))
+      );
+    }
+    
+    // Filtrar por intervalo de datas
+    if (startDate && endDate) {
+      const start = parse(startDate, "yyyy-MM-dd", new Date());
+      const end = parse(endDate, "yyyy-MM-dd", new Date());
+      
+      result = result.filter(sector => {
+        const sectorDate = new Date(sector.entryDate);
+        return isWithinInterval(sectorDate, { start, end });
+      });
+    } 
+    // Filtrar apenas por data inicial
+    else if (startDate) {
+      const start = parse(startDate, "yyyy-MM-dd", new Date());
+      
+      result = result.filter(sector => {
+        const sectorDate = new Date(sector.entryDate);
+        return isAfter(sectorDate, start) || format(sectorDate, "yyyy-MM-dd") === startDate;
+      });
+    } 
+    // Filtrar apenas por data final
+    else if (endDate) {
+      const end = parse(endDate, "yyyy-MM-dd", new Date());
+      
+      result = result.filter(sector => {
+        const sectorDate = new Date(sector.entryDate);
+        return isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
+      });
+    }
+    
+    // Filtrar por data específica (calendário único)
+    if (dateFilter) {
+      const filterDateStr = format(dateFilter, "yyyy-MM-dd");
+      
+      result = result.filter(sector => {
+        const sectorDateStr = format(new Date(sector.entryDate), "yyyy-MM-dd");
+        return sectorDateStr === filterDateStr;
+      });
+    }
+    
+    setFilteredSectors(result);
+  }, [sectors, tagFilter, invoiceFilter, dateFilter, startDate, endDate]);
   
   // Calculate sector counts by status
   const statusCounts: Record<SectorStatus, number> = {
-    peritagemPendente: sectors.filter(s => s.status === 'peritagemPendente').length,
-    emExecucao: sectors.filter(s => s.status === 'emExecucao').length,
-    checagemFinalPendente: sectors.filter(s => s.status === 'checagemFinalPendente').length,
-    concluido: sectors.filter(s => s.status === 'concluido').length,
-    sucateado: sectors.filter(s => s.status === 'sucateado').length,
-    sucateadoPendente: sectors.filter(s => s.status === 'sucateadoPendente').length
+    peritagemPendente: filteredSectors.filter(s => s.status === 'peritagemPendente').length,
+    emExecucao: filteredSectors.filter(s => s.status === 'emExecucao').length,
+    checagemFinalPendente: filteredSectors.filter(s => s.status === 'checagemFinalPendente').length,
+    concluido: filteredSectors.filter(s => s.status === 'concluido').length,
+    sucateado: filteredSectors.filter(s => s.status === 'sucateado').length,
+    sucateadoPendente: filteredSectors.filter(s => s.status === 'sucateadoPendente').length
   };
 
   const resetFilters = () => {
     setTagFilter("");
     setInvoiceFilter("");
     setDateFilter(undefined);
+    setStartDate("");
+    setEndDate("");
   };
 
   useEffect(() => {
@@ -126,6 +192,24 @@ export default function Checagem() {
                       />
                     </PopoverContent>
                   </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Data Inicial</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Data Final</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
                 </div>
               </div>
             </CardContent>
