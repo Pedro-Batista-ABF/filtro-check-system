@@ -18,6 +18,7 @@ export default function PeritagemForm() {
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   
   // Buscar dados ao carregar o componente
@@ -40,13 +41,18 @@ export default function PeritagemForm() {
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
+        toast({
+          title: "Erro de carregamento",
+          description: "Não foi possível carregar os dados necessários para a peritagem",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [id, getSectorById, navigate, getDefaultServices]);
+  }, [id, getSectorById, navigate, getDefaultServices, toast]);
   
   const isEditing = !!sector;
 
@@ -62,6 +68,8 @@ export default function PeritagemForm() {
 
   const handleSubmit = async (data: Partial<Sector>) => {
     try {
+      setIsSaving(true);
+      
       // Verificar se a foto do TAG foi adicionada
       if (!data.tagPhotoUrl) {
         toast({
@@ -69,6 +77,7 @@ export default function PeritagemForm() {
           description: "Por favor, adicione uma foto do TAG do setor",
           variant: "destructive"
         });
+        setIsSaving(false);
         return;
       }
 
@@ -86,6 +95,7 @@ export default function PeritagemForm() {
           description: "Selecione pelo menos um serviço",
           variant: "destructive"
         });
+        setIsSaving(false);
         return;
       }
 
@@ -100,6 +110,7 @@ export default function PeritagemForm() {
           description: `Adicione pelo menos uma foto para cada defeito selecionado: ${missingPhotoServices.map(s => s.name).join(', ')}`,
           variant: "destructive"
         });
+        setIsSaving(false);
         return;
       }
 
@@ -119,11 +130,24 @@ export default function PeritagemForm() {
       navigate('/peritagem');
     } catch (error) {
       console.error('Error saving sector:', error);
+      
+      // Mensagem de erro mais específica
+      let errorMessage = "Ocorreu um erro ao salvar os dados do setor";
+      
+      // Verificar se é o erro de recursão infinita
+      if (error instanceof Error && error.message.includes("infinite recursion")) {
+        errorMessage = "Erro no banco de dados: problema com as políticas de acesso. Por favor, contate o suporte técnico.";
+      } else if (error instanceof Error && error.message) {
+        errorMessage = `Erro: ${error.message}`;
+      }
+      
       toast({
         title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar os dados do setor",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -168,6 +192,7 @@ export default function PeritagemForm() {
               onSubmit={handleSubmit}
               mode="review"
               photoRequired={true}
+              loading={isSaving}
             />
           </div>
         </Card>

@@ -48,8 +48,16 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return newSector.id;
     } catch (error) {
       console.error("Error adding sector:", error);
-      toast.error("Não foi possível adicionar o setor");
-      throw error;
+      
+      // Verificar o tipo de erro e fornecer uma mensagem mais específica
+      if (error instanceof Error) {
+        if (error.message.includes("infinite recursion")) {
+          throw new Error("Erro de configuração do banco de dados: contate o administrador do sistema");
+        }
+        throw error;
+      }
+      
+      throw new Error("Não foi possível adicionar o setor");
     }
   };
 
@@ -72,8 +80,16 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     } catch (error) {
       console.error("Error updating sector:", error);
-      toast.error("Não foi possível atualizar o setor");
-      return false;
+      
+      // Verificar o tipo de erro e fornecer uma mensagem mais específica
+      if (error instanceof Error) {
+        if (error.message.includes("infinite recursion")) {
+          throw new Error("Erro de configuração do banco de dados: contate o administrador do sistema");
+        }
+        throw error;
+      }
+      
+      throw new Error("Não foi possível atualizar o setor");
     }
   };
 
@@ -124,8 +140,16 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     } catch (error) {
       console.error("Error updating service photos:", error);
-      toast.error("Não foi possível atualizar as fotos do serviço");
-      return false;
+      
+      // Verificar o tipo de erro e fornecer uma mensagem mais específica
+      if (error instanceof Error) {
+        if (error.message.includes("infinite recursion")) {
+          throw new Error("Erro de configuração do banco de dados: contate o administrador do sistema");
+        }
+        throw error;
+      }
+      
+      throw new Error("Não foi possível atualizar as fotos do serviço");
     }
   };
 
