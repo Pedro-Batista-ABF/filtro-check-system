@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
 import { Sector, Service } from "@/types";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -19,6 +19,7 @@ export default function PeritagemForm() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Buscar dados ao carregar o componente
@@ -41,6 +42,7 @@ export default function PeritagemForm() {
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
+        setErrorMessage("Não foi possível carregar os dados necessários para a peritagem");
         toast({
           title: "Erro de carregamento",
           description: "Não foi possível carregar os dados necessários para a peritagem",
@@ -69,6 +71,7 @@ export default function PeritagemForm() {
   const handleSubmit = async (data: Partial<Sector>) => {
     try {
       setIsSaving(true);
+      setErrorMessage(null);
       
       // Verificar se a foto do TAG foi adicionada
       if (!data.tagPhotoUrl) {
@@ -132,18 +135,16 @@ export default function PeritagemForm() {
       console.error('Error saving sector:', error);
       
       // Mensagem de erro mais específica
-      let errorMessage = "Ocorreu um erro ao salvar os dados do setor";
+      let errorMsg = "Ocorreu um erro ao salvar os dados do setor";
       
-      // Verificar se é o erro de recursão infinita
-      if (error instanceof Error && error.message.includes("infinite recursion")) {
-        errorMessage = "Erro no banco de dados: problema com as políticas de acesso. Por favor, contate o suporte técnico.";
-      } else if (error instanceof Error && error.message) {
-        errorMessage = `Erro: ${error.message}`;
+      if (error instanceof Error) {
+        errorMsg = error.message;
+        setErrorMessage(errorMsg);
       }
       
       toast({
         title: "Erro ao salvar",
-        description: errorMessage,
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {
@@ -184,6 +185,16 @@ export default function PeritagemForm() {
             {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
           </h1>
         </div>
+        
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <p className="font-medium">Erro encontrado:</p>
+            <p>{errorMessage}</p>
+            <p className="text-sm mt-2">
+              Se o erro persistir, entre em contato com o suporte técnico mencionando "erro de configuração do banco de dados".
+            </p>
+          </div>
+        )}
         
         <Card className="border-none shadow-lg">
           <div className="p-6">

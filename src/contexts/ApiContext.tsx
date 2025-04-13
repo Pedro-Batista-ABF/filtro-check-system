@@ -83,9 +83,17 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
       return newSector;
     } catch (err) {
+      console.error('Erro ao cadastrar setor:', err);
+      
+      // Verificar se é um erro de recursão infinita (problema comum com políticas RLS)
+      if (err instanceof Error && err.message.includes("infinite recursion")) {
+        const errorMsg = 'Erro de configuração do banco de dados: problema com as políticas de acesso';
+        setError(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
       const errorMsg = 'Erro ao cadastrar setor';
       setError(errorMsg);
-      toast.error(errorMsg);
       throw new Error(errorMsg);
     } finally {
       setLoading(false);
@@ -114,9 +122,17 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.success(successMessage);
       return updatedSector;
     } catch (err) {
+      console.error('Erro ao atualizar setor:', err);
+      
+      // Verificar se é um erro de recursão infinita (problema comum com políticas RLS)
+      if (err instanceof Error && err.message.includes("infinite recursion")) {
+        const errorMsg = 'Erro de configuração do banco de dados: problema com as políticas de acesso';
+        setError(errorMsg);
+        throw new Error(errorMsg);
+      }
+      
       const errorMsg = 'Erro ao atualizar setor';
       setError(errorMsg);
-      toast.error(errorMsg);
       throw new Error(errorMsg);
     } finally {
       setLoading(false);

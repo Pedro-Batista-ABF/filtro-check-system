@@ -41,23 +41,36 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     email: auth.user.email || ''
   } : null;
 
+  // Helper function to handle common database errors
+  const handleDatabaseError = (error: any, defaultMessage: string): Error => {
+    console.error(defaultMessage, error);
+    
+    // Handle specific error types
+    if (error instanceof Error) {
+      // Check for infinite recursion error in database policies
+      if (error.message.includes("infinite recursion")) {
+        return new Error("Erro de configuração do banco de dados: problema de recursão infinita nas políticas de acesso. Contate o administrador do sistema.");
+      }
+      
+      // Check for other database error messages that might be useful
+      if (error.message.includes("violates row-level security policy")) {
+        return new Error("Erro de permissão: você não tem autorização para realizar esta operação.");
+      }
+      
+      return error;
+    }
+    
+    // For unknown errors
+    return new Error(defaultMessage);
+  };
+
   // Adapter methods for extended API context
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
       const newSector = await api.createSector(sectorData);
       return newSector.id;
     } catch (error) {
-      console.error("Error adding sector:", error);
-      
-      // Verificar o tipo de erro e fornecer uma mensagem mais específica
-      if (error instanceof Error) {
-        if (error.message.includes("infinite recursion")) {
-          throw new Error("Erro de configuração do banco de dados: contate o administrador do sistema");
-        }
-        throw error;
-      }
-      
-      throw new Error("Não foi possível adicionar o setor");
+      throw handleDatabaseError(error, "Não foi possível adicionar o setor");
     }
   };
 
@@ -79,17 +92,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await api.updateSector(updatedSector);
       return true;
     } catch (error) {
-      console.error("Error updating sector:", error);
-      
-      // Verificar o tipo de erro e fornecer uma mensagem mais específica
-      if (error instanceof Error) {
-        if (error.message.includes("infinite recursion")) {
-          throw new Error("Erro de configuração do banco de dados: contate o administrador do sistema");
-        }
-        throw error;
-      }
-      
-      throw new Error("Não foi possível atualizar o setor");
+      throw handleDatabaseError(error, "Não foi possível atualizar o setor");
     }
   };
 
@@ -139,17 +142,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await api.updateSector(updatedSector);
       return true;
     } catch (error) {
-      console.error("Error updating service photos:", error);
-      
-      // Verificar o tipo de erro e fornecer uma mensagem mais específica
-      if (error instanceof Error) {
-        if (error.message.includes("infinite recursion")) {
-          throw new Error("Erro de configuração do banco de dados: contate o administrador do sistema");
-        }
-        throw error;
-      }
-      
-      throw new Error("Não foi possível atualizar as fotos do serviço");
+      throw handleDatabaseError(error, "Não foi possível atualizar as fotos do serviço");
     }
   };
 
