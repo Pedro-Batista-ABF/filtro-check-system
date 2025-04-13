@@ -18,19 +18,33 @@ export function usePeritagemData(id?: string) {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         // Carregar lista de serviços
         const defaultServices = await getDefaultServices();
+        
+        if (!defaultServices || defaultServices.length === 0) {
+          console.error("Não foi possível carregar os serviços padrão");
+          throw new Error("Não foi possível carregar os serviços disponíveis");
+        }
+        
         setServices(defaultServices);
         
         // Se tem ID, buscar o setor
         if (id) {
           const sectorData = await getSectorById(id);
-          setSector(sectorData);
           
           if (!sectorData) {
             console.warn(`Setor com ID ${id} não encontrado.`);
+            toast({
+              title: "Setor não encontrado",
+              description: `O setor com ID ${id} não foi encontrado.`,
+              variant: "destructive"
+            });
             navigate('/peritagem/novo', { replace: true });
+            return;
           }
+          
+          setSector(sectorData);
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);

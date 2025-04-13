@@ -18,6 +18,19 @@ export function usePeritagemSubmit() {
       setIsSaving(true);
       setErrorMessage(null);
       
+      // Verificar se tem usuário autenticado
+      if (!localStorage.getItem('supabase.auth.token')) {
+        toast({
+          title: "Não autenticado",
+          description: "Você precisa estar logado para realizar esta operação",
+          variant: "destructive"
+        });
+        setIsSaving(false);
+        return false;
+      }
+      
+      console.log("Dados iniciais para submissão:", data);
+      
       // Verificar se a foto do TAG foi adicionada
       if (!data.tagPhotoUrl) {
         toast({
@@ -26,7 +39,7 @@ export function usePeritagemSubmit() {
           variant: "destructive"
         });
         setIsSaving(false);
-        return;
+        return false;
       }
 
       // Definir data da peritagem como hoje se for nova peritagem
@@ -46,7 +59,7 @@ export function usePeritagemSubmit() {
           variant: "destructive"
         });
         setIsSaving(false);
-        return;
+        return false;
       }
 
       // Verificar se todos os serviços selecionados têm pelo menos uma foto de defeito
@@ -61,7 +74,7 @@ export function usePeritagemSubmit() {
           variant: "destructive"
         });
         setIsSaving(false);
-        return;
+        return false;
       }
 
       // Processar as fotos - importante: elas não estão na estrutura correta ainda
@@ -87,12 +100,16 @@ export function usePeritagemSubmit() {
         }
       }
       
+      console.log("Processando fotos...", beforePhotos.length);
+      
       // Upload de fotos, se necessário
       const processedPhotos: PhotoWithFile[] = [];
       for (const photo of beforePhotos) {
         if (photo.file) {
           try {
+            console.log("Fazendo upload de foto:", photo.file.name);
             const photoUrl = await uploadPhoto(photo.file, 'before');
+            console.log("Upload concluído com URL:", photoUrl);
             processedPhotos.push({
               ...photo,
               url: photoUrl
@@ -105,7 +122,7 @@ export function usePeritagemSubmit() {
               variant: "destructive"
             });
             setIsSaving(false);
-            return;
+            return false;
           }
         } else {
           processedPhotos.push(photo);
@@ -116,12 +133,15 @@ export function usePeritagemSubmit() {
       if (data.tagPhotoUrl && data.tagPhotoUrl.startsWith('blob:')) {
         // Converter blob URL para File
         try {
+          console.log("Processando foto do TAG...");
           const response = await fetch(data.tagPhotoUrl);
           const blob = await response.blob();
           const file = new File([blob], `tag-${Date.now()}.jpg`, { type: 'image/jpeg' });
           
           // Fazer upload do arquivo
+          console.log("Fazendo upload da foto do TAG");
           const photoUrl = await uploadPhoto(file, 'tags');
+          console.log("Upload de TAG concluído com URL:", photoUrl);
           data.tagPhotoUrl = photoUrl;
         } catch (error) {
           console.error('Erro ao processar foto do TAG:', error);
@@ -131,22 +151,24 @@ export function usePeritagemSubmit() {
             variant: "destructive"
           });
           setIsSaving(false);
-          return;
+          return false;
         }
       }
       
       // Salvar a coleção de fotos no objeto de dados
       data.beforePhotos = processedPhotos;
 
-      console.log("Dados do setor antes de salvar:", data);
+      console.log("Dados do setor antes de salvar:", JSON.stringify(data, null, 2));
 
       if (isEditing && sectorId) {
+        console.log("Atualizando setor existente:", sectorId);
         await updateSector(sectorId, data);
         toast({
           title: "Peritagem atualizada",
           description: "A peritagem foi atualizada com sucesso."
         });
       } else {
+        console.log("Criando novo setor");
         await addSector(data as Omit<Sector, 'id'>);
         toast({
           title: "Peritagem registrada",
@@ -163,6 +185,7 @@ export function usePeritagemSubmit() {
       
       if (error instanceof Error) {
         errorMsg = error.message;
+        console.error("Detalhes do erro:", errorMsg);
         setErrorMessage(errorMsg);
       }
       
