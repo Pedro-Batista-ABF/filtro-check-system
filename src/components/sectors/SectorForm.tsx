@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -885,4 +886,11 @@ export default function SectorForm({
             </>
           ) : (
             mode === 'scrap' 
-              ? (isScrap ? 'Confirmar Sucateamento'
+              ? (isScrap ? 'Confirmar Sucateamento' : 'Salvar') 
+              : (mode === 'quality' && qualityCompleted ? 'Finalizar Setor' : 'Salvar Alterações')
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
