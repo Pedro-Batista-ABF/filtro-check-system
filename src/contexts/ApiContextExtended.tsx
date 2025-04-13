@@ -31,7 +31,14 @@ export const useApi = () => {
         
         // Verificar se a tagPhotoUrl é válida e está presente
         if (!sectorData.tagPhotoUrl) {
-          console.warn("Aviso: Setor sendo cadastrado sem foto da TAG");
+          console.warn("ERRO CRÍTICO: Setor sendo cadastrado sem foto da TAG");
+          throw new Error("Foto da TAG é obrigatória");
+        }
+        
+        // Verificar se a foto da TAG é um blob
+        if (sectorData.tagPhotoUrl.startsWith('blob:')) {
+          console.error("Erro: Tentativa de salvar com foto em formato blob:", sectorData.tagPhotoUrl);
+          throw new Error("A foto da TAG precisa ser processada antes de salvar o setor.");
         }
         
         // Limpar e formatar os dados para evitar erros
@@ -52,6 +59,13 @@ export const useApi = () => {
           })) || []
         };
         
+        // Validação final antes do envio
+        if (!cleanedData.tagPhotoUrl || cleanedData.tagPhotoUrl === '') {
+          console.error("Erro crítico: tagPhotoUrl está vazio após limpeza");
+          throw new Error("Foto da TAG inválida ou não encontrada");
+        }
+        
+        console.log("Dados limpos para envio:", cleanedData);
         const result = await api.createSector(cleanedData);
         return result;
       } catch (error) {
@@ -67,6 +81,10 @@ export const useApi = () => {
             toast.error("Erro de autenticação", {
               description: "Você precisa estar logado para cadastrar um setor"
             });
+          } else if (error.message.includes("foto da TAG") || error.message.includes("TAG é obrigatória")) {
+            toast.error("Foto da TAG inválida", {
+              description: "A foto da TAG é obrigatória e não foi encontrada"
+            });
           } else {
             toast.error("Erro ao cadastrar setor", {
               description: error.message
@@ -76,6 +94,27 @@ export const useApi = () => {
           toast.error("Erro desconhecido ao cadastrar setor");
         }
         
+        throw error;
+      }
+    },
+    // Adicionar uma nova função para processar fotos da TAG
+    processTagPhoto: async (file: File): Promise<string> => {
+      try {
+        if (!file) {
+          throw new Error("Arquivo de foto inválido");
+        }
+        
+        console.log("Processando foto da TAG:", file.name);
+        
+        // Aqui você pode adicionar lógica para upload para o servidor
+        // Por exemplo, usando supabase storage ou outra solução
+        
+        // Para este exemplo, retornamos uma URL temporária
+        const url = URL.createObjectURL(file);
+        return url;
+      } catch (error) {
+        console.error("Erro ao processar foto da TAG:", error);
+        toast.error("Erro ao processar foto da TAG");
         throw error;
       }
     }

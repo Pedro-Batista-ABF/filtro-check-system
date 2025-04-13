@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,12 @@ export default function ReviewForm({
   formErrors,
   photoRequired
 }: ReviewFormProps) {
+  const [tagPhotoUploaded, setTagPhotoUploaded] = useState(!!tagPhotoUrl);
+
+  const handleTagPhotoSuccess = () => {
+    setTagPhotoUploaded(true);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -158,6 +164,9 @@ export default function ReviewForm({
               onChange={handleTagPhotoUpload}
               photos={tagPhotoUrl ? [tagPhotoUrl] : []}
               required={photoRequired}
+              error={formErrors.tagPhoto}
+              onSuccess={handleTagPhotoSuccess}
+              value={tagPhotoUrl}
             />
             {formErrors.tagPhoto && (
               <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>

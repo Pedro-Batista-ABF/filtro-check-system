@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,7 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
   let displayMessage = message;
   let hint = "Se o erro persistir, entre em contato com o suporte técnico.";
   let showLoginButton = false;
+  let showTagPhotoHelp = false;
   
   if (message.includes("auth/invalid-email")) {
     displayMessage = "E-mail inválido. Verifique o formato do e-mail informado.";
@@ -49,9 +50,10 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
     displayMessage = "Você precisa estar logado para realizar esta operação.";
     hint = "Faça login novamente para continuar.";
     showLoginButton = true;
-  } else if (message.includes("foto da TAG") || message.includes("TAG é obrigatória")) {
+  } else if (message.includes("foto da TAG") || message.includes("TAG é obrigatória") || message.includes("TAG não encontrada") || message.includes("Foto do TAG")) {
     displayMessage = "Foto do TAG não encontrada ou inválida.";
-    hint = "Verifique se você fez o upload da foto do TAG corretamente.";
+    hint = "Certifique-se de fazer o upload da foto do TAG antes de prosseguir. A foto é obrigatória para registro do setor.";
+    showTagPhotoHelp = true;
   }
   
   const handleLoginClick = async () => {
@@ -70,6 +72,22 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
       <AlertDescription>
         <p>{displayMessage}</p>
         <p className="text-sm mt-2">{hint}</p>
+        
+        {showTagPhotoHelp && (
+          <div className="mt-3 p-3 bg-red-100 rounded-md">
+            <div className="flex items-center gap-2 mb-2">
+              <Camera className="h-4 w-4" />
+              <span className="font-medium">Dicas para foto do TAG:</span>
+            </div>
+            <ul className="text-sm list-disc pl-5 space-y-1">
+              <li>Verifique se você selecionou uma imagem válida</li>
+              <li>A imagem deve estar nos formatos JPG, PNG ou GIF</li>
+              <li>Aguarde o upload completo da foto antes de prosseguir</li>
+              <li>Certifique-se de que a foto mostra claramente o TAG do setor</li>
+            </ul>
+          </div>
+        )}
+        
         {showLoginButton && (
           <Button 
             variant="outline" 
