@@ -119,6 +119,39 @@ export default function PeritagemForm() {
         return;
       }
 
+      // Garantir que os IDs de serviço estão como ServiceType
+      if (data.services) {
+        data.services = data.services.map(service => ({
+          ...service,
+          type: service.id as any  // Garantir que type é definido como o ID do serviço
+        }));
+      }
+
+      // Processar as fotos
+      if (data.services) {
+        // Inicializar beforePhotos se necessário
+        data.beforePhotos = data.beforePhotos || [];
+        
+        // Para cada serviço com fotos, adicionar as fotos à coleção principal
+        for (const service of data.services) {
+          if (service.photos && service.photos.length > 0) {
+            // Filtrar apenas fotos do tipo "before"
+            const beforePhotos = service.photos.filter(photo => 
+              typeof photo === 'object' && photo.type === 'before'
+            );
+            
+            // Adicionar serviceId às fotos
+            const processedPhotos = beforePhotos.map(photo => ({
+              ...photo,
+              serviceId: service.id
+            }));
+            
+            // Adicionar à coleção principal
+            data.beforePhotos = [...data.beforePhotos, ...processedPhotos];
+          }
+        }
+      }
+
       if (isEditing && sector) {
         await updateSector(sector.id, data);
         toast({
