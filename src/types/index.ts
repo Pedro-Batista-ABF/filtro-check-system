@@ -1,4 +1,3 @@
-
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -17,6 +16,11 @@ export interface Photo {
   url: string;
   type: 'before' | 'after';
   serviceId?: string;
+}
+
+// Interface para trabalhar com uploads de arquivos
+export interface PhotoWithFile extends Photo {
+  file?: File;
 }
 
 export interface Service {
