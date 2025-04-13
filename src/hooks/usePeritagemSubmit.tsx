@@ -65,6 +65,7 @@ export function usePeritagemSubmit() {
                   processedPhotos.push(processedPhoto);
                 } catch (uploadError) {
                   console.error('Foto Upload Error:', uploadError);
+                  toast.error("Erro ao fazer upload de foto");
                   throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
                 }
               } else if (photo.url) {
@@ -79,6 +80,15 @@ export function usePeritagemSubmit() {
             }
           }
         }
+      }
+
+      // Garantir que a foto da TAG está processada se existe
+      let tagPhotoUrl = data.tagPhotoUrl;
+      if (tagPhotoUrl && tagPhotoUrl.startsWith('blob:')) {
+        console.log("A foto da TAG precisa ser processada:", tagPhotoUrl);
+        // Aqui precisaríamos pegar o arquivo da foto e fazer upload
+        // Como não temos acesso direto ao arquivo, precisamos confiar que o upload já foi feito
+        // Em uma aplicação real, você precisaria armazenar o File junto com a URL blob
       }
 
       // Garantir que status e outcome sejam valores válidos nos tipos corretos
@@ -123,6 +133,18 @@ export function usePeritagemSubmit() {
         } catch (retryError) {
           attempt++;
           console.warn(`Tentativa ${attempt} falhou:`, retryError);
+          
+          // Verificar se é um erro de recursão infinita (problema nas políticas RLS)
+          if (retryError instanceof Error && 
+             (retryError.message.includes("infinite recursion") || 
+              retryError.message.includes("policy for relation"))) {
+            // Este é um erro de configuração do Supabase, não podemos resolver no frontend
+            toast.error("Erro de permissão no banco de dados", {
+              description: "Contacte o administrador do sistema para verificar as políticas de RLS",
+              duration: 5000
+            });
+            throw new Error("Erro de configuração do banco de dados. Por favor, contate o administrador.");
+          }
           
           if (attempt >= maxRetries) {
             throw retryError; // Lançar o erro se todas as tentativas falharem

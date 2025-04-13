@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Service } from "@/types";
 import ServiceCheckbox from "../ServiceCheckbox";
+import PhotoUpload from "../PhotoUpload";
 
 interface ReviewFormProps {
   tagNumber: string;
@@ -149,24 +150,15 @@ export default function ReviewForm({
           
           <div className="space-y-2">
             <Label htmlFor="tagPhoto" className={formErrors.tagPhoto ? "text-red-500" : ""}>
-              Foto do TAG* {photoRequired && <span className="text-red-500">*</span>}
+              Foto do TAG {photoRequired && <span className="text-red-500">*</span>}
             </Label>
-            <Input
+            <PhotoUpload
               id="tagPhoto"
-              type="file"
-              accept="image/*"
-              onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
-              className={formErrors.tagPhoto ? "border-red-500" : ""}
+              label="Foto do TAG"
+              onChange={handleTagPhotoUpload}
+              photos={tagPhotoUrl ? [tagPhotoUrl] : []}
+              required={photoRequired}
             />
-            {tagPhotoUrl && (
-              <div className="mt-2">
-                <img 
-                  src={tagPhotoUrl} 
-                  alt="TAG do Setor" 
-                  className="w-32 h-32 object-cover rounded-md border"
-                />
-              </div>
-            )}
             {formErrors.tagPhoto && (
               <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
             )}

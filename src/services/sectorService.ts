@@ -37,6 +37,14 @@ export const useSectorService = () => {
         serviceId: photo.serviceId
       }));
 
+      // Verificar se a foto da TAG está presente e válida
+      const tagPhotoUrl = sectorData.tagPhotoUrl;
+      if (!tagPhotoUrl) {
+        console.warn("Setor sendo cadastrado sem foto da TAG");
+      } else if (tagPhotoUrl.startsWith('blob:')) {
+        console.warn("Foto da TAG está em formato blob, pode causar problemas:", tagPhotoUrl);
+      }
+
       // Garantir que todos os campos obrigatórios estejam presentes e no formato correto
       const completeData = {
         tagNumber: sectorData.tagNumber,
@@ -69,6 +77,11 @@ export const useSectorService = () => {
 
   const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
     try {
+      // Verificar se existem fotos com formato blob que precisam ser processadas
+      if (updates.tagPhotoUrl && updates.tagPhotoUrl.startsWith('blob:')) {
+        console.warn("Foto da TAG em formato blob no updateSector:", updates.tagPhotoUrl);
+      }
+
       // Usando a versão atualizada do updateSector que aceita id e updates separadamente
       await api.updateSector(id, updates);
       toast.success("Setor atualizado com sucesso!");

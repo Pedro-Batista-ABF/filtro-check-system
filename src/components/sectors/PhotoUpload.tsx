@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ImagePlus, CheckCircle } from "lucide-react";
 import { Photo } from "@/types";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface PhotoUploadProps {
   id?: string;
@@ -34,35 +34,40 @@ export default function PhotoUpload({
 }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const { toast } = useToast();
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Função que lida com os dois tipos de callbacks
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setIsUploading(true);
+      setUploadError(null);
       
-      if (onChange) {
-        onChange(e.target.files);
-      }
-      if (onPhotoUpload) {
-        onPhotoUpload(e, type);
-      }
-      
-      // Simular conclusão do upload para feedback visual
-      setTimeout(() => {
-        setIsUploading(false);
-        setUploadSuccess(true);
+      try {
+        if (onChange) {
+          onChange(e.target.files);
+        }
+        if (onPhotoUpload) {
+          onPhotoUpload(e, type);
+        }
         
-        toast({
-          title: "Upload concluído",
-          description: `${e.target.files?.length} foto(s) adicionada(s) com sucesso.`,
-        });
-        
-        // Reset do estado de sucesso após 3 segundos
+        // Simular conclusão do upload para feedback visual
         setTimeout(() => {
-          setUploadSuccess(false);
-        }, 3000);
-      }, 1000);
+          setIsUploading(false);
+          setUploadSuccess(true);
+          
+          toast.success(`${e.target.files?.length} foto(s) adicionada(s) com sucesso.`);
+          
+          // Reset do estado de sucesso após 3 segundos
+          setTimeout(() => {
+            setUploadSuccess(false);
+          }, 3000);
+        }, 1000);
+      } catch (error) {
+        setIsUploading(false);
+        setUploadError(error instanceof Error ? error.message : "Erro ao fazer upload da foto");
+        toast.error("Erro ao fazer upload da foto");
+        console.error("Erro no upload da foto:", error);
+      }
     }
   };
 
@@ -121,6 +126,12 @@ export default function PhotoUpload({
           disabled={disabled || isUploading}
         />
       </div>
+      
+      {uploadError && (
+        <div className="mt-2 text-sm text-red-500">
+          Erro: {uploadError}
+        </div>
+      )}
 
       {/* Exibir fotos existentes como URLs */}
       {photos.length > 0 && (
