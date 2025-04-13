@@ -1,3 +1,4 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
@@ -14,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSectorById, addSector, updateSector, getDefaultServices } = useApi();
+  const { getSectorById, addSector, updateSector, getDefaultServices, uploadPhoto } = useApi();
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +89,9 @@ export default function PeritagemForm() {
       // Definir data da peritagem como hoje se for nova peritagem
       if (!isEditing) {
         data.peritagemDate = format(new Date(), 'yyyy-MM-dd');
-        data.status = 'emExecucao';
+        data.status = 'emExecucao' as const;
+        data.outcome = 'EmAndamento';
+        data.cycleCount = 1;
       }
 
       // Verificar se pelo menos um serviço foi selecionado
@@ -118,14 +121,6 @@ export default function PeritagemForm() {
         return;
       }
 
-      // Garantir que todos os serviços têm o tipo definido corretamente
-      if (data.services) {
-        data.services = data.services.map(service => ({
-          ...service,
-          type: service.id as any  // Garantir que type é definido como o ID do serviço
-        }));
-      }
-
       // Processar as fotos - importante: elas não estão na estrutura correta ainda
       const beforePhotos: PhotoWithFile[] = [];
       
@@ -142,15 +137,63 @@ export default function PeritagemForm() {
             for (const photo of serviceBeforePhotos) {
               beforePhotos.push({
                 ...photo,
-                serviceId: service.id as any
+                serviceId: service.id
               });
             }
           }
         }
       }
       
+      // Upload de fotos, se necessário
+      const processedPhotos: PhotoWithFile[] = [];
+      for (const photo of beforePhotos) {
+        if (photo.file) {
+          try {
+            const photoUrl = await uploadPhoto(photo.file, 'before');
+            processedPhotos.push({
+              ...photo,
+              url: photoUrl
+            });
+          } catch (uploadError) {
+            console.error('Erro ao fazer upload de foto:', uploadError);
+            toast({
+              title: "Erro de upload",
+              description: "Não foi possível fazer o upload das fotos",
+              variant: "destructive"
+            });
+            setIsSaving(false);
+            return;
+          }
+        } else {
+          processedPhotos.push(photo);
+        }
+      }
+      
+      // Upload da foto do TAG, se necessário
+      if (data.tagPhotoUrl && data.tagPhotoUrl.startsWith('blob:')) {
+        // Converter blob URL para File
+        try {
+          const response = await fetch(data.tagPhotoUrl);
+          const blob = await response.blob();
+          const file = new File([blob], `tag-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          
+          // Fazer upload do arquivo
+          const photoUrl = await uploadPhoto(file, 'tags');
+          data.tagPhotoUrl = photoUrl;
+        } catch (error) {
+          console.error('Erro ao processar foto do TAG:', error);
+          toast({
+            title: "Erro de upload",
+            description: "Não foi possível fazer o upload da foto do TAG",
+            variant: "destructive"
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+      
       // Salvar a coleção de fotos no objeto de dados
-      data.beforePhotos = beforePhotos;
+      data.beforePhotos = processedPhotos;
 
       console.log("Dados do setor antes de salvar:", data);
 
@@ -192,7 +235,7 @@ export default function PeritagemForm() {
   // Definir a data da peritagem como a data atual no formato ISO
   const currentDate = format(new Date(), 'yyyy-MM-dd');
 
-  const defaultSector = {
+  const defaultSector: Sector = {
     id: '',
     tagNumber: '',
     tagPhotoUrl: '',
@@ -203,7 +246,8 @@ export default function PeritagemForm() {
     beforePhotos: [],
     productionCompleted: false,
     cycleCount: 1,
-    status: 'peritagemPendente'
+    status: 'peritagemPendente',
+    outcome: 'EmAndamento'
   };
 
   return (

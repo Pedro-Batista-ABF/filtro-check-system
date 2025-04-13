@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import { Sector, Service, ServiceType, Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
@@ -194,6 +194,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Implementação do método updateServicePhotos
   const updateServicePhotos = async (
     sectorId: string, 
     serviceId: string, 
@@ -226,7 +227,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: `photo-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         url: photoUrl,
         type,
-        serviceId: serviceId as ServiceType
+        serviceId
       };
 
       // Adiciona a foto ao array apropriado dependendo do tipo
@@ -255,7 +256,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getSectorById: api.getSectorById,
     getSectorsByTag: api.getSectorsByTag,
     getDefaultServices: api.getDefaultServices,
-    updateServicePhotos: api.updateServicePhotos,
+    updateServicePhotos,
     uploadPhoto: api.uploadPhoto,
     
     // Include auth properties and methods
