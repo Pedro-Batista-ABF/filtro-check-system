@@ -58,34 +58,45 @@ export function usePeritagemSubmit() {
 
       console.log("Selected Services:", selectedServices);
       
-      // Process before photos from services
-      const processedPhotos: PhotoWithFile[] = [];
-      if (data.services) {
-        for (const service of data.services) {
-          if (service.selected && service.photos) {
-            for (const photo of service.photos) {
-              if ('file' in photo && photo.file instanceof File) {
-                try {
-                  // Usamos o try/catch especificamente para o upload de cada foto
-                  const photoUrl = await uploadPhoto(photo.file, 'before');
-                  processedPhotos.push({
-                    ...photo,
-                    url: photoUrl,
-                    file: photo.file
-                  });
-                } catch (uploadError) {
-                  console.error('Foto Upload Error:', uploadError);
-                  throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
-                }
-              } else if (photo.url) {
-                // Se a foto já tem URL mas não tem file, simplesmente a adicione
-                processedPhotos.push(photo as PhotoWithFile);
+      // Process before photos from services - essa parte estava causando problemas
+      let processedPhotos: PhotoWithFile[] = [];
+      const servicesToProcess = data.services || [];
+      
+      for (const service of servicesToProcess) {
+        if (service.selected && service.photos && service.photos.length > 0) {
+          for (const photo of service.photos) {
+            // Garantir que temos um objeto de foto válido e que ele tem um arquivo
+            if (photo && 'file' in photo && photo.file instanceof File) {
+              try {
+                // Upload da foto e obter URL
+                const photoUrl = await uploadPhoto(photo.file, 'before');
+                
+                // Criar um novo objeto de foto com a URL obtida
+                const processedPhoto: PhotoWithFile = {
+                  id: photo.id || `${service.id}-${Date.now()}`,
+                  url: photoUrl,
+                  type: 'before',
+                  serviceId: service.id,
+                  file: photo.file
+                };
+                
+                processedPhotos.push(processedPhoto);
+              } catch (uploadError) {
+                console.error('Foto Upload Error:', uploadError);
+                throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
               }
+            } else if (photo && photo.url) {
+              // Se a foto já tem URL mas não tem file, adicione-a como está
+              processedPhotos.push({
+                ...photo,
+                file: undefined // Garantir que temos a propriedade file, mesmo que undefined
+              } as PhotoWithFile);
             }
           }
         }
       }
 
+      // Atribuir as fotos processadas ao objeto de setor
       data.beforePhotos = processedPhotos;
 
       // Prepare sector data with retry logic

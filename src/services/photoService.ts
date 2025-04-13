@@ -46,13 +46,21 @@ export const usePhotoService = () => {
         const beforePhotos = sector.beforePhotos || [];
         const updatedBeforePhotos = [...beforePhotos, newPhoto];
         
-        // Crie um objeto separado para a atualização para evitar problemas de recursão
-        const updateData = {
+        // Corrija o erro de tipos passando apenas os campos que precisamos atualizar
+        // Mas mantendo a conformidade com o tipo Sector
+        await api.updateSector({
           id: sector.id,
-          beforePhotos: updatedBeforePhotos
-        };
-        
-        await api.updateSector(updateData);
+          tagNumber: sector.tagNumber,
+          entryInvoice: sector.entryInvoice,
+          entryDate: sector.entryDate,
+          peritagemDate: sector.peritagemDate,
+          services: sector.services,
+          status: sector.status,
+          beforePhotos: updatedBeforePhotos,
+          // Incluir outros campos obrigatórios
+          outcome: sector.outcome || 'EmAndamento',
+          cycleCount: sector.cycleCount || 1
+        });
       }
       // Para fotos "after", adiciona à lista de afterPhotos
       else if (type === 'after') {
@@ -66,13 +74,21 @@ export const usePhotoService = () => {
         const afterPhotos = sector.afterPhotos || [];
         const updatedAfterPhotos = [...afterPhotos, newPhoto];
         
-        // Crie um objeto separado para a atualização para evitar problemas de recursão
-        const updateData = {
+        // Corrija o erro de tipos passando apenas os campos que precisamos atualizar
+        // Mas mantendo a conformidade com o tipo Sector
+        await api.updateSector({
           id: sector.id,
-          afterPhotos: updatedAfterPhotos
-        };
-        
-        await api.updateSector(updateData);
+          tagNumber: sector.tagNumber,
+          entryInvoice: sector.entryInvoice,
+          entryDate: sector.entryDate,
+          peritagemDate: sector.peritagemDate,
+          services: sector.services,
+          status: sector.status,
+          afterPhotos: updatedAfterPhotos,
+          // Incluir outros campos obrigatórios
+          outcome: sector.outcome || 'EmAndamento',
+          cycleCount: sector.cycleCount || 1
+        });
       }
       
       toast.success("Foto adicionada");
