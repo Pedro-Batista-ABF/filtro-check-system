@@ -27,7 +27,15 @@ export function usePeritagemData(id?: string) {
           throw new Error("Não foi possível carregar os serviços disponíveis");
         }
         
-        setServices(defaultServices);
+        // Remove description from services if it's not part of the type
+        const processedServices = defaultServices.map(service => ({
+          id: service.id,
+          name: service.name,
+          selected: false,
+          type: service.id as any
+        }));
+        
+        setServices(processedServices);
         
         // Se tem ID, buscar o setor
         if (id) {
