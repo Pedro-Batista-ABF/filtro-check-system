@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ErrorMessageProps {
   message: string;
@@ -43,11 +44,17 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
   } else if (message.includes("row level security")) {
     displayMessage = "Erro de permissão: você não tem autorização para realizar esta operação.";
     hint = "Verifique se você está logado corretamente ou se possui as permissões necessárias.";
-  } else if (message.includes("not authenticated") || message.includes("Não autenticado")) {
+  } else if (message.includes("not authenticated") || message.includes("Não autenticado") || message.includes("precisa estar logado")) {
     displayMessage = "Você precisa estar logado para realizar esta operação.";
-    hint = "Faça login para continuar.";
+    hint = "Faça login novamente para continuar.";
     showLoginButton = true;
   }
+  
+  const handleLoginClick = async () => {
+    // Fazer logout antes de redirecionar para o login
+    await supabase.auth.signOut();
+    navigate('/login');
+  };
   
   return (
     <Alert variant="destructive" className="bg-red-50 border-red-200">
@@ -61,7 +68,7 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
             variant="outline" 
             size="sm" 
             className="mt-2" 
-            onClick={() => navigate('/login')}
+            onClick={handleLoginClick}
           >
             Ir para o login
           </Button>

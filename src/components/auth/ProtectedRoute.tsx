@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -13,8 +14,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setIsUserAuthenticated(!!session);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Erro ao verificar sessão:", error);
+          setIsUserAuthenticated(false);
+          return;
+        }
+        
+        if (session) {
+          console.log("Sessão válida encontrada:", session.user.email);
+          setIsUserAuthenticated(true);
+          
+          // Verificar também se o token está válido
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            console.warn("Token inválido, usuário não encontrado");
+            setIsUserAuthenticated(false);
+          }
+        } else {
+          console.log("Nenhuma sessão encontrada");
+          setIsUserAuthenticated(false);
+        }
       } catch (error) {
         console.error("Erro ao verificar sessão:", error);
         setIsUserAuthenticated(false);
@@ -28,7 +49,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Show loading when auth is being checked
   if (loading || isCheckingAuth) {
-    return <div className="flex items-center justify-center h-screen">Carregando...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-2 text-sm text-gray-500">Verificando autenticação...</p>
+      </div>
+    );
   }
   
   // Redirect to login if not authenticated

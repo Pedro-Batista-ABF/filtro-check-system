@@ -1,11 +1,16 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { Sector, Photo } from "@/types";
-import { toast } from "sonner";
-import { handleDatabaseError } from "@/utils/errorHandlers";
+import { Photo, PhotoWithFile } from '@/types';
+import { toast } from 'sonner';
+import { handleDatabaseError } from '@/utils/errorHandlers';
+import { useApiOriginal } from '@/contexts/ApiContext';
+import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Service for photo operations
+ */
 export const usePhotoService = () => {
-  // Método para atualizar as fotos de um serviço específico
+  const api = useApiOriginal();
+
   const updateServicePhotos = async (
     sectorId: string,
     serviceId: string,
@@ -13,54 +18,60 @@ export const usePhotoService = () => {
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      // Primeiro, vamos obter o ID do ciclo atual para este setor
-      const { data: cycleData, error: cycleError } = await supabase
-        .from('cycles')
-        .select('id')
-        .eq('sector_id', sectorId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (cycleError) {
-        throw cycleError;
+      // Verificar autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Não autenticado", "Você precisa estar logado para realizar esta operação");
+        throw new Error("Não autenticado");
       }
 
-      const cycleId = cycleData.id;
-
-      // Agora, inserimos a foto no banco de dados
-      const { data: { user } } = await supabase.auth.getUser();
+      // Primeiro, busca o setor atual
+      const sector = await api.getSectorById(sectorId);
+      if (!sector) {
+        throw new Error("Setor não encontrado");
+      }
       
-      if (!user) {
-        throw new Error("Usuário não autenticado");
-      }
-
-      const { data: photoData, error: photoError } = await supabase
-        .from('photos')
-        .insert({
-          cycle_id: cycleId,
-          service_id: serviceId,
+      // Para fotos "before", adiciona à lista de beforePhotos
+      if (type === 'before') {
+        const newPhoto: Photo = {
+          id: `${serviceId}-${Date.now()}`,
           url: photoUrl,
-          type: type,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (photoError) {
-        console.error("Erro ao inserir foto:", photoError);
-        throw photoError;
+          type: 'before',
+          serviceId
+        };
+        
+        const beforePhotos = sector.beforePhotos || [];
+        const updatedBeforePhotos = [...beforePhotos, newPhoto];
+        
+        await api.updateSector({
+          ...sector,
+          beforePhotos: updatedBeforePhotos
+        });
       }
-
+      // Para fotos "after", adiciona à lista de afterPhotos
+      else if (type === 'after') {
+        const newPhoto: Photo = {
+          id: `${serviceId}-${Date.now()}`,
+          url: photoUrl,
+          type: 'after',
+          serviceId
+        };
+        
+        const afterPhotos = sector.afterPhotos || [];
+        const updatedAfterPhotos = [...afterPhotos, newPhoto];
+        
+        await api.updateSector({
+          ...sector,
+          afterPhotos: updatedAfterPhotos
+        });
+      }
+      
+      toast.success("Foto adicionada com sucesso");
       return true;
     } catch (error) {
-      const processedError = handleDatabaseError(
-        error,
-        "Não foi possível atualizar as fotos do serviço"
-      );
-      console.error(processedError);
+      const processedError = handleDatabaseError(error, "Não foi possível adicionar a foto");
       toast.error(processedError.message);
-      return false;
+      throw processedError;
     }
   };
 

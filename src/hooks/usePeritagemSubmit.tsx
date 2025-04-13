@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -5,44 +6,42 @@ import { Sector, PhotoWithFile } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { toast as sonnerToast } from "sonner";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { addSector, updateSector, uploadPhoto, isAuthenticated } = useApi();
+  const { addSector, updateSector, uploadPhoto } = useApi();
 
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
       setIsSaving(true);
       setErrorMessage(null);
       
-      // Verificar se tem usuário autenticado - usando o método correto
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast({
-          title: "Não autenticado",
-          description: "Você precisa estar logado para realizar esta operação",
-          variant: "destructive"
-        });
-        setIsSaving(false);
-        setErrorMessage("Não autenticado. Faça login para continuar.");
-        return false;
+      console.log("Iniciando submissão de dados do setor...");
+      
+      // Verificar se tem usuário autenticado
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log("Verificação de sessão:", sessionData?.session ? "Autenticado" : "Não autenticado");
+      
+      if (sessionError) {
+        console.error("Erro ao verificar sessão:", sessionError);
+        throw new Error(`Erro de autenticação: ${sessionError.message}`);
+      }
+      
+      if (!sessionData?.session) {
+        sonnerToast.error("Não autenticado", "Você precisa estar logado para realizar esta operação");
+        throw new Error("Não autenticado. Faça login para continuar.");
       }
       
       console.log("Dados iniciais para submissão:", data);
       
       // Verificar se a foto do TAG foi adicionada
       if (!data.tagPhotoUrl) {
-        toast({
-          title: "Foto do TAG obrigatória",
-          description: "Por favor, adicione uma foto do TAG do setor",
-          variant: "destructive"
-        });
-        setIsSaving(false);
-        setErrorMessage("Foto do TAG obrigatória");
-        return false;
+        sonnerToast.error("Foto do TAG obrigatória", "Por favor, adicione uma foto do TAG do setor");
+        throw new Error("Foto do TAG obrigatória");
       }
 
       // Definir data da peritagem como hoje se for nova peritagem
@@ -56,14 +55,8 @@ export function usePeritagemSubmit() {
       // Verificar se pelo menos um serviço foi selecionado
       const hasSelectedService = data.services?.some(service => service.selected);
       if (!hasSelectedService) {
-        toast({
-          title: "Serviço obrigatório",
-          description: "Selecione pelo menos um serviço",
-          variant: "destructive"
-        });
-        setIsSaving(false);
-        setErrorMessage("Selecione pelo menos um serviço");
-        return false;
+        sonnerToast.error("Serviço obrigatório", "Selecione pelo menos um serviço");
+        throw new Error("Selecione pelo menos um serviço");
       }
 
       // Verificar se todos os serviços selecionados têm pelo menos uma foto de defeito
@@ -72,17 +65,14 @@ export function usePeritagemSubmit() {
       );
 
       if (missingPhotoServices && missingPhotoServices.length > 0) {
-        toast({
-          title: "Fotos de defeito obrigatórias",
-          description: `Adicione pelo menos uma foto para cada defeito selecionado: ${missingPhotoServices.map(s => s.name).join(', ')}`,
-          variant: "destructive"
-        });
-        setIsSaving(false);
-        setErrorMessage("Adicione pelo menos uma foto para cada defeito selecionado");
-        return false;
+        sonnerToast.error(
+          "Fotos de defeito obrigatórias", 
+          `Adicione pelo menos uma foto para cada defeito selecionado: ${missingPhotoServices.map(s => s.name).join(', ')}`
+        );
+        throw new Error("Adicione pelo menos uma foto para cada defeito selecionado");
       }
 
-      // Processar as fotos - importante: elas não estão na estrutura correta ainda
+      // Processar as fotos
       const beforePhotos: PhotoWithFile[] = [];
       
       // Para cada serviço com fotos, extrair todas as fotos do tipo 'before'
@@ -121,13 +111,7 @@ export function usePeritagemSubmit() {
             });
           } catch (uploadError) {
             console.error('Erro ao fazer upload de foto:', uploadError);
-            toast({
-              title: "Erro de upload",
-              description: "Não foi possível fazer o upload das fotos",
-              variant: "destructive"
-            });
-            setIsSaving(false);
-            return false;
+            throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
           }
         } else {
           processedPhotos.push(photo);
@@ -150,13 +134,7 @@ export function usePeritagemSubmit() {
           data.tagPhotoUrl = photoUrl;
         } catch (error) {
           console.error('Erro ao processar foto do TAG:', error);
-          toast({
-            title: "Erro de upload",
-            description: "Não foi possível fazer o upload da foto do TAG",
-            variant: "destructive"
-          });
-          setIsSaving(false);
-          return false;
+          throw new Error(`Erro ao processar foto do TAG: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
       }
       
@@ -168,37 +146,53 @@ export function usePeritagemSubmit() {
       if (isEditing && sectorId) {
         console.log("Atualizando setor existente:", sectorId);
         await updateSector(sectorId, data);
-        toast({
-          title: "Peritagem atualizada",
-          description: "A peritagem foi atualizada com sucesso."
-        });
+        sonnerToast.success("Peritagem atualizada", "A peritagem foi atualizada com sucesso.");
       } else {
         console.log("Criando novo setor");
-        await addSector(data as Omit<Sector, 'id'>);
-        toast({
-          title: "Peritagem registrada",
-          description: "Nova peritagem registrada com sucesso."
-        });
+        const result = await addSector(data as Omit<Sector, 'id'>);
+        console.log("Resultado da criação:", result);
+        sonnerToast.success("Peritagem registrada", "Nova peritagem registrada com sucesso.");
       }
+      
       navigate('/peritagem');
       return true;
     } catch (error) {
-      console.error('Error saving sector:', error);
+      console.error('Erro ao salvar setor:', error);
       
-      // Mensagem de erro mais específica
       let errorMsg = "Ocorreu um erro ao salvar os dados do setor";
       
       if (error instanceof Error) {
         errorMsg = error.message;
-        console.error("Detalhes do erro:", errorMsg);
-        setErrorMessage(errorMsg);
+        
+        // Verificar se é um erro de autenticação
+        if (errorMsg.includes("não autenticado") || errorMsg.includes("Não autenticado")) {
+          errorMsg = "Você precisa estar logado para realizar esta operação. Faça login novamente.";
+          
+          // Tentar fazer logout e redirecionar para login
+          try {
+            await supabase.auth.signOut();
+            setTimeout(() => {
+              navigate('/login');
+            }, 3000);
+          } catch (logoutError) {
+            console.error("Erro ao fazer logout:", logoutError);
+          }
+        }
+        
+        // Verificar se é um erro de RLS
+        if (errorMsg.includes("row level security") || errorMsg.includes("violates row-level security")) {
+          errorMsg = "Erro de permissão: você não tem autorização para realizar esta operação.";
+        }
+        
+        // Verificar se é um erro de recursão infinita
+        if (errorMsg.includes("infinite recursion")) {
+          errorMsg = "Erro de configuração do banco de dados. Entre em contato com o suporte.";
+        }
       }
       
-      toast({
-        title: "Erro ao salvar",
-        description: errorMsg,
-        variant: "destructive"
-      });
+      console.error("Detalhes do erro:", errorMsg);
+      setErrorMessage(errorMsg);
+      sonnerToast.error("Erro ao salvar", errorMsg);
       return false;
     } finally {
       setIsSaving(false);
