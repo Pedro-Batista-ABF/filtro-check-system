@@ -41,18 +41,16 @@ export const usePhotoService = () => {
         serviceId
       };
       
-      // Cria cópias simples das listas de fotos para evitar referências circulares
-      let updatedBeforePhotos = [...(sector.beforePhotos || [])];
-      let updatedAfterPhotos = [...(sector.afterPhotos || [])];
+      // Preparar arrays para as fotos
+      const updatedBeforePhotos = type === 'before' 
+        ? [...(sector.beforePhotos || []), newPhoto]
+        : [...(sector.beforePhotos || [])];
+        
+      const updatedAfterPhotos = type === 'after'
+        ? [...(sector.afterPhotos || []), newPhoto]
+        : [...(sector.afterPhotos || [])];
       
-      // Adiciona a nova foto à lista apropriada
-      if (type === 'before') {
-        updatedBeforePhotos = [...updatedBeforePhotos, newPhoto];
-      } else {
-        updatedAfterPhotos = [...updatedAfterPhotos, newPhoto];
-      }
-      
-      // Prepara um objeto simples para atualização, minimizando propriedades
+      // Preparar objeto simplificado para atualização com tipos corretos
       const updateData = {
         id: sector.id,
         tagNumber: sector.tagNumber,
@@ -60,7 +58,7 @@ export const usePhotoService = () => {
         entryDate: sector.entryDate,
         beforePhotos: updatedBeforePhotos,
         afterPhotos: updatedAfterPhotos,
-        services: sector.services,
+        services: sector.services || [],
         status: sector.status,
         productionCompleted: sector.productionCompleted || false,
         outcome: sector.outcome || 'EmAndamento',
@@ -68,7 +66,7 @@ export const usePhotoService = () => {
         peritagemDate: sector.peritagemDate
       };
       
-      // Tenta atualizar o setor com um objeto simplificado
+      // Tenta atualizar o setor
       await api.updateSector(updateData);
       
       toast.success("Foto adicionada");

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector, Photo } from "@/types";
+import { Sector, Photo, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,7 +66,8 @@ export function usePeritagemSubmit() {
               if ('file' in photo && photo.file instanceof File) {
                 try {
                   // Upload da foto e obter URL
-                  const photoUrl = await uploadPhoto(photo.file, 'before');
+                  const photoWithFile = photo as PhotoWithFile;
+                  const photoUrl = await uploadPhoto(photoWithFile.file, 'before');
                   
                   // Criar objeto Photo simples sem a propriedade file
                   const processedPhoto: Photo = {
@@ -95,8 +96,9 @@ export function usePeritagemSubmit() {
         }
       }
 
-      // Atribuir as fotos processadas ao objeto de setor
-      data.beforePhotos = processedPhotos;
+      // Garantir que status e outcome sejam valores válidos nos tipos corretos
+      const status: SectorStatus = (data.status as SectorStatus) || 'peritagemPendente';
+      const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
 
       // Prepare sector data com dados mínimos necessários
       const sectorData = {
@@ -106,12 +108,13 @@ export function usePeritagemSubmit() {
         entryDate: data.entryDate || format(new Date(), 'yyyy-MM-dd'),
         peritagemDate: format(new Date(), 'yyyy-MM-dd'),
         services: data.services || [],
-        status: 'peritagemPendente',
-        outcome: 'EmAndamento',
+        status: status,
+        outcome: outcome,
         beforePhotos: processedPhotos,
         afterPhotos: [],
-        productionCompleted: false,
-        cycleCount: 1
+        productionCompleted: data.productionCompleted || false,
+        cycleCount: data.cycleCount || 1,
+        entryObservations: data.entryObservations || ''
       };
 
       console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));

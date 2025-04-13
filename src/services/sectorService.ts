@@ -1,5 +1,5 @@
 
-import { Sector, Photo, PhotoWithFile, ServiceType } from '@/types';
+import { Sector, Photo, PhotoWithFile, ServiceType, SectorStatus, CycleOutcome } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
 import { useApiOriginal } from '@/contexts/ApiContext';
@@ -22,56 +22,46 @@ export const useSectorService = () => {
         throw new Error("Não autenticado");
       }
 
+      // Garantir que os tipos estejam corretos
+      const status: SectorStatus = sectorData.status || 'peritagemPendente';
+      const outcome: CycleOutcome = sectorData.outcome || 'EmAndamento';
+
       // Certifique-se de que todos os serviços tenham o campo 'type' definido corretamente
-      if (sectorData.services) {
-        sectorData.services = sectorData.services.map(service => ({
-          ...service,
-          type: service.id as ServiceType // Garantir que type é igual ao id
-        }));
-      }
+      const processedServices = sectorData.services?.map(service => ({
+        ...service,
+        type: service.id as ServiceType,
+        // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
+        photos: service.photos?.map(photo => ({
+          id: photo.id,
+          url: photo.url,
+          type: photo.type,
+          serviceId: photo.serviceId
+        })) || []
+      })) || [];
 
-      // Processar arquivos de foto para garantir que sejam enviados corretamente
-      if (sectorData.beforePhotos && sectorData.beforePhotos.length > 0) {
-        const processedPhotos: Photo[] = [];
-        
-        for (const photo of sectorData.beforePhotos) {
-          // Verificar se é uma PhotoWithFile com propriedade file
-          const photoWithFile = photo as PhotoWithFile;
-          
-          if (photoWithFile.file) {
-            try {
-              // Fazer upload da imagem e obter URL
-              const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
-              processedPhotos.push({
-                id: photoWithFile.id,
-                url: photoUrl,
-                type: photoWithFile.type,
-                serviceId: photoWithFile.serviceId
-              });
-            } catch (uploadError) {
-              console.error('Erro ao fazer upload de foto:', uploadError);
-              throw new Error('Não foi possível fazer o upload das fotos. Verifique sua conexão.');
-            }
-          } else if (photo.url) {
-            // Se já é uma URL válida, apenas adicionar
-            processedPhotos.push({
-              id: photo.id,
-              url: photo.url,
-              type: photo.type,
-              serviceId: photo.serviceId
-            });
-          }
-        }
-        
-        // Substituir as fotos originais pelas processadas
-        sectorData.beforePhotos = processedPhotos;
-      }
+      // Garantir que as fotos estejam no formato correto sem propriedades extras
+      const processedBeforePhotos = (sectorData.beforePhotos || []).map(photo => ({
+        id: photo.id,
+        url: photo.url,
+        type: photo.type,
+        serviceId: photo.serviceId
+      }));
 
-      // Garantir que todos os campos obrigatórios estejam presentes
+      // Garantir que todos os campos obrigatórios estejam presentes e no formato correto
       const completeData = {
-        ...sectorData,
+        tagNumber: sectorData.tagNumber,
+        entryInvoice: sectorData.entryInvoice,
+        entryDate: sectorData.entryDate,
+        peritagemDate: sectorData.peritagemDate || '',
+        services: processedServices,
+        beforePhotos: processedBeforePhotos,
         afterPhotos: sectorData.afterPhotos || [],
-        productionCompleted: sectorData.productionCompleted || false
+        productionCompleted: sectorData.productionCompleted || false,
+        status,
+        outcome,
+        cycleCount: sectorData.cycleCount || 1,
+        tagPhotoUrl: sectorData.tagPhotoUrl,
+        entryObservations: sectorData.entryObservations
       };
 
       const newSector = await api.createSector(completeData);
@@ -101,65 +91,53 @@ export const useSectorService = () => {
         throw new Error("Setor não encontrado");
       }
 
+      // Garantir tipagem correta
+      const status: SectorStatus = (updates.status as SectorStatus) || currentSector.status;
+      const outcome: CycleOutcome = (updates.outcome as CycleOutcome) || currentSector.outcome || 'EmAndamento';
+
       // Certifique-se de que todos os serviços atualizados tenham o campo 'type' definido corretamente
-      if (updates.services) {
-        updates.services = updates.services.map(service => ({
-          ...service,
-          type: service.id as ServiceType // Garantir que type é igual ao id
-        }));
-      }
+      const processedServices = updates.services?.map(service => ({
+        ...service,
+        type: service.id as ServiceType,
+        // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
+        photos: service.photos?.map(photo => ({
+          id: photo.id,
+          url: photo.url,
+          type: photo.type,
+          serviceId: photo.serviceId
+        })) || []
+      })) || currentSector.services;
 
-      // Processar arquivos de foto para garantir que sejam enviados corretamente
-      if (updates.beforePhotos && updates.beforePhotos.length > 0) {
-        const processedPhotos: Photo[] = [];
-        
-        for (const photo of updates.beforePhotos) {
-          // Verificar se é uma PhotoWithFile com propriedade file
-          const photoWithFile = photo as PhotoWithFile;
-          
-          if (photoWithFile.file) {
-            try {
-              // Fazer upload da imagem e obter URL
-              const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
-              processedPhotos.push({
-                id: photoWithFile.id,
-                url: photoUrl,
-                type: photoWithFile.type,
-                serviceId: photoWithFile.serviceId
-              });
-            } catch (uploadError) {
-              console.error('Erro ao fazer upload de foto:', uploadError);
-              throw new Error('Não foi possível fazer o upload das fotos. Verifique sua conexão.');
-            }
-          } else if (photo.url) {
-            // Se já é uma URL válida, apenas adicionar
-            processedPhotos.push({
-              id: photo.id,
-              url: photo.url,
-              type: photo.type,
-              serviceId: photo.serviceId
-            });
-          }
-        }
-        
-        // Substituir as fotos originais pelas processadas
-        updates.beforePhotos = processedPhotos;
-      }
+      // Garantir que as fotos estejam no formato correto sem propriedades extras
+      const processedBeforePhotos = (updates.beforePhotos || currentSector.beforePhotos || []).map(photo => ({
+        id: photo.id,
+        url: photo.url,
+        type: photo.type,
+        serviceId: photo.serviceId
+      }));
 
-      // Garantir que apenas os campos básicos sejam modificados (para reduzir problemas com RLS)
+      const processedAfterPhotos = (updates.afterPhotos || currentSector.afterPhotos || []).map(photo => ({
+        id: photo.id,
+        url: photo.url,
+        type: photo.type,
+        serviceId: photo.serviceId
+      }));
+
+      // Garantir que apenas os campos necessários sejam modificados (para reduzir problemas com RLS)
       const safeUpdateData: Sector = {
         id: currentSector.id,
         tagNumber: updates.tagNumber || currentSector.tagNumber,
         entryInvoice: updates.entryInvoice || currentSector.entryInvoice,
         entryDate: updates.entryDate || currentSector.entryDate,
         peritagemDate: updates.peritagemDate || currentSector.peritagemDate,
-        services: updates.services || currentSector.services,
-        status: updates.status || currentSector.status,
-        beforePhotos: updates.beforePhotos || currentSector.beforePhotos || [],
-        afterPhotos: updates.afterPhotos || currentSector.afterPhotos || [],
+        services: processedServices,
+        status: status,
+        beforePhotos: processedBeforePhotos,
+        afterPhotos: processedAfterPhotos,
         productionCompleted: updates.productionCompleted !== undefined ? updates.productionCompleted : currentSector.productionCompleted || false,
-        outcome: updates.outcome || currentSector.outcome || 'EmAndamento',
-        cycleCount: updates.cycleCount || currentSector.cycleCount || 1
+        outcome: outcome,
+        cycleCount: updates.cycleCount || currentSector.cycleCount || 1,
+        tagPhotoUrl: updates.tagPhotoUrl || currentSector.tagPhotoUrl
       };
 
       // Atualiza o setor
