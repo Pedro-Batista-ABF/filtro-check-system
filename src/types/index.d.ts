@@ -1,3 +1,4 @@
+
 export interface Sector {
   id: string;
   tagNumber: string;

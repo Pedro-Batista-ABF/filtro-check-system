@@ -1,14 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Sector, Service, ServiceType, Photo } from '@/types';
+import { Sector, Service, ServiceType, Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { useApiOriginal } from './ApiContext';
-
-// Interface estendida para trabalhar com uploads de fotos
-interface PhotoWithFile extends Photo {
-  file?: File;
-}
 
 interface ApiContextValue {
   sectors: Sector[];
@@ -98,23 +93,27 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (sectorData.beforePhotos && sectorData.beforePhotos.length > 0) {
         const processedPhotos: Photo[] = [];
         
-        for (const photoWithFile of sectorData.beforePhotos as PhotoWithFile[]) {
+        for (const photo of sectorData.beforePhotos) {
+          // Verificar se é uma PhotoWithFile com propriedade file
+          const photoWithFile = photo as PhotoWithFile;
+          
           if (photoWithFile.file) {
             try {
               // Fazer upload da imagem e obter URL
               const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
               processedPhotos.push({
-                ...photoWithFile,
+                id: photoWithFile.id,
                 url: photoUrl,
-                // Não incluiremos a propriedade file no objeto processado
+                type: photoWithFile.type,
+                serviceId: photoWithFile.serviceId
               });
             } catch (uploadError) {
               console.error('Erro ao fazer upload de foto:', uploadError);
               throw new Error('Não foi possível fazer o upload das fotos. Verifique sua conexão.');
             }
-          } else {
+          } else if (photo.url) {
             // Se já é uma URL válida, apenas adicionar
-            processedPhotos.push(photoWithFile);
+            processedPhotos.push(photo);
           }
         }
         
@@ -151,23 +150,27 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (updates.beforePhotos && updates.beforePhotos.length > 0) {
         const processedPhotos: Photo[] = [];
         
-        for (const photoWithFile of updates.beforePhotos as PhotoWithFile[]) {
+        for (const photo of updates.beforePhotos) {
+          // Verificar se é uma PhotoWithFile com propriedade file
+          const photoWithFile = photo as PhotoWithFile;
+          
           if (photoWithFile.file) {
             try {
               // Fazer upload da imagem e obter URL
               const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
               processedPhotos.push({
-                ...photoWithFile,
+                id: photoWithFile.id,
                 url: photoUrl,
-                // Não incluiremos a propriedade file no objeto processado
+                type: photoWithFile.type,
+                serviceId: photoWithFile.serviceId
               });
             } catch (uploadError) {
               console.error('Erro ao fazer upload de foto:', uploadError);
               throw new Error('Não foi possível fazer o upload das fotos. Verifique sua conexão.');
             }
-          } else {
+          } else if (photo.url) {
             // Se já é uma URL válida, apenas adicionar
-            processedPhotos.push(photoWithFile);
+            processedPhotos.push(photo);
           }
         }
         
@@ -252,7 +255,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getSectorById: api.getSectorById,
     getSectorsByTag: api.getSectorsByTag,
     getDefaultServices: api.getDefaultServices,
-    updateServicePhotos,
+    updateServicePhotos: api.updateServicePhotos,
     uploadPhoto: api.uploadPhoto,
     
     // Include auth properties and methods

@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
-import { Sector, Service } from "@/types";
+import { Sector, Service, PhotoWithFile } from "@/types";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -105,7 +105,7 @@ export default function PeritagemForm() {
 
       // Verificar se todos os serviços selecionados têm pelo menos uma foto de defeito
       const missingPhotoServices = data.services?.filter(
-        service => service.selected && (!service.photos || !service.photos.some(p => typeof p === 'object' && p.type === 'before'))
+        service => service.selected && (!service.photos || !service.photos.some(p => p.type === 'before'))
       );
 
       if (missingPhotoServices && missingPhotoServices.length > 0) {
@@ -118,7 +118,7 @@ export default function PeritagemForm() {
         return;
       }
 
-      // Garantir que os IDs de serviço estão como ServiceType
+      // Garantir que todos os serviços têm o tipo definido corretamente
       if (data.services) {
         data.services = data.services.map(service => ({
           ...service,
@@ -126,72 +126,73 @@ export default function PeritagemForm() {
         }));
       }
 
-      // Processar as fotos
+      // Processar as fotos - importante: elas não estão na estrutura correta ainda
+      const beforePhotos: PhotoWithFile[] = [];
+      
+      // Para cada serviço com fotos, extrair todas as fotos do tipo 'before'
       if (data.services) {
-        // Inicializar beforePhotos se necessário
-        data.beforePhotos = data.beforePhotos || [];
-        
-        // Para cada serviço com fotos, adicionar as fotos à coleção principal
         for (const service of data.services) {
           if (service.photos && service.photos.length > 0) {
             // Filtrar apenas fotos do tipo "before"
-            const beforePhotos = service.photos.filter(photo => 
-              typeof photo === 'object' && photo.type === 'before'
+            const serviceBeforePhotos = service.photos.filter(photo => 
+              photo.type === 'before'
             );
             
-            // Adicionar serviceId às fotos
-            const processedPhotos = beforePhotos.map(photo => ({
-              ...photo,
-              serviceId: service.id
-            }));
-            
-            // Adicionar à coleção principal
-            data.beforePhotos = [...data.beforePhotos, ...processedPhotos];
+            // Adicionar serviceId às fotos e incluí-las na coleção
+            for (const photo of serviceBeforePhotos) {
+              beforePhotos.push({
+                ...photo,
+                serviceId: service.id as any
+              });
+            }
           }
         }
       }
+      
+      // Salvar a coleção de fotos no objeto de dados
+      data.beforePhotos = beforePhotos;
 
-    console.log("Dados do setor antes de salvar:", data);
+      console.log("Dados do setor antes de salvar:", data);
 
-    if (isEditing && sector) {
-      await updateSector(sector.id, data);
+      if (isEditing && sector) {
+        await updateSector(sector.id, data);
+        toast({
+          title: "Peritagem atualizada",
+          description: "A peritagem foi atualizada com sucesso."
+        });
+      } else {
+        await addSector(data as Omit<Sector, 'id'>);
+        toast({
+          title: "Peritagem registrada",
+          description: "Nova peritagem registrada com sucesso."
+        });
+      }
+      navigate('/peritagem');
+    } catch (error) {
+      console.error('Error saving sector:', error);
+      
+      // Mensagem de erro mais específica
+      let errorMsg = "Ocorreu um erro ao salvar os dados do setor";
+      
+      if (error instanceof Error) {
+        errorMsg = error.message;
+        setErrorMessage(errorMsg);
+      }
+      
       toast({
-        title: "Peritagem atualizada",
-        description: "A peritagem foi atualizada com sucesso."
+        title: "Erro ao salvar",
+        description: errorMsg,
+        variant: "destructive"
       });
-    } else {
-      await addSector(data as Omit<Sector, 'id'>);
-      toast({
-        title: "Peritagem registrada",
-        description: "Nova peritagem registrada com sucesso."
-      });
+    } finally {
+      setIsSaving(false);
     }
-    navigate('/peritagem');
-  } catch (error) {
-    console.error('Error saving sector:', error);
-    
-    // Mensagem de erro mais específica
-    let errorMsg = "Ocorreu um erro ao salvar os dados do setor";
-    
-    if (error instanceof Error) {
-      errorMsg = error.message;
-      setErrorMessage(errorMsg);
-    }
-    
-    toast({
-      title: "Erro ao salvar",
-      description: errorMsg,
-      variant: "destructive"
-    });
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
   // Definir a data da peritagem como a data atual no formato ISO
   const currentDate = format(new Date(), 'yyyy-MM-dd');
 
-  const defaultSector: Sector = {
+  const defaultSector = {
     id: '',
     tagNumber: '',
     tagPhotoUrl: '',
