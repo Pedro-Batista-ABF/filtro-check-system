@@ -11,6 +11,7 @@ interface ServiceCheckboxProps {
   service: Service;
   checked?: boolean;
   onChecked?: (id: string, checked: boolean) => void;
+  onServiceChange?: (id: string, checked: boolean) => void;
   onQuantityChange?: (id: string, quantity: number) => void;
   onObservationChange?: (id: string, observations: string) => void;
   onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
@@ -29,6 +30,7 @@ export default function ServiceCheckbox({
   service,
   checked = false,
   onChecked,
+  onServiceChange,
   onQuantityChange,
   onObservationChange,
   onPhotoUpload,
@@ -49,6 +51,9 @@ export default function ServiceCheckbox({
     setIsSelected(checked);
     if (onChecked) {
       onChecked(service.id, checked);
+    }
+    if (onServiceChange) {
+      onServiceChange(service.id, checked);
     }
   };
 
@@ -71,6 +76,9 @@ export default function ServiceCheckbox({
   const handlePhotoUpload = (files: FileList) => {
     if (onPhotoUpload) {
       onPhotoUpload(service.id, files, photoType);
+    }
+    if (onChange) {
+      onChange(files);
     }
   };
 

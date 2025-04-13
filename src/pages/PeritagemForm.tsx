@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -48,9 +49,11 @@ export default function PeritagemForm() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-xl font-semibold">Carregando...</h1>
-      </div>
+      <PageLayoutWrapper>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-semibold">Carregando...</h1>
+        </div>
+      </PageLayoutWrapper>
     );
   }
 
@@ -67,42 +70,46 @@ export default function PeritagemForm() {
     }
   };
 
+  const defaultSector: Sector = {
+    id: '',
+    tagNumber: '',
+    entryInvoice: '',
+    entryDate: '',
+    peritagemDate: '',
+    services: services,
+    beforePhotos: [],
+    productionCompleted: false,
+    cycleCount: 1,
+    status: 'peritagemPendente'
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3 pb-2 border-b">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate('/peritagem')}
-          className="hover:bg-primary/10"
-        >
-          <ArrowLeft className="h-5 w-5 text-primary" />
-        </Button>
-        <h1 className="text-2xl font-bold text-primary">
-          {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
-        </h1>
-      </div>
-      
-      <Card className="border-none shadow-lg">
-        <div className="p-6">
-          <SectorForm 
-            sector={sector || {
-              id: '',
-              tagNumber: '',
-              entryInvoice: '',
-              entryDate: '',
-              peritagemDate: '',
-              services: services,
-              beforePhotos: [],
-              productionCompleted: false,
-              cycleCount: 1,
-              status: 'peritagemPendente'
-            }}
-            onSubmit={handleSubmit}
-            mode="review"
-          />
+    <PageLayoutWrapper>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3 pb-2 border-b">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/peritagem')}
+            className="hover:bg-primary/10"
+          >
+            <ArrowLeft className="h-5 w-5 text-primary" />
+          </Button>
+          <h1 className="text-2xl font-bold text-primary">
+            {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
+          </h1>
         </div>
-      </Card>
-    </div>
+        
+        <Card className="border-none shadow-lg">
+          <div className="p-6">
+            <SectorForm 
+              sector={sector || defaultSector}
+              onSubmit={handleSubmit}
+              mode="review"
+            />
+          </div>
+        </Card>
+      </div>
+    </PageLayoutWrapper>
   );
 }
