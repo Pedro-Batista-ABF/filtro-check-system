@@ -194,6 +194,9 @@ export default function ReviewForm({
           {formErrors.services && (
             <p className="text-xs text-red-500 mb-4">Selecione pelo menos um serviço</p>
           )}
+          {formErrors.photos && (
+            <p className="text-xs text-red-500 mb-4">Cada serviço selecionado deve ter pelo menos uma foto</p>
+          )}
           {services.map((service) => (
             <ServiceCheckbox
               key={service.id}
@@ -204,7 +207,7 @@ export default function ReviewForm({
               onObservationChange={handleObservationChange}
               onPhotoUpload={handlePhotoUpload}
               photoType="before"
-              required={true}
+              required={photoRequired}
             />
           ))}
         </CardContent>
