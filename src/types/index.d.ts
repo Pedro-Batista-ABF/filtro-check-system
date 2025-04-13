@@ -1,4 +1,3 @@
-
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
