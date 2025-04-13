@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector, PhotoWithFile } from "@/types";
+import { Sector, PhotoWithFile, Photo } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,8 +58,8 @@ export function usePeritagemSubmit() {
 
       console.log("Selected Services:", selectedServices);
       
-      // Process before photos from services - essa parte estava causando problemas
-      let processedPhotos: PhotoWithFile[] = [];
+      // Process before photos from services
+      const processedPhotos: Photo[] = [];
       const servicesToProcess = data.services || [];
       
       for (const service of servicesToProcess) {
@@ -71,13 +71,12 @@ export function usePeritagemSubmit() {
                 // Upload da foto e obter URL
                 const photoUrl = await uploadPhoto(photo.file, 'before');
                 
-                // Criar um novo objeto de foto com a URL obtida
-                const processedPhoto: PhotoWithFile = {
+                // Criar um novo objeto de foto com a URL obtida - sem a propriedade file para evitar recursão
+                const processedPhoto: Photo = {
                   id: photo.id || `${service.id}-${Date.now()}`,
                   url: photoUrl,
                   type: 'before',
-                  serviceId: service.id,
-                  file: photo.file
+                  serviceId: service.id
                 };
                 
                 processedPhotos.push(processedPhoto);
@@ -86,11 +85,13 @@ export function usePeritagemSubmit() {
                 throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
               }
             } else if (photo && photo.url) {
-              // Se a foto já tem URL mas não tem file, adicione-a como está
+              // Se a foto já tem URL, adicione-a como está (sem a propriedade file)
               processedPhotos.push({
-                ...photo,
-                file: undefined // Garantir que temos a propriedade file, mesmo que undefined
-              } as PhotoWithFile);
+                id: photo.id,
+                url: photo.url,
+                type: photo.type,
+                serviceId: photo.serviceId
+              });
             }
           }
         }
@@ -105,7 +106,9 @@ export function usePeritagemSubmit() {
         status: 'peritagemPendente',
         outcome: 'EmAndamento',
         peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-        cycleCount: 1
+        cycleCount: 1,
+        productionCompleted: false,
+        afterPhotos: [] // Garantir que este campo existe para novos setores
       } as Omit<Sector, 'id'>;
 
       console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));

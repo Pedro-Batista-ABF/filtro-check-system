@@ -46,8 +46,7 @@ export const usePhotoService = () => {
         const beforePhotos = sector.beforePhotos || [];
         const updatedBeforePhotos = [...beforePhotos, newPhoto];
         
-        // Corrija o erro de tipos passando apenas os campos que precisamos atualizar
-        // Mas mantendo a conformidade com o tipo Sector
+        // Atualizar o setor garantindo que todas as propriedades obrigatórias estejam incluídas
         await api.updateSector({
           id: sector.id,
           tagNumber: sector.tagNumber,
@@ -57,7 +56,8 @@ export const usePhotoService = () => {
           services: sector.services,
           status: sector.status,
           beforePhotos: updatedBeforePhotos,
-          // Incluir outros campos obrigatórios
+          afterPhotos: sector.afterPhotos || [],
+          productionCompleted: sector.productionCompleted || false,
           outcome: sector.outcome || 'EmAndamento',
           cycleCount: sector.cycleCount || 1
         });
@@ -74,8 +74,7 @@ export const usePhotoService = () => {
         const afterPhotos = sector.afterPhotos || [];
         const updatedAfterPhotos = [...afterPhotos, newPhoto];
         
-        // Corrija o erro de tipos passando apenas os campos que precisamos atualizar
-        // Mas mantendo a conformidade com o tipo Sector
+        // Atualizar o setor garantindo que todas as propriedades obrigatórias estejam incluídas
         await api.updateSector({
           id: sector.id,
           tagNumber: sector.tagNumber,
@@ -84,8 +83,9 @@ export const usePhotoService = () => {
           peritagemDate: sector.peritagemDate,
           services: sector.services,
           status: sector.status,
+          beforePhotos: sector.beforePhotos || [],
           afterPhotos: updatedAfterPhotos,
-          // Incluir outros campos obrigatórios
+          productionCompleted: sector.productionCompleted || false,
           outcome: sector.outcome || 'EmAndamento',
           cycleCount: sector.cycleCount || 1
         });
