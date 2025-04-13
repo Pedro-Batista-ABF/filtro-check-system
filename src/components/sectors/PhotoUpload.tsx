@@ -11,13 +11,15 @@ interface PhotoUploadProps {
   title?: string;
   onPhotoUpload?: (e: ChangeEvent<HTMLInputElement>, type: 'tag' | 'entry' | 'exit') => void;
   type?: 'tag' | 'entry' | 'exit';
-  photos?: string[];
+  photos?: string[] | Photo[];
   disabled?: boolean;
   // Propriedades adicionais para compatibilidade
   label?: string;
+  onUpload?: (files: FileList) => void;
   onChange?: (files: FileList) => void;
   existingPhotos?: Photo[];
   required?: boolean;
+  className?: string;
 }
 
 export default function PhotoUpload({
@@ -28,9 +30,11 @@ export default function PhotoUpload({
   photos = [],
   disabled = false,
   label,
+  onUpload,
   onChange,
   existingPhotos = [],
-  required = false
+  required = false,
+  className = ""
 }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -43,6 +47,9 @@ export default function PhotoUpload({
       
       if (onChange) {
         onChange(e.target.files);
+      }
+      if (onUpload) {
+        onUpload(e.target.files);
       }
       if (onPhotoUpload) {
         onPhotoUpload(e, type);
@@ -66,10 +73,14 @@ export default function PhotoUpload({
     }
   };
 
-  const hasPhotos = photos.length > 0 || existingPhotos.length > 0;
+  // Determinar se existem fotos, tratando tanto array de strings quanto de objetos Photo
+  const hasStringPhotos = Array.isArray(photos) && photos.length > 0 && typeof photos[0] === 'string';
+  const hasObjectPhotos = Array.isArray(photos) && photos.length > 0 && typeof photos[0] === 'object';
+  const hasExistingPhotos = existingPhotos.length > 0;
+  const hasAnyPhotos = hasStringPhotos || hasObjectPhotos || hasExistingPhotos;
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${className}`}>
       {title && <h3 className="text-lg font-medium">{title}</h3>}
       {label && (
         <div className="text-sm font-medium text-gray-700 mb-2">
@@ -81,7 +92,7 @@ export default function PhotoUpload({
       <div className="mt-1">
         <Label 
           htmlFor={id} 
-          className={`cursor-pointer flex flex-col items-center justify-center bg-gray-50 border ${required && !hasPhotos ? 'border-red-500' : 'border-dashed border-gray-300'} rounded-lg p-8 hover:bg-gray-100 transition-colors ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+          className={`cursor-pointer flex flex-col items-center justify-center bg-gray-50 border ${required && !hasAnyPhotos ? 'border-red-500' : 'border-dashed border-gray-300'} rounded-lg p-8 hover:bg-gray-100 transition-colors ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
         >
           {isUploading ? (
             <>
@@ -122,14 +133,14 @@ export default function PhotoUpload({
         />
       </div>
 
-      {/* Exibir fotos existentes como URLs */}
-      {photos.length > 0 && (
+      {/* Exibir fotos existentes como URLs (string) */}
+      {hasStringPhotos && (
         <div className="mt-4">
           <p className="text-sm font-medium mb-3 text-gray-700">
-            {photos.length} foto(s) adicionada(s):
+            {(photos as string[]).length} foto(s) adicionada(s):
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {photos.map((photo, index) => (
+            {(photos as string[]).map((photo, index) => (
               <div key={index} className="relative h-28 bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <img 
                   src={photo} 
@@ -143,7 +154,27 @@ export default function PhotoUpload({
       )}
 
       {/* Exibir fotos existentes como objetos Photo */}
-      {existingPhotos.length > 0 && (
+      {hasObjectPhotos && (
+        <div className="mt-4">
+          <p className="text-sm font-medium mb-3 text-gray-700">
+            {(photos as Photo[]).length} foto(s) adicionada(s):
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {(photos as Photo[]).map((photo) => (
+              <div key={photo.id} className="relative h-28 bg-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <img 
+                  src={photo.url} 
+                  alt={`Foto`} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Exibir fotos existentes de existingPhotos */}
+      {hasExistingPhotos && (
         <div className="mt-4">
           <p className="text-sm font-medium mb-3 text-gray-700">
             {existingPhotos.length} foto(s) adicionada(s):

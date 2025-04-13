@@ -20,6 +20,9 @@ interface ServiceCheckboxProps {
   photoType?: "before" | "after";
   required?: boolean;
   onCameraCapture?: (e: React.MouseEvent) => void;
+  // Adicionando suporte para as props usadas em ExitForm
+  isCompleted?: boolean;
+  completedCheckboxId?: string;
 }
 
 const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
@@ -32,7 +35,9 @@ const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
   onPhotoUpload,
   photoType = "before",
   required = false,
-  onCameraCapture
+  onCameraCapture,
+  isCompleted,
+  completedCheckboxId
 }) => {
   const handleCheckedChange = (checked: boolean) => {
     if (onChecked) {
@@ -73,13 +78,13 @@ const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-2">
           <Checkbox
-            id={`service-${service.id}`}
-            checked={checked}
+            id={completedCheckboxId || `service-${service.id}`}
+            checked={isCompleted !== undefined ? isCompleted : checked}
             onCheckedChange={handleCheckedChange}
           />
           <div>
             <Label
-              htmlFor={`service-${service.id}`}
+              htmlFor={completedCheckboxId || `service-${service.id}`}
               className="font-medium cursor-pointer"
             >
               {service.name} {required && checked && <span className="text-red-500">*</span>}

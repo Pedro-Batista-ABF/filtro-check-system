@@ -1,3 +1,4 @@
+
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -16,6 +17,7 @@ export interface Photo {
   url: string;
   type: 'before' | 'after';
   serviceId?: string;
+  file?: File;
 }
 
 // Interface para trabalhar com uploads de arquivos
@@ -118,6 +120,11 @@ export interface Sector {
   
   status: SectorStatus;
   outcome?: CycleOutcome;
+  
+  // Campos necessários para o Supabase
+  updated_at?: string;
+  modified_at?: string;
+  created_at?: string;
 }
 
 export interface User {

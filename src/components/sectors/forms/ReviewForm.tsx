@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Service } from "@/types";
 import ServiceCheckbox from "../ServiceCheckbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 interface ReviewFormProps {
   tagNumber: string;
@@ -86,8 +87,10 @@ export default function ReviewForm({
       if (target.files && target.files.length > 0) {
         if (serviceId) {
           handlePhotoUpload(serviceId, target.files, 'before');
+          toast.success("Foto capturada com sucesso");
         } else {
           handleTagPhotoUpload(target.files);
+          toast.success("Foto da TAG capturada com sucesso");
         }
       }
     });
