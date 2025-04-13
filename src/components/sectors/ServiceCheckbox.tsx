@@ -115,6 +115,7 @@ export default function ServiceCheckbox({
     typeof photo === 'object' && photo.type === photoType
   ) || [];
 
+  // Só precisa de foto se o serviço estiver selecionado e photoRequired estiver ativo
   const needsPhoto = isSelected && photoRequired && !hasPhotos();
 
   return (
@@ -125,7 +126,7 @@ export default function ServiceCheckbox({
           checked={isSelected}
           onCheckedChange={handleChange}
           disabled={disabled}
-          required={required}
+          // Serviço não é obrigatório
         />
         <div className="space-y-1.5 flex-1">
           <Label 
@@ -178,7 +179,7 @@ export default function ServiceCheckbox({
                   className={`text-sm font-medium mb-1 block ${needsPhoto ? 'text-red-500' : ''}`}
                 >
                   {`Fotos do ${photoType === "before" ? "Defeito" : "Serviço Concluído"}`}
-                  {photoRequired && <span className="text-red-500 ml-1">*</span>}
+                  {photoRequired && isSelected && <span className="text-red-500 ml-1">*</span>}
                 </Label>
                 {needsPhoto && (
                   <div className="flex items-center text-red-500 text-xs mb-2">
