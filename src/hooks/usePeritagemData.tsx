@@ -5,6 +5,7 @@ import { Sector, Service } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { ensureUserProfile } from "@/utils/ensureUserProfile";
 
 export function usePeritagemData(id?: string) {
   const [sector, setSector] = useState<Sector | undefined>(undefined);
@@ -19,6 +20,22 @@ export function usePeritagemData(id?: string) {
     const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Verificar e criar o perfil do usuário se necessário
+        try {
+          console.log("⏳ Verificando perfil de usuário antes de carregar dados...");
+          await ensureUserProfile();
+          console.log("✅ Perfil de usuário verificado com sucesso");
+        } catch (profileError) {
+          console.error("❌ Erro ao verificar perfil:", profileError);
+          toast({
+            title: "Erro de autenticação",
+            description: profileError instanceof Error ? profileError.message : "Erro desconhecido de autenticação",
+            variant: "destructive"
+          });
+          throw profileError;
+        }
+        
         // Carregar lista de serviços
         const defaultServices = await getDefaultServices();
         

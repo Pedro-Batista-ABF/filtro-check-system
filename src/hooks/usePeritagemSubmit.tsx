@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -7,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ensureUserProfile } from "@/utils/ensureUserProfile";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
@@ -14,43 +14,6 @@ export function usePeritagemSubmit() {
   const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
   const { addSector, updateSector, uploadPhoto } = useApi();
-
-  const ensureUserProfile = async () => {
-    // Verificar se o usuário está autenticado
-    const { data: session } = await supabase.auth.getSession();
-    
-    if (!session?.user) {
-      throw new Error("Não autenticado. Faça login para continuar.");
-    }
-    
-    // Verificar se o perfil já existe
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    
-    // Se o perfil não existir, crie-o
-    if (!existingProfile) {
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: session.user.id,
-          email: session.user.email || '',
-          full_name: session.user.user_metadata?.full_name || 'Usuário',
-          role: 'producao'
-        });
-      
-      if (insertError) {
-        console.error("Erro ao criar perfil:", insertError);
-        throw new Error("Não foi possível criar o perfil do usuário");
-      }
-      
-      console.log("Perfil de usuário criado com sucesso");
-    }
-    
-    return session.user.id;
-  };
 
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
@@ -64,10 +27,11 @@ export function usePeritagemSubmit() {
       
       // Garantir que o perfil do usuário existe antes de continuar
       try {
+        console.log("⏳ Verificando/criando perfil do usuário...");
         await ensureUserProfile();
-        console.log("Perfil de usuário verificado com sucesso");
+        console.log("✅ Perfil de usuário verificado com sucesso");
       } catch (profileError) {
-        console.error("Erro ao verificar/criar perfil:", profileError);
+        console.error("❌ Erro ao verificar/criar perfil:", profileError);
         toast.error("Erro de autenticação", {
           description: profileError instanceof Error ? profileError.message : "Erro desconhecido de autenticação"
         });
@@ -137,7 +101,7 @@ export function usePeritagemSubmit() {
                   id: photo.id,
                   url: photo.url,
                   type: photo.type,
-                  serviceId: photo.serviceId
+                  serviceId: service.serviceId
                 });
               }
             }
