@@ -47,20 +47,34 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     // Handle specific error types
     if (error instanceof Error) {
-      // Check for infinite recursion error in database policies
-      if (error.message.includes("infinite recursion")) {
-        return new Error("Erro de configuração do banco de dados: problema de recursão infinita nas políticas de acesso. Contate o administrador do sistema.");
+      // Verificar por erros específicos
+      const errorMessage = error.message.toLowerCase();
+      
+      // Erro de recursão infinita nas políticas RLS
+      if (errorMessage.includes("infinite recursion")) {
+        return new Error("Erro de configuração do banco de dados: problema de recursão infinita nas políticas de acesso. Por favor, tente novamente em alguns instantes.");
       }
       
-      // Check for other database error messages that might be useful
-      if (error.message.includes("violates row-level security policy")) {
-        return new Error("Erro de permissão: você não tem autorização para realizar esta operação.");
+      // Erro de violação de política RLS
+      if (errorMessage.includes("violates row-level security policy")) {
+        return new Error("Erro de permissão: você não tem autorização para realizar esta operação. Verifique se você está logado corretamente.");
       }
       
+      // Erro de conexão
+      if (errorMessage.includes("network") || errorMessage.includes("connection")) {
+        return new Error("Erro de conexão com o servidor. Verifique sua conexão com a internet e tente novamente.");
+      }
+      
+      // Erro de validação
+      if (errorMessage.includes("validation") || errorMessage.includes("constraint")) {
+        return new Error("Erro de validação: verifique se todos os campos foram preenchidos corretamente.");
+      }
+      
+      // Se não for nenhum dos casos acima, retorna a mensagem original
       return error;
     }
     
-    // For unknown errors
+    // Para erros desconhecidos
     return new Error(defaultMessage);
   };
 
@@ -68,9 +82,12 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
       const newSector = await api.createSector(sectorData);
+      toast.success("Setor cadastrado com sucesso!");
       return newSector.id;
     } catch (error) {
-      throw handleDatabaseError(error, "Não foi possível adicionar o setor");
+      const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
+      toast.error(processedError.message);
+      throw processedError;
     }
   };
 
@@ -90,9 +107,12 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Atualiza o setor
       await api.updateSector(updatedSector);
+      toast.success("Setor atualizado com sucesso!");
       return true;
     } catch (error) {
-      throw handleDatabaseError(error, "Não foi possível atualizar o setor");
+      const processedError = handleDatabaseError(error, "Não foi possível atualizar o setor");
+      toast.error(processedError.message);
+      throw processedError;
     }
   };
 
@@ -142,7 +162,9 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await api.updateSector(updatedSector);
       return true;
     } catch (error) {
-      throw handleDatabaseError(error, "Não foi possível atualizar as fotos do serviço");
+      const processedError = handleDatabaseError(error, "Não foi possível atualizar as fotos do serviço");
+      toast.error(processedError.message);
+      throw processedError;
     }
   };
 

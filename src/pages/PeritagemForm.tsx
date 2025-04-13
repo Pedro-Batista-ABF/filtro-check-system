@@ -3,13 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
 import { Sector, Service } from "@/types";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +62,8 @@ export default function PeritagemForm() {
   if (loading) {
     return (
       <PageLayoutWrapper>
-        <div className="text-center py-12">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
           <h1 className="text-xl font-semibold">Carregando...</h1>
         </div>
       </PageLayoutWrapper>
@@ -187,13 +189,16 @@ export default function PeritagemForm() {
         </div>
         
         {errorMessage && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            <p className="font-medium">Erro encontrado:</p>
-            <p>{errorMessage}</p>
-            <p className="text-sm mt-2">
-              Se o erro persistir, entre em contato com o suporte técnico mencionando "erro de configuração do banco de dados".
-            </p>
-          </div>
+          <Alert variant="destructive" className="bg-red-50 border-red-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erro encontrado</AlertTitle>
+            <AlertDescription>
+              <p>{errorMessage}</p>
+              <p className="text-sm mt-2">
+                Se o erro persistir, entre em contato com o suporte técnico.
+              </p>
+            </AlertDescription>
+          </Alert>
         )}
         
         <Card className="border-none shadow-lg">
