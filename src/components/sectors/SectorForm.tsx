@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +30,7 @@ interface SectorFormProps {
   mode: 'review' | 'production' | 'quality' | 'scrap';
   services?: Service[]; // Adicionando propriedade services
   formType?: string;    // Adicionando propriedade formType
+  photoRequired?: boolean; // Nova propriedade para foto obrigatória
 }
 
 export default function SectorForm({
@@ -38,7 +38,8 @@ export default function SectorForm({
   onSubmit,
   loading = false,
   mode,
-  services: initialServices
+  services: initialServices,
+  photoRequired = false
 }: SectorFormProps) {
   const [sector, setSector] = useState<Sector>(initialSector);
   const [services, setServices] = useState<Service[]>(initialServices || initialSector.services || []);
@@ -48,6 +49,13 @@ export default function SectorForm({
   const [exitInvoice, setExitInvoice] = useState(sector.exitInvoice || "");
   const [exitObservations, setExitObservations] = useState(sector.exitObservations || "");
   const [selectedTab, setSelectedTab] = useState("services");
+  const [tagNumber, setTagNumber] = useState(sector.tagNumber || "");
+  const [entryInvoice, setEntryInvoice] = useState(sector.entryInvoice || "");
+  const [entryDate, setEntryDate] = useState<Date | undefined>(
+    sector.entryDate ? new Date(sector.entryDate) : new Date()
+  );
+  const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(sector.tagPhotoUrl);
+  const [entryObservations, setEntryObservations] = useState(sector.entryObservations || "");
   const [productionCompleted, setProductionCompleted] = useState(
     initialSector.status === "checagemFinalPendente" || 
     initialSector.status === "concluido" ||
@@ -77,8 +85,21 @@ export default function SectorForm({
     exitObservations: false,
     scrapObservations: false,
     scrapDate: false,
-    scrapInvoice: false
+    scrapInvoice: false,
+    tagNumber: false,
+    tagPhoto: false,
+    entryInvoice: false,
+    entryDate: false
   });
+
+  // Manipulador para upload de foto do TAG
+  const handleTagPhotoUpload = (files: FileList) => {
+    if (files.length > 0) {
+      const file = files[0];
+      const url = URL.createObjectURL(file);
+      setTagPhotoUrl(url);
+    }
+  };
 
   // Check if all selected services have photos
   const checkServicePhotos = () => {
@@ -232,7 +253,19 @@ export default function SectorForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    // Validar campos obrigatórios
+    const errors = {
+      ...formErrors,
+      tagNumber: !tagNumber,
+      tagPhoto: photoRequired && !tagPhotoUrl,
+      entryInvoice: !entryInvoice,
+      entryDate: !entryDate,
+      services: mode === 'review' && !services.some(s => s.selected)
+    };
+    
+    setFormErrors(errors);
+    
+    if (Object.values(errors).some(Boolean)) {
       toast({
         title: "Formulário Incompleto",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -240,43 +273,79 @@ export default function SectorForm({
       });
       return;
     }
-
-    let updatedSector = { ...sector, services };
+    
+    // Construir objeto do setor atualizado
+    const updatedSector = {
+      ...sector,
+      tagNumber,
+      tagPhotoUrl,
+      entryInvoice,
+      entryDate: entryDate ? format(entryDate, 'yyyy-MM-dd') : '',
+      entryObservations,
+      services,
+    };
     
     // Lógica específica para cada modo
     if (mode === 'production') {
       // Se a produção está concluída, atualize o status
       if (productionCompleted && sector.status === "emExecucao") {
-        updatedSector = {
-          ...updatedSector,
-          status: "checagemFinalPendente"
-        };
+        updatedSector.status = "checagemFinalPendente";
       }
     } 
     else if (mode === 'quality') {
       // Se qualidade está concluída, marque como concluído e adicione dados da saída
       if (qualityCompleted) {
-        updatedSector = {
-          ...updatedSector,
+        updatedSector.status = "concluido";
+        updatedSector.exitDate = exitDate ? format(exitDate, 'yyyy-MM-dd') : undefined;
+        updatedSector.exitInvoice = exitInvoice;
+        updatedSector.exitObservations = exitObservations;
+        
+        // Criar um ciclo para o setor recuperado
+        const newCycle: Cycle = {
+          id: Date.now().toString(),
+          tagNumber: updatedSector.tagNumber,
+          entryInvoice: updatedSector.entryInvoice,
+          entryDate: updatedSector.entryDate,
+          peritagemDate: updatedSector.peritagemDate,
+          services: updatedSector.services,
+          beforePhotos: updatedSector.beforePhotos || [],
           status: "concluido",
-          exitDate: exitDate ? format(exitDate, 'yyyy-MM-dd') : undefined,
-          exitInvoice,
-          exitObservations,
-          cycles: [...(sector.cycles || []), createCycle("recovered", exitObservations || "")]
+          outcome: "recovered" as CycleOutcome,
+          createdAt: new Date().toISOString(),
+          comments: exitObservations || "",
+          technicianId: "sistema", // Considere pegar do usuário atual em um sistema real
+          productionCompleted: true
         };
+        
+        updatedSector.cycles = [...(sector.cycles || []), newCycle];
       }
     }
     else if (mode === 'scrap') {
       // Marcar como sucateado se necessário
       if (isScrap) {
-        updatedSector = {
-          ...updatedSector,
+        updatedSector.status = "sucateado";
+        updatedSector.scrapObservations = scrapObservations;
+        updatedSector.scrapReturnDate = scrapDate ? format(scrapDate, 'yyyy-MM-dd') : undefined;
+        updatedSector.scrapReturnInvoice = scrapInvoice;
+        
+        // Criar um ciclo para o setor sucateado
+        const newCycle: Cycle = {
+          id: Date.now().toString(),
+          tagNumber: updatedSector.tagNumber,
+          entryInvoice: updatedSector.entryInvoice,
+          entryDate: updatedSector.entryDate,
+          peritagemDate: updatedSector.peritagemDate,
+          services: updatedSector.services,
+          beforePhotos: updatedSector.beforePhotos || [],
           status: "sucateado",
-          scrapObservations,
-          scrapReturnDate: scrapDate ? format(scrapDate, 'yyyy-MM-dd') : undefined,
-          scrapReturnInvoice: scrapInvoice,
-          cycles: [...(sector.cycles || []), createCycle("scrapped", scrapObservations || "")]
+          outcome: "scrapped" as CycleOutcome,
+          createdAt: new Date().toISOString(),
+          comments: scrapObservations || "",
+          technicianId: "sistema",
+          productionCompleted: true
         };
+        
+        updatedSector.cycles = [...(sector.cycles || []), newCycle];
       }
     }
     
@@ -287,6 +356,117 @@ export default function SectorForm({
   const renderReviewMode = () => {
     return (
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações do Setor</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tagNumber" className={formErrors.tagNumber ? "text-red-500" : ""}>
+                  Número da TAG*
+                </Label>
+                <Input
+                  id="tagNumber"
+                  value={tagNumber}
+                  onChange={(e) => setTagNumber(e.target.value)}
+                  placeholder="Ex: ABC-123"
+                  className={formErrors.tagNumber ? "border-red-500" : ""}
+                />
+                {formErrors.tagNumber && (
+                  <p className="text-xs text-red-500">TAG é obrigatória</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
+                  Nota Fiscal de Entrada*
+                </Label>
+                <Input
+                  id="entryInvoice"
+                  value={entryInvoice}
+                  onChange={(e) => setEntryInvoice(e.target.value)}
+                  placeholder="Ex: NF-12345"
+                  className={formErrors.entryInvoice ? "border-red-500" : ""}
+                />
+                {formErrors.entryInvoice && (
+                  <p className="text-xs text-red-500">Nota fiscal é obrigatória</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="entryDate" className={formErrors.entryDate ? "text-red-500" : ""}>
+                  Data de Entrada*
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="entryDate"
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !entryDate && "text-muted-foreground",
+                        formErrors.entryDate && "border-red-500"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {entryDate ? format(entryDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={entryDate}
+                      onSelect={setEntryDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                {formErrors.entryDate && (
+                  <p className="text-xs text-red-500">Data é obrigatória</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="tagPhoto" className={formErrors.tagPhoto ? "text-red-500" : ""}>
+                Foto do TAG* {photoRequired && <span className="text-red-500">*</span>}
+              </Label>
+              <Input
+                id="tagPhoto"
+                type="file"
+                accept="image/*"
+                onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
+                className={formErrors.tagPhoto ? "border-red-500" : ""}
+              />
+              {tagPhotoUrl && (
+                <div className="mt-2">
+                  <img 
+                    src={tagPhotoUrl} 
+                    alt="TAG do Setor" 
+                    className="w-32 h-32 object-cover rounded-md border"
+                  />
+                </div>
+              )}
+              {formErrors.tagPhoto && (
+                <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="entryObservations">
+                Observações de Entrada
+              </Label>
+              <Textarea
+                id="entryObservations"
+                value={entryObservations}
+                onChange={(e) => setEntryObservations(e.target.value)}
+                placeholder="Observações sobre o estado do setor na entrada..."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Serviços Necessários</CardTitle>
@@ -669,7 +849,7 @@ export default function SectorForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {renderModeContent()}
+      {mode === 'review' ? renderReviewMode() : renderModeContent()}
       
       <div className="flex justify-end space-x-2">
         <Button variant="outline" type="button" onClick={() => window.history.back()}>

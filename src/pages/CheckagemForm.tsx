@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
+import { Card } from "@/components/ui/card";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -86,24 +87,27 @@ export default function CheckagemForm() {
   return (
     <PageLayoutWrapper>
       <div className="space-y-6">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3 pb-2 border-b">
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="icon" 
             onClick={() => navigate('/checagem')}
+            className="hover:bg-primary/10"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5 text-primary" />
           </Button>
-          <h1 className="page-title">Checagem Final</h1>
+          <h1 className="text-2xl font-bold text-primary">Checagem Final</h1>
         </div>
         
-        <div className="form-container">
-          <SectorForm 
-            sector={sector}
-            onSubmit={handleSubmit}
-            mode="quality"
-          />
-        </div>
+        <Card className="border-none shadow-lg">
+          <div className="p-6">
+            <SectorForm 
+              sector={sector}
+              onSubmit={handleSubmit}
+              mode="quality"
+            />
+          </div>
+        </Card>
       </div>
     </PageLayoutWrapper>
   );

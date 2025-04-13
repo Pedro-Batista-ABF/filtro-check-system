@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +18,7 @@ export default function PeritagemForm() {
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   // Buscar dados ao carregar o componente
   useEffect(() => {
@@ -59,6 +62,33 @@ export default function PeritagemForm() {
 
   const handleSubmit = async (data: Partial<Sector>) => {
     try {
+      // Verificar se a foto do TAG foi adicionada
+      if (!data.tagPhotoUrl) {
+        toast({
+          title: "Foto do TAG obrigatória",
+          description: "Por favor, adicione uma foto do TAG do setor",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Definir data da peritagem como hoje se for nova peritagem
+      if (!isEditing) {
+        data.peritagemDate = format(new Date(), 'yyyy-MM-dd');
+        data.status = 'emExecucao';
+      }
+
+      // Verificar se pelo menos um serviço foi selecionado
+      const hasSelectedService = data.services?.some(service => service.selected);
+      if (!hasSelectedService) {
+        toast({
+          title: "Serviço obrigatório",
+          description: "Selecione pelo menos um serviço",
+          variant: "destructive"
+        });
+        return;
+      }
+
       if (isEditing && sector) {
         await updateSector(sector.id, data);
       } else {
@@ -67,15 +97,21 @@ export default function PeritagemForm() {
       navigate('/peritagem');
     } catch (error) {
       console.error('Error saving sector:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar os dados do setor",
+        variant: "destructive"
+      });
     }
   };
 
   const defaultSector: Sector = {
     id: '',
     tagNumber: '',
+    tagPhotoUrl: '',
     entryInvoice: '',
     entryDate: '',
-    peritagemDate: '',
+    peritagemDate: format(new Date(), 'yyyy-MM-dd'),
     services: services,
     beforePhotos: [],
     productionCompleted: false,
@@ -106,6 +142,7 @@ export default function PeritagemForm() {
               sector={sector || defaultSector}
               onSubmit={handleSubmit}
               mode="review"
+              photoRequired={true}
             />
           </div>
         </Card>
