@@ -21,7 +21,7 @@ export const useApi = () => {
         ...updates
       } as Sector);
     },
-    // Função específica para processar fotos da TAG
+    // Função específica para processar fotos da TAG e outras
     uploadPhoto: async (file: File, type: 'tag' | 'before' | 'after'): Promise<string> => {
       try {
         setIsProcessingPhoto(true);
@@ -30,18 +30,22 @@ export const useApi = () => {
         if (!file) {
           throw new Error("Arquivo de foto inválido");
         }
+
+        console.log("Tamanho do arquivo:", Math.round(file.size / 1024), "KB");
         
         // Gerar um nome único para o arquivo
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
+        const fileName = `${type}_${Date.now()}.${fileExt}`;
         const filePath = `${type}/${fileName}`;
+        
+        console.log("Preparando upload para caminho:", filePath);
         
         // Upload para o Supabase Storage
         const { data, error } = await supabase.storage
           .from('sector_photos')
           .upload(filePath, file, {
             cacheControl: '3600',
-            upsert: false
+            upsert: true
           });
         
         if (error) {
@@ -55,6 +59,11 @@ export const useApi = () => {
           .getPublicUrl(filePath);
         
         console.log("Upload concluído com sucesso. URL:", urlData.publicUrl);
+        
+        // Garantir que a URL retornada é válida
+        if (!urlData.publicUrl) {
+          throw new Error("URL da foto não foi gerada corretamente");
+        }
         
         return urlData.publicUrl;
       } catch (error) {

@@ -16,11 +16,11 @@ interface PhotoUploadProps {
   disabled?: boolean;
   // Propriedades adicionais para compatibilidade
   label?: string;
-  onChange?: (files: FileList) => void;
+  onChange?: (files: FileList, processedUrl?: string) => void;
   existingPhotos?: Photo[];
   required?: boolean;
   value?: string | null;
-  onSuccess?: () => void;
+  onSuccess?: (url: string) => void;
   error?: boolean;
 }
 
@@ -58,7 +58,7 @@ export default function PhotoUpload({
   // Também observe value se for diferente de photos
   useEffect(() => {
     if (value && !photoUrls.includes(value)) {
-      setPhotoUrls(prev => [...prev, value]);
+      setPhotoUrls(prev => [value]);
       setUploadSuccess(true);
     }
   }, [value, photoUrls]);
@@ -75,80 +75,66 @@ export default function PhotoUpload({
         // Processar arquivos
         const files = Array.from(e.target.files);
         
-        // Se for foto da TAG, precisamos processar o upload imediatamente
-        if (type === 'tag') {
-          const file = files[0];
-          try {
-            // Upload do arquivo para o storage e obter URL permanente
-            const uploadedUrl = await api.uploadPhoto(file, 'tag');
-            console.log("TAG foto processada com sucesso:", uploadedUrl);
-            
-            // Adicionar URL processada à lista
-            setPhotoUrls([uploadedUrl]);
-            
-            // Criar um objeto File simulado para passar para os callbacks
-            const processedFileList = new DataTransfer();
-            processedFileList.items.add(file);
-            
-            if (onChange) {
-              onChange(processedFileList.files);
-            }
-            if (onPhotoUpload) {
-              // Forçar a URL processada no evento
-              const modifiedEvent = {
-                ...e,
-                currentTarget: {
-                  ...e.currentTarget,
-                  dataset: {
-                    processedUrl: uploadedUrl
-                  }
-                },
-                target: {
-                  ...e.target,
-                  dataset: {
-                    processedUrl: uploadedUrl
-                  },
-                  files: processedFileList.files
-                }
-              };
-              onPhotoUpload(modifiedEvent, type);
-            }
-          } catch (uploadError) {
-            console.error("Erro ao processar foto da TAG:", uploadError);
-            setUploadError("Erro ao processar foto da TAG. Tente novamente.");
-            toast.error("Erro ao processar foto da TAG");
-            setIsUploading(false);
-            return;
-          }
-        } else {
-          // Para outros tipos de fotos, criar URLs temporárias
-          const newUrls = files.map(file => URL.createObjectURL(file));
-          setPhotoUrls([...photoUrls, ...newUrls]);
+        // Para todos os tipos de fotos, precisamos processar o upload imediatamente
+        const file = files[0];
+        try {
+          // Upload do arquivo para o storage e obter URL permanente
+          console.log(`Iniciando upload da foto de ${type} para o Supabase`);
+          const uploadedUrl = await api.uploadPhoto(file, type === 'tag' ? 'tag' : 'before');
+          console.log(`Foto de ${type} processada com sucesso:`, uploadedUrl);
+          
+          // Adicionar URL processada à lista
+          setPhotoUrls([uploadedUrl]);
+          
+          // Criar um objeto File simulado para passar para os callbacks
+          const processedFileList = new DataTransfer();
+          processedFileList.items.add(file);
           
           if (onChange) {
-            onChange(e.target.files);
+            onChange(processedFileList.files, uploadedUrl);
           }
           if (onPhotoUpload) {
-            onPhotoUpload(e, type);
+            // Forçar a URL processada no evento
+            const modifiedEvent = {
+              ...e,
+              currentTarget: {
+                ...e.currentTarget,
+                dataset: {
+                  processedUrl: uploadedUrl
+                }
+              },
+              target: {
+                ...e.target,
+                dataset: {
+                  processedUrl: uploadedUrl
+                },
+                files: processedFileList.files
+              }
+            };
+            onPhotoUpload(modifiedEvent, type as 'tag' | 'entry' | 'exit');
           }
-        }
-        
-        // Simular conclusão do upload para feedback visual
-        setTimeout(() => {
+
+          // Notificar que upload foi concluído com sucesso
           setIsUploading(false);
           setUploadSuccess(true);
           
-          toast.success(`${e.target.files?.length} foto(s) adicionada(s) com sucesso.`);
+          toast.success(`Foto ${type === 'tag' ? 'do TAG' : ''} enviada com sucesso`);
           
           if (onSuccess) {
-            onSuccess();
+            onSuccess(uploadedUrl);
           }
           
           // Reset do estado de sucesso após 3 segundos
           setTimeout(() => {
             setUploadSuccess(false);
           }, 3000);
-        }, 1000);
+        } catch (uploadError) {
+          console.error(`Erro ao processar foto de ${type}:`, uploadError);
+          setUploadError(`Erro ao processar foto de ${type}. Tente novamente.`);
+          toast.error(`Erro ao processar foto de ${type}`);
+          setIsUploading(false);
+          return;
+        }
       } catch (error) {
         setIsUploading(false);
         setUploadError(error instanceof Error ? error.message : "Erro ao fazer upload da foto");

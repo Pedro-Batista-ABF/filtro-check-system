@@ -14,6 +14,7 @@ import { Service } from "@/types";
 import ServiceCheckbox from "../ServiceCheckbox";
 import PhotoUpload from "../PhotoUpload";
 import { useApi } from "@/contexts/ApiContextExtended";
+import { toast } from "sonner";
 
 interface ReviewFormProps {
   tagNumber: string;
@@ -61,37 +62,63 @@ export default function ReviewForm({
   formErrors,
   photoRequired
 }: ReviewFormProps) {
-  const [tagPhotoUploaded, setTagPhotoUploaded] = useState(!!tagPhotoUrl);
+  const [tagPhotoProcessed, setTagPhotoProcessed] = useState(false);
   const api = useApi();
 
   // Efeito para monitorar mudanças na tagPhotoUrl
   useEffect(() => {
     if (tagPhotoUrl && !tagPhotoUrl.startsWith('blob:')) {
-      setTagPhotoUploaded(true);
+      console.log("Tag photo URL é válida:", tagPhotoUrl);
+      setTagPhotoProcessed(true);
+    } else {
+      console.log("Tag photo URL não é válida ou não existe:", tagPhotoUrl);
+      setTagPhotoProcessed(false);
     }
   }, [tagPhotoUrl]);
 
   // Função personalizada para lidar com o upload da foto da TAG
-  const handleDirectTagPhotoUpload = async (files: FileList) => {
-    if (files && files.length > 0) {
-      try {
+  const handleDirectTagPhotoUpload = async (files: FileList, processedUrl?: string) => {
+    try {
+      console.log("handleDirectTagPhotoUpload chamado", {files, processedUrl});
+      
+      if (processedUrl) {
+        console.log("URL já processada recebida:", processedUrl);
+        // Se a URL já foi processada pelo componente PhotoUpload, use-a diretamente
+        handleTagPhotoUpload(files);
+        setTagPhotoProcessed(true);
+        
+        // Avise o usuário que a foto foi processada com sucesso
+        toast.success("Foto do TAG processada com sucesso!");
+      } 
+      else if (files && files.length > 0) {
+        console.log("Processando arquivos:", files);
+        
         // Fazer upload usando API
         const file = files[0];
-        const uploadedUrl = await api.uploadPhoto(file, 'tag');
-        
-        // Enviar URL processada para o componente pai
-        // Criar um novo FileList simulado para passar para handleTagPhotoUpload
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        
-        // Chamar o callback original com os arquivos
-        handleTagPhotoUpload(dt.files);
-        
-        // Também definir manualmente o estado para esta URL processada
-        setTagPhotoUploaded(true);
-      } catch (error) {
-        console.error("Erro ao processar foto da TAG:", error);
+        try {
+          const uploadedUrl = await api.uploadPhoto(file, 'tag');
+          console.log("Upload bem-sucedido, URL:", uploadedUrl);
+          
+          // Criar um novo FileList simulado para passar para handleTagPhotoUpload
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          
+          // Chamar o callback original com os arquivos
+          handleTagPhotoUpload(dt.files);
+          
+          // Também definir manualmente o estado para esta URL processada
+          setTagPhotoProcessed(true);
+          
+          // Avise o usuário que a foto foi processada com sucesso
+          toast.success("Foto do TAG processada com sucesso!");
+        } catch (uploadError) {
+          console.error("Erro ao processar foto da TAG:", uploadError);
+          toast.error("Erro ao processar foto da TAG. Tente novamente.");
+        }
       }
+    } catch (error) {
+      console.error("Erro inesperado no upload da foto da TAG:", error);
+      toast.error("Erro inesperado ao processar foto. Tente novamente.");
     }
   };
 
@@ -194,7 +221,14 @@ export default function ReviewForm({
               photos={tagPhotoUrl && !tagPhotoUrl.startsWith('blob:') ? [tagPhotoUrl] : []}
               required={photoRequired}
               error={formErrors.tagPhoto}
-              onSuccess={() => setTagPhotoUploaded(true)}
+              onSuccess={(url) => {
+                console.log("PhotoUpload onSuccess com URL:", url);
+                // Se a URL já foi processada, podemos usá-la diretamente
+                if (url && !url.startsWith('blob:')) {
+                  handleTagPhotoUpload(new DataTransfer().files);
+                  setTagPhotoProcessed(true);
+                }
+              }}
               value={tagPhotoUrl && !tagPhotoUrl.startsWith('blob:') ? tagPhotoUrl : null}
               type="tag"
             />
@@ -202,7 +236,14 @@ export default function ReviewForm({
               <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
             )}
             {tagPhotoUrl && tagPhotoUrl.startsWith('blob:') && (
-              <p className="text-xs text-amber-500">A foto da TAG precisa ser processada. Faça o upload novamente.</p>
+              <p className="text-xs text-amber-500 font-bold">
+                A foto da TAG precisa ser processada. Faça o upload novamente.
+              </p>
+            )}
+            {!tagPhotoUrl && (
+              <p className="text-xs text-amber-500">
+                Clique acima para adicionar a foto do TAG.
+              </p>
             )}
           </div>
 

@@ -32,14 +32,14 @@ export function usePeritagemSubmit() {
       }
 
       // Verificar foto da tag - deve ser validação rigorosa
-      if (!data.tagPhotoUrl || data.tagPhotoUrl === '') {
+      if (!data.tagPhotoUrl) {
         console.error("Foto da TAG não encontrada");
         throw new Error("Foto da TAG é obrigatória");
       }
 
       // Verificar se a foto da TAG está no formato blob
       if (data.tagPhotoUrl && data.tagPhotoUrl.startsWith('blob:')) {
-        console.log("Erro: A foto da TAG está em formato blob:", data.tagPhotoUrl);
+        console.error("Erro: A foto da TAG está em formato blob:", data.tagPhotoUrl);
         throw new Error("A foto da TAG precisa ser processada corretamente. Faça o upload novamente.");
       }
 
@@ -80,7 +80,7 @@ export function usePeritagemSubmit() {
                   processedPhotos.push(processedPhoto);
                 } catch (uploadError) {
                   console.error('Erro no upload de foto:', uploadError);
-                  toast.error("Erro ao fazer upload de foto");
+                  toast.error("Erro ao fazer upload de foto de serviço");
                   throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
                 }
               } else if (photo.url) {
@@ -94,7 +94,10 @@ export function usePeritagemSubmit() {
                   });
                 } else {
                   console.error('Erro: Foto de serviço com URL blob:', photo.url);
-                  // Não adicionar fotos com URL blob
+                  toast.error("Foto de serviço precisa ser processada novamente", {
+                    description: "Faça o upload novamente para a foto com URL temporária"
+                  });
+                  throw new Error("Foto de serviço com URL temporária. Faça o upload novamente.");
                 }
               }
             }
@@ -131,6 +134,7 @@ export function usePeritagemSubmit() {
         if (isEditing && sectorId) {
           result = await api.updateSector(sectorId, sectorData);
         } else {
+          console.log("Chamando api.addSector com dados processados");
           // Chamando a função addSector diretamente do api
           result = await api.addSector(sectorData);
           console.log("Resposta da API após addSector:", result);
@@ -163,7 +167,7 @@ export function usePeritagemSubmit() {
               duration: 5000
             });
             // Explicitamente definir o erro para ser mais específico
-            errorMsg = "Foto da TAG não encontrada ou inválida";
+            errorMsg = "Foto da TAG não encontrada ou inválida. Faça o upload novamente.";
           } else {
             toast.error("Erro ao processar setor", {
               description: errorMsg,
