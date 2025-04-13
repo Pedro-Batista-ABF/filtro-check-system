@@ -1,11 +1,10 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useApi } from "@/contexts/ApiContext";
 import { Sector, Photo, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function usePeritagemSubmit() {
@@ -25,17 +24,7 @@ export function usePeritagemSubmit() {
       console.log("Is Editing:", isEditing);
       console.log("Sector ID:", sectorId);
       
-      // Verificação de autenticação
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log("Session Details:", session?.user?.id ? "Autenticado" : "Não autenticado");
-      
-      if (sessionError || !session) {
-        console.error("Authentication Failed", sessionError);
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado. Faça login para continuar.");
-      }
+      // Removed authentication check
       
       // Validate required fields
       if (!data.tagNumber) {

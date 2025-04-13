@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Sector, Service, Photo, CycleOutcome, SectorStatus, ServiceType } from "@/types";
 import { toast } from "sonner";
@@ -413,8 +414,8 @@ export const supabaseService = {
    */
   addSector: async (sectorData: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      // Removido a verificação de autenticação
+      const mockUserId = 'no-auth-user';
       
       // 1. Insere o setor
       const { data: newSector, error: sectorError } = await supabase
@@ -424,8 +425,8 @@ export const supabaseService = {
           tag_photo_url: sectorData.tagPhotoUrl,
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
-          created_by: user.id,
-          updated_by: user.id
+          created_by: mockUserId,
+          updated_by: mockUserId
         })
         .select()
         .single();
@@ -453,8 +454,8 @@ export const supabaseService = {
           scrap_return_invoice: sectorData.scrapReturnInvoice || null,
           status: sectorData.status,
           outcome: sectorData.outcome || 'EmAndamento',
-          created_by: user.id,
-          updated_by: user.id
+          created_by: mockUserId,
+          updated_by: mockUserId
         })
         .select()
         .single();
@@ -491,7 +492,7 @@ export const supabaseService = {
               service_id: photo.serviceId || null,
               url: photo.url,
               type: 'before',
-              created_by: user.id
+              created_by: mockUserId
             });
             
           if (photoError) {
@@ -513,8 +514,8 @@ export const supabaseService = {
    */
   updateSector: async (sectorData: Sector): Promise<Sector> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      // Removido verificação de autenticação
+      const mockUserId = 'no-auth-user';
       
       // 1. Busca o ciclo atual do setor
       const { data: cycleData, error: cycleError } = await supabase
@@ -535,7 +536,7 @@ export const supabaseService = {
           tag_photo_url: sectorData.tagPhotoUrl,
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
-          updated_by: user.id
+          updated_by: mockUserId
         })
         .eq('id', sectorData.id);
         
@@ -561,7 +562,7 @@ export const supabaseService = {
           scrap_return_invoice: sectorData.scrapReturnInvoice || null,
           status: sectorData.status,
           outcome: sectorData.outcome || 'EmAndamento',
-          updated_by: user.id
+          updated_by: mockUserId
         })
         .eq('id', cycleData.id);
         
@@ -615,7 +616,7 @@ export const supabaseService = {
                 service_id: photo.serviceId || null,
                 url: photo.url,
                 type: 'after',
-                created_by: user.id
+                created_by: mockUserId
               });
               
             if (photoError) {
@@ -645,7 +646,7 @@ export const supabaseService = {
                 service_id: photo.serviceId || null,
                 url: photo.url,
                 type: 'scrap',
-                created_by: user.id
+                created_by: mockUserId
               });
               
             if (photoError) {

@@ -12,8 +12,6 @@ export const useSectorService = () => {
 
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
-      // Authentication check removed
-
       // Garantir que os tipos estejam corretos
       const status: SectorStatus = sectorData.status || 'peritagemPendente';
       const outcome: CycleOutcome = sectorData.outcome || 'EmAndamento';
@@ -68,8 +66,6 @@ export const useSectorService = () => {
 
   const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
     try {
-      // Authentication check removed
-
       // Primeiro, busca o setor atual
       const currentSector = await api.getSectorById(id);
       if (!currentSector) {

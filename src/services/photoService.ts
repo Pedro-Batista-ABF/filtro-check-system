@@ -17,8 +17,6 @@ export const usePhotoService = () => {
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      // Authentication check removed
-
       // First, busca o setor atual
       const sector = await api.getSectorById(sectorId);
       if (!sector) {
