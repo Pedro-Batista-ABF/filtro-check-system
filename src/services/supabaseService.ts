@@ -133,7 +133,7 @@ const mapSectorFromDB = (
     scrapPhotos,
     scrapValidated: cycle.scrap_validated || false,
     scrapReturnDate: cycle.scrap_return_date || undefined,
-    scrapReturnInvoice: cycle.scrap_return_invoice || undefined,
+    scrapReturnInvoice: cycle.scrapReturnInvoice || undefined,
     status: cycle.status as SectorStatus,
     outcome: cycle.outcome as CycleOutcome || undefined,
     cycleCount: sector.cycle_count,
@@ -150,85 +150,114 @@ export const supabaseService = {
    */
   getAllSectors: async (): Promise<Sector[]> => {
     try {
+      console.log("Iniciando busca de todos os setores");
+      
       // 1. Busca todos os setores
       const { data: sectorsData, error: sectorsError } = await supabase
         .from('sectors')
         .select('*')
         .order('tag_number');
 
-      if (sectorsError) throw sectorsError;
+      if (sectorsError) {
+        console.error("Erro ao buscar setores:", sectorsError);
+        throw sectorsError;
+      }
+      
+      console.log(`Encontrados ${sectorsData?.length || 0} setores no banco de dados`);
       
       // 2. Para cada setor, busca seu ciclo atual
       const sectors: Sector[] = [];
       
       for (const sector of sectorsData || []) {
-        const { data: cyclesData, error: cyclesError } = await supabase
-          .from('cycles')
-          .select('*')
-          .eq('sector_id', sector.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+        console.log(`Buscando ciclo para o setor ${sector.id} (TAG: ${sector.tag_number})`);
+        
+        try {
+          const { data: cyclesData, error: cyclesError } = await supabase
+            .from('cycles')
+            .select('*')
+            .eq('sector_id', sector.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          if (cyclesError) {
+            console.error(`Erro ao buscar ciclo para o setor ${sector.id}:`, cyclesError);
+            // Em vez de pular este setor, vamos tentar criar um ciclo básico
+            console.log("Buscando todos os ciclos para este setor para diagnóstico...");
+            
+            const { data: allCycles } } = await supabase
+              .from('cycles')
+              .select('*')
+              .eq('sector_id', sector.id);
+              
+            console.log(`Ciclos encontrados para o setor ${sector.id}:`, allCycles?.length || 0);
+            
+            // Continua para o próximo setor
+            continue;
+          }
           
-        if (cyclesError) {
-          console.error(`Erro ao buscar ciclo para o setor ${sector.id}:`, cyclesError);
-          continue;
+          console.log(`Ciclo encontrado para o setor ${sector.id}:`, cyclesData.id);
+          
+          // 3. Busca os serviços associados ao ciclo
+          const { data: serviceTypesData } = await supabase
+            .from('service_types')
+            .select('*');
+            
+          const { data: cycleServicesData } = await supabase
+            .from('cycle_services')
+            .select('*')
+            .eq('cycle_id', cyclesData.id);
+            
+          // 4. Busca as fotos associadas ao ciclo
+          const { data: photosData } = await supabase
+            .from('photos')
+            .select('*')
+            .eq('cycle_id', cyclesData.id);
+            
+          const beforePhotos = (photosData || [])
+            .filter(photo => photo.type === 'before')
+            .map(mapPhotoFromDB);
+            
+          const afterPhotos = (photosData || [])
+            .filter(photo => photo.type === 'after')
+            .map(mapPhotoFromDB);
+            
+          const scrapPhotos = (photosData || [])
+            .filter(photo => photo.type === 'scrap')
+            .map(mapPhotoFromDB);
+          
+          // 5. Monta os serviços com suas fotos
+          const services = (serviceTypesData || []).map(serviceType => {
+            const cycleService = (cycleServicesData || []).find(
+              cs => cs.service_id === serviceType.id
+            );
+            
+            const servicePhotos = (photosData || []).filter(
+              photo => photo.service_id === serviceType.id
+            );
+            
+            return mapServiceFromDB(serviceType, cycleService, servicePhotos);
+          });
+          
+          // 6. Adiciona o setor completo à lista
+          sectors.push(
+            mapSectorFromDB(
+              sector, 
+              cyclesData, 
+              services, 
+              beforePhotos, 
+              afterPhotos, 
+              scrapPhotos
+            )
+          );
+          
+          console.log(`Setor ${sector.id} adicionado à lista com status: ${cyclesData.status}`);
+        } catch (error) {
+          console.error(`Erro ao processar o setor ${sector.id}:`, error);
         }
-        
-        // 3. Busca os serviços associados ao ciclo
-        const { data: serviceTypesData } = await supabase
-          .from('service_types')
-          .select('*');
-          
-        const { data: cycleServicesData } = await supabase
-          .from('cycle_services')
-          .select('*')
-          .eq('cycle_id', cyclesData.id);
-          
-        // 4. Busca as fotos associadas ao ciclo
-        const { data: photosData } = await supabase
-          .from('photos')
-          .select('*')
-          .eq('cycle_id', cyclesData.id);
-          
-        const beforePhotos = (photosData || [])
-          .filter(photo => photo.type === 'before')
-          .map(mapPhotoFromDB);
-          
-        const afterPhotos = (photosData || [])
-          .filter(photo => photo.type === 'after')
-          .map(mapPhotoFromDB);
-          
-        const scrapPhotos = (photosData || [])
-          .filter(photo => photo.type === 'scrap')
-          .map(mapPhotoFromDB);
-        
-        // 5. Monta os serviços com suas fotos
-        const services = (serviceTypesData || []).map(serviceType => {
-          const cycleService = (cycleServicesData || []).find(
-            cs => cs.service_id === serviceType.id
-          );
-          
-          const servicePhotos = (photosData || []).filter(
-            photo => photo.service_id === serviceType.id
-          );
-          
-          return mapServiceFromDB(serviceType, cycleService, servicePhotos);
-        });
-        
-        // 6. Adiciona o setor completo à lista
-        sectors.push(
-          mapSectorFromDB(
-            sector, 
-            cyclesData, 
-            services, 
-            beforePhotos, 
-            afterPhotos, 
-            scrapPhotos
-          )
-        );
       }
       
+      console.log(`Retornando ${sectors.length} setores processados`);
       return sectors;
     } catch (error) {
       console.error("Erro ao buscar setores:", error);

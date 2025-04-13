@@ -23,7 +23,9 @@ export default function Peritagem() {
 
   useEffect(() => {
     document.title = "Peritagem - Gestão de Recuperação";
-  }, []);
+    // Add diagnostic log to see sector data
+    console.log("Dados de setores na tela Peritagem:", sectors);
+  }, [sectors]);
 
   return (
     <PageLayout>

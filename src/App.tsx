@@ -20,6 +20,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ConsolidatedReport from "@/pages/ConsolidatedReport";
 import UserInfo from "@/components/auth/UserInfo";
 import Checagem from "@/pages/Checagem";
+import PeritagemPendente from "@/pages/PeritagemPendente";
 
 const App = () => {
   return (
@@ -42,6 +43,7 @@ const App = () => {
         }>
           <Route index element={<Index />} />
           <Route path="peritagem" element={<Peritagem />} />
+          <Route path="peritagem/pendente" element={<PeritagemPendente />} />
           <Route path="peritagem/novo" element={<PeritagemForm />} />
           <Route path="peritagem/editar/:id" element={<PeritagemForm />} />
           <Route path="execucao" element={<Execucao />} />
