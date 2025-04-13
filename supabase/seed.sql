@@ -39,3 +39,13 @@ DROP POLICY IF EXISTS "Allow public delete access" ON storage.objects;
 CREATE POLICY "Allow public delete access" 
     ON storage.objects FOR DELETE
     USING (bucket_id = 'sector_photos');
+
+-- Inserir serviços padrão se não existirem
+INSERT INTO public.service_types (id, name, description)
+VALUES 
+    ('limpeza', 'Limpeza', 'Limpeza geral do setor'),
+    ('troca_elemento', 'Troca de Elemento', 'Substituição do elemento filtrante'),
+    ('reparo_estrutural', 'Reparo Estrutural', 'Reparos na estrutura do filtro'),
+    ('pintura', 'Pintura', 'Pintura do setor'),
+    ('teste_vazamento', 'Teste de Vazamento', 'Teste para identificar vazamentos')
+ON CONFLICT (id) DO NOTHING;

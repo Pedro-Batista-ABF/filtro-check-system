@@ -20,6 +20,7 @@ interface PhotoUploadProps {
   value?: string | null;
   onSuccess?: (url: string) => void;
   error?: boolean;
+  onPhotoUpload?: (e: ChangeEvent<HTMLInputElement>, type: "tag" | "entry" | "exit") => void;
 }
 
 export default function PhotoUpload({
@@ -34,7 +35,8 @@ export default function PhotoUpload({
   required = false,
   value,
   onSuccess,
-  error = false
+  error = false,
+  onPhotoUpload
 }: PhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -53,41 +55,52 @@ export default function PhotoUpload({
   }, [photos, value, photoUrls]);
 
   const uploadToSupabase = async (file: File): Promise<string> => {
-    // Gerar um nome único para o arquivo
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${type}_${Date.now()}.${fileExt}`;
-    const filePath = `${type}/${fileName}`;
-    
-    console.log("Preparando upload para caminho:", filePath);
-    
-    // Upload para o Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('sector_photos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
-    
-    if (error) {
-      console.error("Erro no upload para o Supabase:", error);
-      throw new Error(`Erro no upload da foto: ${error.message}`);
+    try {
+      // Gerar um nome único para o arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${type}_${Date.now()}.${fileExt}`;
+      const filePath = `${type}/${fileName}`;
+      
+      console.log("Preparando upload para caminho:", filePath);
+      
+      // Upload para o Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('sector_photos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error("Erro no upload para o Supabase:", error);
+        throw new Error(`Erro no upload da foto: ${error.message}`);
+      }
+      
+      // Obter a URL pública do arquivo
+      const { data: urlData } = supabase.storage
+        .from('sector_photos')
+        .getPublicUrl(filePath);
+      
+      console.log("Upload concluído com sucesso. URL:", urlData.publicUrl);
+      
+      if (!urlData.publicUrl) {
+        throw new Error("URL da foto não foi gerada corretamente");
+      }
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      throw error;
     }
-    
-    // Obter a URL pública do arquivo
-    const { data: urlData } = supabase.storage
-      .from('sector_photos')
-      .getPublicUrl(filePath);
-    
-    console.log("Upload concluído com sucesso. URL:", urlData.publicUrl);
-    
-    if (!urlData.publicUrl) {
-      throw new Error("URL da foto não foi gerada corretamente");
-    }
-    
-    return urlData.publicUrl;
   };
 
   const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    // Se temos um manipulador personalizado, use-o
+    if (onPhotoUpload) {
+      onPhotoUpload(e, type);
+      return;
+    }
+
     if (e.target.files && e.target.files.length > 0) {
       setIsUploading(true);
       setUploadError(null);

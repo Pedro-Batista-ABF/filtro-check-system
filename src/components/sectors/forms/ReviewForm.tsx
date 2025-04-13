@@ -210,19 +210,25 @@ export default function ReviewForm({
           {formErrors.services && (
             <p className="text-xs text-red-500 mb-4">Selecione pelo menos um serviço</p>
           )}
-          {services.map((service) => (
-            <ServiceCheckbox
-              key={service.id}
-              service={service}
-              checked={service.selected}
-              onChecked={handleServiceChange}
-              onQuantityChange={handleQuantityChange}
-              onObservationChange={handleObservationChange}
-              onPhotoUpload={handlePhotoUpload}
-              photoType="before"
-              required={true}
-            />
-          ))}
+          {services.length > 0 ? (
+            services.map((service) => (
+              <ServiceCheckbox
+                key={service.id}
+                service={service}
+                checked={service.selected}
+                onChecked={handleServiceChange}
+                onQuantityChange={handleQuantityChange}
+                onObservationChange={handleObservationChange}
+                onPhotoUpload={handlePhotoUpload}
+                photoType="before"
+                required={true}
+              />
+            ))
+          ) : (
+            <div className="p-4 border border-yellow-300 bg-yellow-50 rounded-md">
+              <p className="text-yellow-700">Nenhum serviço encontrado. Verifique a conexão com o banco de dados.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
