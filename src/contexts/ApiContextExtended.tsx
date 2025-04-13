@@ -20,6 +20,7 @@ export const useApi = () => {
     },
     // Garantir que addSector está disponível
     addSector: (sectorData: Omit<Sector, 'id'>) => {
+      console.log('ApiContextExtended.addSector chamado com:', sectorData);
       return api.createSector(sectorData as any); // Use proper function from ApiContext
     }
   };

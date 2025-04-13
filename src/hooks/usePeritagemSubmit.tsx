@@ -114,8 +114,9 @@ export function usePeritagemSubmit() {
           if (isEditing && sectorId) {
             result = await api.updateSector(sectorId, sectorData);
           } else {
-            // Make sure we're calling the correct function
-            result = await api.addSector(sectorData as Omit<Sector, 'id'>);
+            // Chamando a função addSector diretamente do api
+            result = await api.addSector(sectorData);
+            console.log("Resposta da API após addSector:", result);
           }
           // Se chegar aqui, a operação foi bem-sucedida
           break;

@@ -10,7 +10,7 @@ import { useApi } from '@/contexts/ApiContextExtended';
 export const useSectorService = () => {
   const api = useApi();
 
-  const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
+  const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string | Sector> => {
     try {
       // Garantir que os tipos estejam corretos
       const status: SectorStatus = sectorData.status || 'peritagemPendente';
@@ -54,10 +54,12 @@ export const useSectorService = () => {
         entryObservations: sectorData.entryObservations || ''
       };
 
+      console.log('Enviando dados de setor:', completeData);
       const result = await api.addSector(completeData);
       toast.success("Setor cadastrado com sucesso!");
-      // Ensure we return a string for the sector ID
-      return typeof result === 'object' && result.id ? result.id : result as string;
+      
+      // Retornar o resultado diretamente, sem tentar converter
+      return result;
     } catch (error) {
       const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
       toast.error(processedError.message);
