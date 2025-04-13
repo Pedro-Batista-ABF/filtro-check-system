@@ -33,6 +33,7 @@ export const usePhotoService = () => {
         throw new Error("Setor não encontrado");
       }
       
+      // Implementar lógica sem recursão para adicionar fotos
       // Para fotos "before", adiciona à lista de beforePhotos
       if (type === 'before') {
         const newPhoto: Photo = {
@@ -45,10 +46,13 @@ export const usePhotoService = () => {
         const beforePhotos = sector.beforePhotos || [];
         const updatedBeforePhotos = [...beforePhotos, newPhoto];
         
-        await api.updateSector({
-          ...sector,
+        // Crie um objeto separado para a atualização para evitar problemas de recursão
+        const updateData = {
+          id: sector.id,
           beforePhotos: updatedBeforePhotos
-        });
+        };
+        
+        await api.updateSector(updateData);
       }
       // Para fotos "after", adiciona à lista de afterPhotos
       else if (type === 'after') {
@@ -62,10 +66,13 @@ export const usePhotoService = () => {
         const afterPhotos = sector.afterPhotos || [];
         const updatedAfterPhotos = [...afterPhotos, newPhoto];
         
-        await api.updateSector({
-          ...sector,
+        // Crie um objeto separado para a atualização para evitar problemas de recursão
+        const updateData = {
+          id: sector.id,
           afterPhotos: updatedAfterPhotos
-        });
+        };
+        
+        await api.updateSector(updateData);
       }
       
       toast.success("Foto adicionada");

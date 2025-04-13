@@ -26,19 +26,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
+        // Se temos uma sessão válida, o usuário está autenticado
         if (session) {
-          console.log("Sessão válida encontrada:", session.user.email);
+          console.log("Sessão válida encontrada");
           setIsUserAuthenticated(true);
-          
-          // Verificar também se o token está válido
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            console.warn("Token inválido, usuário não encontrado");
-            setIsUserAuthenticated(false);
-            toast.error("Sessão expirada", {
-              description: "Sua sessão expirou. Por favor, faça login novamente."
-            });
-          }
         } else {
           console.log("Nenhuma sessão encontrada");
           setIsUserAuthenticated(false);
@@ -52,6 +43,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     };
 
     checkAuth();
+    
+    // Adicionar listener para mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          setIsUserAuthenticated(true);
+        } else {
+          setIsUserAuthenticated(false);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Show loading when auth is being checked

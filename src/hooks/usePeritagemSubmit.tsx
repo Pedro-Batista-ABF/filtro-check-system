@@ -25,7 +25,7 @@ export function usePeritagemSubmit() {
       console.log("Is Editing:", isEditing);
       console.log("Sector ID:", sectorId);
       
-      // Extensive authentication check
+      // Verificação de autenticação
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       console.log("Session Details:", session);
       console.log("Session Error:", sessionError);
@@ -64,9 +64,9 @@ export function usePeritagemSubmit() {
         for (const service of data.services) {
           if (service.selected && service.photos) {
             for (const photo of service.photos) {
-              // Verificar se a foto tem a propriedade 'file' antes de usá-la
               if ('file' in photo && photo.file instanceof File) {
                 try {
+                  // Usamos o try/catch especificamente para o upload de cada foto
                   const photoUrl = await uploadPhoto(photo.file, 'before');
                   processedPhotos.push({
                     ...photo,
@@ -88,7 +88,7 @@ export function usePeritagemSubmit() {
 
       data.beforePhotos = processedPhotos;
 
-      // Prepare sector data
+      // Prepare sector data with retry logic
       const sectorData: Omit<Sector, 'id'> = {
         ...data,
         status: 'peritagemPendente',
@@ -99,11 +99,31 @@ export function usePeritagemSubmit() {
 
       console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));
 
+      // Implementar tentativas com atraso exponencial
+      const maxRetries = 3;
+      let attempt = 0;
       let result;
-      if (isEditing && sectorId) {
-        result = await updateSector(sectorId, sectorData);
-      } else {
-        result = await addSector(sectorData);
+      
+      while (attempt < maxRetries) {
+        try {
+          if (isEditing && sectorId) {
+            result = await updateSector(sectorId, sectorData);
+          } else {
+            result = await addSector(sectorData);
+          }
+          // Se chegar aqui, a operação foi bem-sucedida
+          break;
+        } catch (retryError) {
+          attempt++;
+          console.warn(`Tentativa ${attempt} falhou:`, retryError);
+          
+          if (attempt >= maxRetries) {
+            throw retryError; // Lançar o erro se todas as tentativas falharem
+          }
+          
+          // Espera exponencial antes da próxima tentativa (500ms, 1000ms, 2000ms)
+          await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+        }
       }
 
       console.log("Submission Result:", result);
