@@ -16,6 +16,12 @@ export const useSectorService = () => {
       const status: SectorStatus = sectorData.status || 'peritagemPendente';
       const outcome: CycleOutcome = sectorData.outcome || 'EmAndamento';
 
+      // Verificar se a foto da TAG está presente
+      if (!sectorData.tagPhotoUrl) {
+        console.error("Erro: Tentativa de cadastrar setor sem foto da TAG");
+        throw new Error("A foto da TAG é obrigatória");
+      }
+
       // Certifique-se de que todos os serviços tenham o campo 'type' definido corretamente
       const processedServices = sectorData.services?.map(service => ({
         ...service,
@@ -37,12 +43,11 @@ export const useSectorService = () => {
         serviceId: photo.serviceId
       }));
 
-      // Verificar se a foto da TAG está presente e válida
+      // Verificar se a foto da TAG está em formato blob
       const tagPhotoUrl = sectorData.tagPhotoUrl;
-      if (!tagPhotoUrl) {
-        console.warn("Setor sendo cadastrado sem foto da TAG");
-      } else if (tagPhotoUrl.startsWith('blob:')) {
-        console.warn("Foto da TAG está em formato blob, pode causar problemas:", tagPhotoUrl);
+      if (tagPhotoUrl && tagPhotoUrl.startsWith('blob:')) {
+        console.error("Erro: A foto da TAG ainda está em formato blob:", tagPhotoUrl);
+        throw new Error("A foto da TAG precisa ser processada antes de salvar o setor");
       }
 
       // Garantir que todos os campos obrigatórios estejam presentes e no formato correto
@@ -79,7 +84,8 @@ export const useSectorService = () => {
     try {
       // Verificar se existem fotos com formato blob que precisam ser processadas
       if (updates.tagPhotoUrl && updates.tagPhotoUrl.startsWith('blob:')) {
-        console.warn("Foto da TAG em formato blob no updateSector:", updates.tagPhotoUrl);
+        console.error("Erro: Foto da TAG em formato blob no updateSector:", updates.tagPhotoUrl);
+        throw new Error("A foto da TAG precisa ser processada antes de atualizar o setor");
       }
 
       // Usando a versão atualizada do updateSector que aceita id e updates separadamente

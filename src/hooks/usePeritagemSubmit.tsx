@@ -31,6 +31,11 @@ export function usePeritagemSubmit() {
         throw new Error("Nota fiscal de entrada é obrigatória");
       }
 
+      // Verificar foto da tag
+      if (!data.tagPhotoUrl) {
+        throw new Error("Foto da TAG é obrigatória");
+      }
+
       // Verify services
       const selectedServices = data.services?.filter(service => service.selected) || [];
       if (selectedServices.length === 0) {
@@ -52,7 +57,9 @@ export function usePeritagemSubmit() {
                 try {
                   // Upload da foto e obter URL
                   const photoWithFile = photo as PhotoWithFile;
+                  console.log("Enviando foto para upload:", photoWithFile.file.name);
                   const photoUrl = await api.uploadPhoto(photoWithFile.file, 'before');
+                  console.log("URL da foto obtida:", photoUrl);
                   
                   // Criar objeto Photo simples sem a propriedade file
                   const processedPhoto: Photo = {
@@ -64,7 +71,7 @@ export function usePeritagemSubmit() {
                   
                   processedPhotos.push(processedPhoto);
                 } catch (uploadError) {
-                  console.error('Foto Upload Error:', uploadError);
+                  console.error('Erro no upload de foto:', uploadError);
                   toast.error("Erro ao fazer upload de foto");
                   throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
                 }
@@ -82,13 +89,11 @@ export function usePeritagemSubmit() {
         }
       }
 
-      // Garantir que a foto da TAG está processada se existe
+      // Garantir que a foto da TAG está processada corretamente
       let tagPhotoUrl = data.tagPhotoUrl;
       if (tagPhotoUrl && tagPhotoUrl.startsWith('blob:')) {
-        console.log("A foto da TAG precisa ser processada:", tagPhotoUrl);
-        // Aqui precisaríamos pegar o arquivo da foto e fazer upload
-        // Como não temos acesso direto ao arquivo, precisamos confiar que o upload já foi feito
-        // Em uma aplicação real, você precisaria armazenar o File junto com a URL blob
+        console.error("Erro: A foto da TAG ainda está em formato blob e não foi processada:", tagPhotoUrl);
+        throw new Error("A foto da TAG não foi processada corretamente. Tente fazer o upload novamente.");
       }
 
       // Garantir que status e outcome sejam valores válidos nos tipos corretos
@@ -114,45 +119,47 @@ export function usePeritagemSubmit() {
 
       console.log("Final Sector Data:", JSON.stringify(sectorData, null, 2));
 
-      // Implementar tentativas com atraso exponencial
-      const maxRetries = 3;
-      let attempt = 0;
       let result;
       
-      while (attempt < maxRetries) {
-        try {
-          if (isEditing && sectorId) {
-            result = await api.updateSector(sectorId, sectorData);
-          } else {
-            // Chamando a função addSector diretamente do api
-            result = await api.addSector(sectorData);
-            console.log("Resposta da API após addSector:", result);
-          }
-          // Se chegar aqui, a operação foi bem-sucedida
-          break;
-        } catch (retryError) {
-          attempt++;
-          console.warn(`Tentativa ${attempt} falhou:`, retryError);
-          
-          // Verificar se é um erro de recursão infinita (problema nas políticas RLS)
-          if (retryError instanceof Error && 
-             (retryError.message.includes("infinite recursion") || 
-              retryError.message.includes("policy for relation"))) {
-            // Este é um erro de configuração do Supabase, não podemos resolver no frontend
+      try {
+        if (isEditing && sectorId) {
+          result = await api.updateSector(sectorId, sectorData);
+        } else {
+          // Chamando a função addSector diretamente do api
+          result = await api.addSector(sectorData);
+          console.log("Resposta da API após addSector:", result);
+        }
+      } catch (apiError) {
+        console.error("Erro na chamada da API:", apiError);
+        
+        // Verificar se é um erro conhecido e tratar adequadamente
+        if (apiError instanceof Error) {
+          if (apiError.message.includes("infinite recursion") || 
+              apiError.message.includes("policy for relation")) {
             toast.error("Erro de permissão no banco de dados", {
               description: "Contacte o administrador do sistema para verificar as políticas de RLS",
               duration: 5000
             });
-            throw new Error("Erro de configuração do banco de dados. Por favor, contate o administrador.");
+          } else if (apiError.message.includes("not authenticated") || 
+                     apiError.message.includes("Não autenticado")) {
+            toast.error("Erro de autenticação", {
+              description: "Você precisa estar logado para cadastrar um setor",
+              duration: 5000
+            });
+          } else {
+            toast.error("Erro ao processar setor", {
+              description: apiError.message,
+              duration: 5000
+            });
           }
-          
-          if (attempt >= maxRetries) {
-            throw retryError; // Lançar o erro se todas as tentativas falharem
-          }
-          
-          // Espera exponencial antes da próxima tentativa (500ms, 1000ms, 2000ms)
-          await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt - 1)));
+        } else {
+          toast.error("Erro desconhecido", {
+            description: "Ocorreu um erro ao processar o setor",
+            duration: 5000
+          });
         }
+        
+        throw apiError;
       }
 
       console.log("Submission Result:", result);

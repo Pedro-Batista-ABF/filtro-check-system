@@ -49,6 +49,9 @@ export default function ErrorMessage({ message }: ErrorMessageProps) {
     displayMessage = "Você precisa estar logado para realizar esta operação.";
     hint = "Faça login novamente para continuar.";
     showLoginButton = true;
+  } else if (message.includes("foto da TAG") || message.includes("TAG é obrigatória")) {
+    displayMessage = "Foto do TAG não encontrada ou inválida.";
+    hint = "Verifique se você fez o upload da foto do TAG corretamente.";
   }
   
   const handleLoginClick = async () => {
