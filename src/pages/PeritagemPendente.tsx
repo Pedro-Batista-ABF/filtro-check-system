@@ -19,7 +19,8 @@ export default function PeritagemPendente() {
   const handleRefresh = async () => {
     toast.info("Recarregando dados...");
     try {
-      await refreshData(); // Usar a função de atualização do contexto API
+      // Usar a função de atualização do contexto API
+      await refreshData(); 
       setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error("Erro ao atualizar dados:", error);

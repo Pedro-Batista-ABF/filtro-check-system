@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector, Service } from "@/types";
+import { Sector, Service, Photo, ServiceType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -45,12 +45,13 @@ export function usePeritagemData(id?: string) {
           throw new Error("Não foi possível carregar os serviços disponíveis");
         }
         
-        // Remove description from services if it's not part of the type
-        const processedServices = defaultServices.map(service => ({
+        // Processa os serviços para garantir tipagens corretas
+        const processedServices: Service[] = defaultServices.map(service => ({
           id: service.id,
           name: service.name,
           selected: false,
-          type: service.id as any
+          type: service.id as ServiceType,
+          photos: []
         }));
         
         setServices(processedServices);
@@ -139,7 +140,7 @@ export function usePeritagemData(id?: string) {
               }
               
               // Mapear serviços para o formato esperado pelo frontend
-              const servicesWithDetails = processedServices.map(service => {
+              const servicesWithDetails: Service[] = processedServices.map(service => {
                 const cycleService = (cycleServicesData || []).find(cs => cs.service_id === service.id);
                 
                 // Se o serviço existe no ciclo, adicionar detalhes
@@ -149,7 +150,7 @@ export function usePeritagemData(id?: string) {
                     .map(photo => ({
                       id: photo.id,
                       url: photo.url,
-                      type: photo.type,
+                      type: photo.type as "before" | "after", // Garantir tipo correto
                       serviceId: photo.service_id
                     }));
                   
@@ -179,14 +180,14 @@ export function usePeritagemData(id?: string) {
                   .map(photo => ({
                     id: photo.id,
                     url: photo.url,
-                    type: 'before'
+                    type: 'before' as const
                   })),
                 afterPhotos: (photosData || [])
                   .filter(photo => photo.type === 'after' && !photo.service_id)
                   .map(photo => ({
                     id: photo.id,
                     url: photo.url,
-                    type: 'after'
+                    type: 'after' as const
                   })),
                 productionCompleted: cycleData.production_completed || false,
                 status: cycleData.status as any || sectorDb.current_status,
@@ -258,6 +259,7 @@ export function usePeritagemData(id?: string) {
     peritagemDate: currentDate,
     services: services,
     beforePhotos: [],
+    afterPhotos: [],
     productionCompleted: false,
     cycleCount: 1,
     status: 'peritagemPendente',

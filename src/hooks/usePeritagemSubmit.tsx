@@ -14,7 +14,7 @@ export function usePeritagemSubmit() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
-  const { addSector, updateSector, uploadPhoto } = useApi();
+  const { addSector, updateSector, uploadPhoto, refreshData } = useApi();
 
   // Função para gerar um cycleCount único
   const generateUniqueCycleCount = (attempt: number): number => {
@@ -247,7 +247,7 @@ export function usePeritagemSubmit() {
       }
 
       // Após salvar com sucesso, atualize diretamente o status do setor no Supabase para emExecucao
-      if (!isEditing && result) {
+      if (result) {
         try {
           const sectorId = typeof result === "string" ? result : result.id;
           console.log("Atualizando status do setor para emExecucao:", sectorId);
@@ -270,6 +270,9 @@ export function usePeritagemSubmit() {
           // Não precisamos interromper o fluxo por causa dessa atualização secundária
         }
       }
+
+      // Recarregar os dados para atualizar a interface
+      await refreshData();
 
       toast.success(isEditing ? "Peritagem atualizada" : "Peritagem registrada", {
         description: isEditing 

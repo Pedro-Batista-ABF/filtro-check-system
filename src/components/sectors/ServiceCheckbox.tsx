@@ -3,7 +3,6 @@ import React, { useState, useRef, ChangeEvent, MouseEvent } from 'react';
 import { Service, Photo, PhotoWithFile } from '@/types';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
-import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
 import { AlertTriangle, Camera } from 'lucide-react';
@@ -13,7 +12,8 @@ import QuantityInput from './QuantityInput';
 interface ServiceCheckboxProps {
   service: Service;
   checked?: boolean;
-  onChecked: (id: string, checked: boolean) => void;
+  onChecked?: (id: string, checked: boolean) => void;
+  onServiceChange?: (id: string, checked: boolean) => void; // Added this prop
   onQuantityChange?: (id: string, quantity: number) => void;
   onObservationChange?: (id: string, observations: string) => void;
   onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
@@ -28,6 +28,7 @@ export default function ServiceCheckbox({
   service,
   checked = false,
   onChecked,
+  onServiceChange,
   onQuantityChange,
   onObservationChange,
   onPhotoUpload,
@@ -41,7 +42,13 @@ export default function ServiceCheckbox({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleServiceChange = (checked: boolean) => {
-    onChecked(service.id, checked);
+    // Support both callback patterns
+    if (onChecked) {
+      onChecked(service.id, checked);
+    }
+    if (onServiceChange) {
+      onServiceChange(service.id, checked);
+    }
     setExpanded(checked);
   };
 

@@ -66,20 +66,28 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       
       // Força o refresh da sessão
-      await supabase.auth.refreshSession();
-      
-      // Limpa o cache local e força um recarregamento
       const { error } = await supabase.auth.refreshSession();
       if (error) {
         console.error("Erro ao atualizar sessão:", error);
       }
       
-      // Atualiza os setores explicitamente através da API original
+      // Tentar recarregar os dados explicitamente
       try {
-        // Referência temporária ao método interno de fetchData do ApiContext original
-        // Isso geralmente seria acessado diretamente, mas para fins de compatibilidade,
-        // recarregamos a página inteira
-        window.location.reload();
+        // Limpar o cache do Supabase
+        const { data: realtimeData } = supabase.getChannels();
+        for (const channel of realtimeData) {
+          supabase.removeChannel(channel);
+        }
+
+        // Recarregar dados através do método original se existir
+        if (typeof api.refreshData === 'function') {
+          await api.refreshData();
+        } else {
+          // Caso não exista um método de refresh, recarregar a página
+          window.location.reload();
+        }
+        
+        toast.success("Dados atualizados com sucesso");
       } catch (error) {
         console.error("Erro ao recarregar setores:", error);
         toast.error("Erro ao recarregar dados");
