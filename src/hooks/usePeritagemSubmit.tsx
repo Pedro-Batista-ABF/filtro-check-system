@@ -155,8 +155,12 @@ export function usePeritagemSubmit() {
         }
       }
 
-      // Garantir que status e outcome sejam valores válidos nos tipos corretos
-      const status: SectorStatus = (data.status as SectorStatus) || 'peritagemPendente';
+      // Define initial status - CHANGE: Start with emExecucao instead of peritagemPendente
+      // for new sectors after form completion
+      const status: SectorStatus = isEditing 
+        ? (data.status as SectorStatus) || 'peritagemPendente'
+        : 'emExecucao'; // New sectors go directly to 'emExecucao' after form completion
+      
       const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
 
       // Implementa tentativas de adicionar o setor com cycleCount único
@@ -239,6 +243,31 @@ export function usePeritagemSubmit() {
             console.error(`Todas as ${maxRetries} tentativas falharam. Último erro:`, lastError);
             throw new Error(`Falha ao salvar setor após ${maxRetries} tentativas. Verifique se já existe um setor com a mesma TAG e ciclo.`);
           }
+        }
+      }
+
+      // Após salvar com sucesso, atualize diretamente o status do setor no Supabase para emExecucao
+      if (!isEditing && result) {
+        try {
+          const sectorId = typeof result === "string" ? result : result.id;
+          console.log("Atualizando status do setor para emExecucao:", sectorId);
+          
+          const { error: updateStatusError } = await supabase
+            .from('sectors')
+            .update({ 
+              current_status: 'emExecucao',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', sectorId);
+            
+          if (updateStatusError) {
+            console.error("Erro ao atualizar status do setor:", updateStatusError);
+          } else {
+            console.log("Status do setor atualizado com sucesso para emExecucao");
+          }
+        } catch (statusUpdateError) {
+          console.error("Erro ao tentar atualizar status:", statusUpdateError);
+          // Não precisamos interromper o fluxo por causa dessa atualização secundária
         }
       }
 

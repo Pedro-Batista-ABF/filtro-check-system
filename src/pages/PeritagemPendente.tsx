@@ -10,15 +10,21 @@ import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PeritagemPendente() {
-  const { sectors, loading } = useApi();
+  const { sectors, loading, refreshData } = useApi();
   const [pendingSectors, setPendingSectors] = useState<Sector[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0); // Usado para forçar recarregamento
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
 
   // Função para recarregar os dados
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+  const handleRefresh = async () => {
     toast.info("Recarregando dados...");
+    try {
+      await refreshData(); // Usar a função de atualização do contexto API
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Erro ao atualizar dados:", error);
+      toast.error("Erro ao atualizar dados");
+    }
   };
 
   useEffect(() => {
@@ -52,7 +58,14 @@ export default function PeritagemPendente() {
   }, [sectors, refreshKey]);
 
   const handleSelectSector = (sector: Sector) => {
-    navigate(`/peritagem/editar/${sector.id}`);
+    console.log("Selecionando setor para edição:", sector);
+    if (sector && sector.id) {
+      navigate(`/peritagem/editar/${sector.id}`);
+    } else {
+      toast.error("Erro ao selecionar setor", {
+        description: "Dados do setor incompletos."
+      });
+    }
   };
 
   return (

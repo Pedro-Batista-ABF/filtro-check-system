@@ -49,18 +49,41 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     email: auth.user.email || ''
   } : null;
 
-  // Adiciona função para recarregar dados
+  // Função aprimorada para recarregar dados
   const refreshData = async () => {
     try {
-      // Forçar recarregamento dos setores
-      console.log("Forçando recarregamento dos setores...");
+      console.log("Iniciando recarregamento de dados...");
+      toast.info("Recarregando dados...");
       
-      // Este é um workaround para forçar o recarregamento
-      // Primeiro limpa os dados da sessão
+      // Verifica se o usuário está autenticado
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.error("Erro de autenticação ao recarregar dados:", sessionError);
+        toast.error("Erro de autenticação", {
+          description: "Por favor, faça login novamente."
+        });
+        return;
+      }
+      
+      // Força o refresh da sessão
       await supabase.auth.refreshSession();
       
-      // Recarrega a página atual para obter dados frescos
-      window.location.reload();
+      // Limpa o cache local e força um recarregamento
+      const { error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error("Erro ao atualizar sessão:", error);
+      }
+      
+      // Atualiza os setores explicitamente através da API original
+      try {
+        // Referência temporária ao método interno de fetchData do ApiContext original
+        // Isso geralmente seria acessado diretamente, mas para fins de compatibilidade,
+        // recarregamos a página inteira
+        window.location.reload();
+      } catch (error) {
+        console.error("Erro ao recarregar setores:", error);
+        toast.error("Erro ao recarregar dados");
+      }
     } catch (error) {
       console.error("Erro ao recarregar dados:", error);
       toast.error("Erro ao recarregar dados");

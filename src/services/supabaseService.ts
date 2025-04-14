@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Sector, Service, Photo, CycleOutcome, SectorStatus, ServiceType } from "@/types";
 import { toast } from "sonner";

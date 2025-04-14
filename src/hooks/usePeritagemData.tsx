@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ensureUserProfile } from "@/utils/ensureUserProfile";
+import { supabase } from "@/integrations/supabase/client";
 
 export function usePeritagemData(id?: string) {
   const [sector, setSector] = useState<Sector | undefined>(undefined);
@@ -56,20 +57,82 @@ export function usePeritagemData(id?: string) {
         
         // Se tem ID, buscar o setor
         if (id) {
+          console.log("Buscando setor pelo ID:", id);
           const sectorData = await getSectorById(id);
           
           if (!sectorData) {
-            console.warn(`Setor com ID ${id} não encontrado.`);
-            toast({
-              title: "Setor não encontrado",
-              description: `O setor com ID ${id} não foi encontrado.`,
-              variant: "destructive"
-            });
-            navigate('/peritagem/novo', { replace: true });
-            return;
+            console.log(`Setor com ID ${id} não encontrado via getSectorById. Tentando buscar diretamente do Supabase...`);
+            
+            // Tentar buscar diretamente do Supabase se a função do contexto falhar
+            try {
+              const { data: sectorDb, error: sectorError } = await supabase
+                .from('sectors')
+                .select('*')
+                .eq('id', id)
+                .single();
+                
+              if (sectorError || !sectorDb) {
+                console.warn(`Setor com ID ${id} não encontrado no Supabase.`);
+                toast({
+                  title: "Setor não encontrado",
+                  description: `O setor com ID ${id} não foi encontrado.`,
+                  variant: "destructive"
+                });
+                navigate('/peritagem/novo', { replace: true });
+                return;
+              }
+              
+              // Criar um setor mínimo com base nos dados da tabela sectors
+              console.log("Criando setor mínimo a partir dos dados do Supabase:", sectorDb);
+              const minimalSector: Sector = {
+                id: sectorDb.id,
+                tagNumber: sectorDb.tag_number,
+                tagPhotoUrl: sectorDb.tag_photo_url || undefined,
+                entryInvoice: "Pendente",
+                entryDate: new Date().toISOString().split('T')[0],
+                peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+                services: processedServices,
+                beforePhotos: [],
+                afterPhotos: [],
+                productionCompleted: false,
+                status: sectorDb.current_status as any || 'peritagemPendente',
+                outcome: sectorDb.current_outcome as any || 'EmAndamento',
+                cycleCount: sectorDb.cycle_count || 1,
+                updated_at: new Date().toISOString()
+              };
+              
+              console.log("Definindo setor mínimo:", minimalSector);
+              setSector(minimalSector);
+            } catch (directError) {
+              console.error("Erro ao tentar buscar setor diretamente:", directError);
+              toast({
+                title: "Erro ao carregar setor",
+                description: "Não foi possível carregar os dados do setor.",
+                variant: "destructive"
+              });
+              navigate('/peritagem/novo', { replace: true });
+              return;
+            }
+          } else {
+            console.log("Setor encontrado:", sectorData);
+            setSector(sectorData);
+            
+            // Se o setor já tem serviços, atualizar a lista de serviços
+            if (sectorData.services && sectorData.services.length > 0) {
+              console.log("Usando serviços do setor:", sectorData.services);
+              setServices(sectorData.services);
+            } else {
+              console.log("Setor não tem serviços, usando serviços padrão");
+              // Verifica se o setor está sem serviços mas precisa ter serviços
+              if (sectorData.status === 'peritagemPendente' || sectorData.status === 'emExecucao') {
+                // Atualiza o setor com os serviços padrão
+                setSector({
+                  ...sectorData,
+                  services: processedServices
+                });
+              }
+            }
           }
-          
-          setSector(sectorData);
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -102,7 +165,8 @@ export function usePeritagemData(id?: string) {
     productionCompleted: false,
     cycleCount: 1,
     status: 'peritagemPendente',
-    outcome: 'EmAndamento'
+    outcome: 'EmAndamento',
+    updated_at: new Date().toISOString()
   };
 
   return {

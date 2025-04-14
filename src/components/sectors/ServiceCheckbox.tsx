@@ -10,44 +10,71 @@ import PhotoUpload from './PhotoUpload';
 
 interface ServiceCheckboxProps {
   service: Service;
-  onChange: (service: Service) => void;
+  onChange?: (service: Service) => void;
+  onChecked?: (id: string, checked: boolean) => void;
+  onQuantityChange?: (id: string, quantity: number) => void;
+  onObservationChange?: (id: string, observations: string) => void;
+  onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
+  onCameraCapture?: (e: React.MouseEvent) => void;
   readOnly?: boolean;
   hidePhotos?: boolean;
   showObservations?: boolean;
+  photoType?: "before" | "after";
+  required?: boolean;
+  selected?: boolean;
+  checked?: boolean;
 }
 
 const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
   service,
   onChange,
+  onChecked,
+  onQuantityChange,
+  onObservationChange,
+  onPhotoUpload,
+  onCameraCapture,
   readOnly = false,
   hidePhotos = false,
-  showObservations = false
+  showObservations = false,
+  photoType = "before",
+  required = false,
+  checked: externalChecked,
 }) => {
-  const [isSelected, setIsSelected] = useState(service.selected);
+  const [isSelected, setIsSelected] = useState(externalChecked !== undefined ? externalChecked : service.selected);
   const [photos, setPhotos] = useState<PhotoWithFile[]>(service.photos || []);
   const [quantity, setQuantity] = useState<number | undefined>(service.quantity);
   const [observations, setObservations] = useState<string | undefined>(service.observations);
 
   // Sincroniza o estado local com as props
   useEffect(() => {
-    setIsSelected(service.selected);
+    if (externalChecked !== undefined) {
+      setIsSelected(externalChecked);
+    } else {
+      setIsSelected(service.selected);
+    }
     setPhotos(service.photos || []);
     setQuantity(service.quantity);
     setObservations(service.observations);
-  }, [service]);
+  }, [service, externalChecked]);
 
   // Função para atualizar o serviço quando houver alterações
   const updateService = (updates: Partial<Service>) => {
-    onChange({
-      ...service,
-      ...updates
-    });
+    if (onChange) {
+      onChange({
+        ...service,
+        ...updates
+      });
+    }
   };
 
   // Handler para alteração do checkbox
   const handleCheckboxChange = (checked: boolean) => {
     setIsSelected(checked);
-    updateService({ selected: checked });
+    if (onChecked) {
+      onChecked(service.id, checked);
+    } else {
+      updateService({ selected: checked });
+    }
   };
 
   // Handler para alteração da quantidade
@@ -55,20 +82,44 @@ const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
     const numValue = parseInt(value, 10);
     const newQuantity = isNaN(numValue) ? undefined : numValue;
     setQuantity(newQuantity);
-    updateService({ quantity: newQuantity });
+    
+    if (onQuantityChange) {
+      onQuantityChange(service.id, newQuantity || 0);
+    } else {
+      updateService({ quantity: newQuantity });
+    }
   };
 
   // Handler para alteração das observações
   const handleObservationsChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const newObservations = e.target.value;
     setObservations(newObservations);
-    updateService({ observations: newObservations });
+    
+    if (onObservationChange) {
+      onObservationChange(service.id, newObservations);
+    } else {
+      updateService({ observations: newObservations });
+    }
   };
 
   // Handler para alteração das fotos
-  const handlePhotosChange = (newPhotos: PhotoWithFile[]) => {
-    setPhotos(newPhotos);
-    updateService({ photos: newPhotos });
+  const handlePhotoChange = (files: FileList) => {
+    if (onPhotoUpload) {
+      onPhotoUpload(service.id, files, photoType);
+    } else {
+      // Processamento local de fotos quando onChange for usado
+      const newPhotos: PhotoWithFile[] = Array.from(files).map(file => ({
+        id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        url: URL.createObjectURL(file),
+        file,
+        type: photoType,
+        serviceId: service.id
+      }));
+      
+      const updatedPhotos = [...photos, ...newPhotos];
+      setPhotos(updatedPhotos);
+      updateService({ photos: updatedPhotos });
+    }
   };
 
   return (
@@ -114,9 +165,11 @@ const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
             <div className="mt-4">
               <PhotoUpload
                 photos={photos}
-                onChange={handlePhotosChange}
+                onChange={handlePhotoChange}
                 disabled={readOnly}
                 title={`Fotos - ${service.name}`}
+                required={required}
+                onCameraCapture={onCameraCapture}
               />
             </div>
           )}
