@@ -79,13 +79,8 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.removeChannel(channel);
         }
 
-        // Recarregar dados através do método original se existir
-        if (api && typeof api.refreshData === 'function') {
-          await api.refreshData();
-        } else {
-          // Caso não exista um método de refresh, recarregar a página
-          window.location.reload();
-        }
+        // Caso não exista um método de refresh, recarregar a página
+        window.location.reload();
         
         toast.success("Dados atualizados com sucesso");
       } catch (error) {

@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button"; // Add Button import
 
 // Import our new component files
 import ReviewForm from "./forms/ReviewForm";
@@ -229,7 +231,7 @@ export default function SectorForm({
       shadcnToast({
         title: "Peritagem finalizada!",
         description: "Setor enviado para execução",
-        variant: "success"
+        variant: "default" // Changed from "success" to "default" for compatibility
       });
       
       // Navigate to execution page after a short delay
@@ -255,7 +257,7 @@ export default function SectorForm({
         shadcnToast({
           title: "Operação cancelada",
           description: "É necessário informar o motivo do sucateamento",
-          variant: "warning"
+          variant: "default" // Changed from "warning" to "default" for compatibility
         });
         return;
       }
@@ -283,7 +285,7 @@ export default function SectorForm({
       shadcnToast({
         title: "Setor sucateado!",
         description: "Enviado para validação na qualidade",
-        variant: "success"
+        variant: "default" // Changed from "success" to "default" for compatibility
       });
       
       // Navigate to quality page after a short delay
@@ -557,4 +559,3 @@ export default function SectorForm({
       </div>
     </form>
   );
-}

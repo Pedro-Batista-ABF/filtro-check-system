@@ -272,58 +272,80 @@ export function usePeritagemSubmit() {
           
           // 2. Salvar a foto da TAG corretamente
           if (data.tagPhotoUrl) {
-            const { error: tagPhotoError } = await supabase
-              .from('photos')
-              .insert({
-                sector_id: sectorId,
-                type: 'tag',
-                stage: 'peritagem',
-                url: data.tagPhotoUrl,
-                created_at: new Date().toISOString()
-              });
+            // Use correct schema for photos table - adding cycle_id is required
+            const { data: cycleData } = await supabase
+              .from('cycles')
+              .select('id')
+              .eq('sector_id', sectorId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
               
-            if (tagPhotoError) {
-              console.error("Erro ao salvar foto da TAG:", tagPhotoError);
-            } else {
-              console.log("Foto da TAG salva com sucesso");
+            if (cycleData) {
+              const { error: tagPhotoError } = await supabase
+                .from('photos')
+                .insert({
+                  cycle_id: cycleData.id,
+                  type: 'tag',
+                  url: data.tagPhotoUrl,
+                  created_by: session.user.id,
+                  created_at: new Date().toISOString()
+                });
+                
+              if (tagPhotoError) {
+                console.error("Erro ao salvar foto da TAG:", tagPhotoError);
+              } else {
+                console.log("Foto da TAG salva com sucesso");
+              }
             }
           }
           
-          // 3. Salvar os serviços selecionados na tabela intermediária
-          // Primeiro deletar quaisquer serviços existentes para este setor
+          // 3. Salvar os serviços selecionados em cycle_services
+          // Primeiro deletar quaisquer serviços existentes para este ciclo
           try {
-            const { error: deleteError } = await supabase
-              .from('sector_services')
-              .delete()
-              .eq('sector_id', sectorId);
+            const { data: cycleData } = await supabase
+              .from('cycles')
+              .select('id')
+              .eq('sector_id', sectorId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
               
-            if (deleteError) {
-              console.error("Erro ao deletar serviços antigos:", deleteError);
-            }
-          } catch (deleteError) {
-            console.error("Erro ao tentar deletar serviços existentes:", deleteError);
-          }
-          
-          // Agora inserir os serviços atualizados
-          if (selectedServices.length > 0) {
-            const { error: servicesError } = await supabase
-              .from('sector_services')
-              .insert(
-                selectedServices.map(service => ({
-                  sector_id: sectorId,
-                  service_id: service.id,
-                  quantity: service.quantity || 1,
-                  observations: service.observations || "",
-                  selected: true,
-                  stage: 'peritagem'
-                }))
-              );
+            if (cycleData) {
+              // First delete existing services for this cycle
+              const { error: deleteError } = await supabase
+                .from('cycle_services')
+                .delete()
+                .eq('cycle_id', cycleData.id);
+                
+              if (deleteError) {
+                console.error("Erro ao deletar serviços antigos:", deleteError);
+              }
               
-            if (servicesError) {
-              console.error("Erro ao salvar serviços do setor:", servicesError);
-            } else {
-              console.log(`${selectedServices.length} serviços salvos com sucesso`);
+              // Now insert the updated services
+              if (selectedServices.length > 0) {
+                const { error: servicesError } = await supabase
+                  .from('cycle_services')
+                  .insert(
+                    selectedServices.map(service => ({
+                      cycle_id: cycleData.id,
+                      service_id: service.id,
+                      quantity: service.quantity || 1,
+                      observations: service.observations || "",
+                      selected: true,
+                      completed: false
+                    }))
+                  );
+                  
+                if (servicesError) {
+                  console.error("Erro ao salvar serviços do ciclo:", servicesError);
+                } else {
+                  console.log(`${selectedServices.length} serviços salvos com sucesso`);
+                }
+              }
             }
+          } catch (servicesError) {
+            console.error("Erro ao tentar salvar serviços:", servicesError);
           }
         } catch (statusUpdateError) {
           console.error("Erro ao tentar atualizar status:", statusUpdateError);

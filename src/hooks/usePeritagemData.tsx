@@ -129,16 +129,6 @@ export function usePeritagemData(id?: string) {
                 console.warn(`Erro ao buscar serviços para o ciclo ${cycleData.id}:`, servicesError);
               }
               
-              // Buscar serviços diretamente associados ao setor (legacy method)
-              const { data: sectorServicesData, error: sectorServicesError } = await supabase
-                .from('sector_services')
-                .select('*')
-                .eq('sector_id', id);
-              
-              if (sectorServicesError) {
-                console.warn(`Erro ao buscar serviços diretos para o setor ${id}:`, sectorServicesError);
-              }
-              
               // Buscar fotos associadas ao ciclo
               const { data: photosData, error: photosError } = await supabase
                 .from('photos')
@@ -153,9 +143,8 @@ export function usePeritagemData(id?: string) {
               const { data: tagPhotoData, error: tagPhotoError } = await supabase
                 .from('photos')
                 .select('*')
-                .eq('sector_id', id)
+                .eq('cycle_id', cycleData.id)
                 .eq('type', 'tag')
-                .eq('stage', 'peritagem')
                 .maybeSingle();
               
               if (tagPhotoError) {
@@ -165,10 +154,9 @@ export function usePeritagemData(id?: string) {
               // Mapear serviços para o formato esperado pelo frontend
               const servicesWithDetails: Service[] = processedServices.map(service => {
                 const cycleService = (cycleServicesData || []).find(cs => cs.service_id === service.id);
-                const sectorService = (sectorServicesData || []).find(ss => ss.service_id === service.id);
                 
-                // Se o serviço existe no ciclo ou diretamente no setor, adicionar detalhes
-                if (cycleService || sectorService) {
+                // Se o serviço existe no ciclo, adicionar detalhes
+                if (cycleService) {
                   const serviceId = service.id;
                   const servicePhotos = (photosData || [])
                     .filter(photo => photo.service_id === serviceId)
@@ -181,9 +169,9 @@ export function usePeritagemData(id?: string) {
                   
                   return {
                     ...service,
-                    selected: (cycleService?.selected || sectorService?.selected) || false,
-                    quantity: (cycleService?.quantity || sectorService?.quantity) || 1,
-                    observations: (cycleService?.observations || sectorService?.observations) || "",
+                    selected: cycleService.selected || false,
+                    quantity: cycleService.quantity || 1,
+                    observations: cycleService.observations || "",
                     photos: servicePhotos
                   };
                 }
