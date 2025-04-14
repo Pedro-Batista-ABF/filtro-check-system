@@ -8,13 +8,13 @@ import { ApiProvider } from './contexts/ApiContextExtended'
 import { AuthProvider } from './contexts/AuthContext'
 
 createRoot(document.getElementById("root")!).render(
-  <AuthProvider>
-    <ApiProviderOriginal>
-      <ApiProvider>
-        <BrowserRouter>
+  <BrowserRouter>
+    <AuthProvider>
+      <ApiProviderOriginal>
+        <ApiProvider>
           <App />
-        </BrowserRouter>
-      </ApiProvider>
-    </ApiProviderOriginal>
-  </AuthProvider>
+        </ApiProvider>
+      </ApiProviderOriginal>
+    </AuthProvider>
+  </BrowserRouter>
 );
