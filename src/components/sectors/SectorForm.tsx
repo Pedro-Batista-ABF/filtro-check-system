@@ -1,488 +1,314 @@
-import React, { useState, useEffect } from "react";
-import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button"; 
-
-// Import our new component files
-import ReviewForm from "./forms/ReviewForm";
-import ProductionForm from "./forms/ProductionForm";
-import QualityForm from "./forms/QualityForm";
+import React, { useState, useEffect, useRef } from "react";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import PhotoUpload from "@/components/sectors/PhotoUpload";
+import { Service, Sector, Photo, PhotoWithFile } from "@/types";
+import { Button } from "@/components/ui/button";
+import { format } from 'date-fns';
 import ScrapForm from "./forms/ScrapForm";
 
 interface SectorFormProps {
   sector: Sector;
-  onSubmit: (sector: Sector) => void;
-  loading?: boolean;
-  mode: 'review' | 'production' | 'quality' | 'scrap';
-  services?: Service[]; 
-  formType?: string;    
-  photoRequired?: boolean;
+  onSubmit?: (data: Partial<Sector>) => void;
+  mode?: 'create' | 'edit' | 'view' | 'checagem' | 'scrap';
+  isLoading?: boolean;
 }
 
-export default function SectorForm({
-  sector: initialSector,
+export default function SectorForm({ 
+  sector,
   onSubmit,
-  loading = false,
-  mode,
-  services: initialServices,
-  photoRequired = false
+  mode = 'create',
+  isLoading = false
 }: SectorFormProps) {
-  const [sector, setSector] = useState<Sector>(initialSector);
-  const [services, setServices] = useState<Service[]>(initialServices || initialSector.services || []);
-  const [exitDate, setExitDate] = useState<Date | undefined>(
-    sector.exitDate ? new Date(sector.exitDate) : undefined
-  );
-  const [exitInvoice, setExitInvoice] = useState(sector.exitInvoice || "");
-  const [exitObservations, setExitObservations] = useState(sector.exitObservations || "");
-  const [selectedTab, setSelectedTab] = useState("services");
-  const [tagNumber, setTagNumber] = useState(sector.tagNumber || "");
-  const [entryInvoice, setEntryInvoice] = useState(sector.entryInvoice || "");
-  const [entryDate, setEntryDate] = useState<Date | undefined>(
-    sector.entryDate ? new Date(sector.entryDate) : new Date()
-  );
-  const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(sector.tagPhotoUrl);
-  const [entryObservations, setEntryObservations] = useState(sector.entryObservations || "");
-  const [productionCompleted, setProductionCompleted] = useState(
-    initialSector.status === "checagemFinalPendente" || 
-    initialSector.status === "concluido" ||
-    initialSector.status === "sucateado"
-  );
-  const [qualityCompleted, setQualityCompleted] = useState(
-    initialSector.status === "concluido" ||
-    initialSector.status === "sucateado"
-  );
-
-  // Para sucateamento
+  const [tagNumber, setTagNumber] = useState(sector.tagNumber || '');
+  const [entryInvoice, setEntryInvoice] = useState(sector.entryInvoice || '');
+  const [entryDate, setEntryDate] = useState(sector.entryDate || '');
+  const [peritagemDate, setPeritagemDate] = useState(sector.peritagemDate || '');
+  const [entryObservations, setEntryObservations] = useState(sector.entryObservations || '');
+  const [selectedServices, setSelectedServices] = useState<Service[]>(sector.services || []);
+  const [beforePhotos, setBeforePhotos] = useState<PhotoWithFile[]>(sector.beforePhotos || []);
+  const [afterPhotos, setAfterPhotos] = useState<PhotoWithFile[]>(sector.afterPhotos || []);
+  const [formErrors, setFormErrors] = useState<{
+    tagNumber?: boolean;
+    entryInvoice?: boolean;
+    entryDate?: boolean;
+    peritagemDate?: boolean;
+    scrapObservations?: boolean;
+    scrapDate?: boolean;
+    scrapInvoice?: boolean;
+  }>({});
   const [isScrap, setIsScrap] = useState(false);
-  const [scrapObservations, setScrapObservations] = useState(sector.scrapObservations || "");
-  const [scrapDate, setScrapDate] = useState<Date | undefined>(
-    sector.scrapReturnDate ? new Date(sector.scrapReturnDate) : new Date()
-  );
-  const [scrapInvoice, setScrapInvoice] = useState(sector.scrapReturnInvoice || "");
+  const [scrapObservations, setScrapObservations] = useState('');
+  const [scrapDate, setScrapDate] = useState<Date>();
+  const [scrapInvoice, setScrapInvoice] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { toast: shadcnToast } = useToast();
+  // Effect para inicializar o formulário com os dados do setor
+  useEffect(() => {
+    setTagNumber(sector.tagNumber || '');
+    setEntryInvoice(sector.entryInvoice || '');
+    setEntryDate(sector.entryDate || '');
+    setPeritagemDate(sector.peritagemDate || '');
+    setEntryObservations(sector.entryObservations || '');
+    setSelectedServices(sector.services || []);
+    setBeforePhotos(sector.beforePhotos ? sector.beforePhotos.map(photo => ({ ...photo, file: null })) : []);
+    setAfterPhotos(sector.afterPhotos ? sector.afterPhotos.map(photo => ({ ...photo, file: null })) : []);
 
-  // Form validation
-  const [formErrors, setFormErrors] = useState({
-    services: false,
-    photos: false,
-    exitDate: false,
-    exitInvoice: false,
-    exitObservations: false,
-    scrapObservations: false,
-    scrapDate: false,
-    scrapInvoice: false,
-    tagNumber: false,
-    tagPhoto: false,
-    entryInvoice: false,
-    entryDate: false
-  });
-
-  // Manipulador para upload de foto do TAG
-  const handleTagPhotoUpload = (files: FileList) => {
-    if (files.length > 0) {
-      const file = files[0];
-      const url = URL.createObjectURL(file);
-      setTagPhotoUrl(url);
+    // Quando estamos em modo de sucateamento, inicializar scrapValidated
+    if (mode === 'scrap') {
+      setIsScrap(sector.scrapValidated || false);
     }
-  };
+  }, [sector, mode]);
 
-  // Check if all selected services have photos
-  const checkServicePhotos = () => {
-    if (mode !== 'quality') return true;
-    
-    let allPhotosValid = true;
-    const selectedServiceIds = services.filter(s => s.selected).map(s => s.id);
-    
-    selectedServiceIds.forEach(serviceId => {
-      const service = services.find(s => s.id === serviceId);
-      const hasAfterPhoto = service?.photos?.some(p => typeof p === 'object' && p.type === 'after');
-      if (!hasAfterPhoto) {
-        allPhotosValid = false;
-      }
-    });
-    
-    return allPhotosValid;
-  };
-
-  // Verifica se os serviços selecionados têm fotos (para modo peritagem)
-  const checkBeforePhotos = () => {
-    if (mode !== 'review') return true;
-    
-    let allValid = true;
-    const selectedServices = services.filter(s => s.selected);
-    
-    // Se não há serviços selecionados, não é necessário validar fotos
-    if (selectedServices.length === 0) return true;
-    
-    selectedServices.forEach(service => {
-      const hasBeforePhoto = service.photos?.some(p => typeof p === 'object' && p.type === 'before');
-      if (!hasBeforePhoto) {
-        allValid = false;
-      }
-    });
-    
-    return allValid;
-  };
-
-  const handleServiceChange = (id: string, checked: boolean) => {
-    setServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, selected: checked } 
-          : service
-      )
-    );
-  };
-
-  const handleQuantityChange = (id: string, quantity: number) => {
-    setServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, quantity } 
-          : service
-      )
-    );
-  };
-
-  const handleObservationChange = (id: string, observations: string) => {
-    setServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, observations } 
-          : service
-      )
-    );
-  };
-
-  const handlePhotoUpload = (id: string, files: FileList, type: "before" | "after") => {
-    setServices(prev => 
-      prev.map(service => {
-        if (service.id === id) {
-          // Keep existing photos of other types, add new ones
-          const existingPhotos = service.photos || [];
-          const newPhotos: Photo[] = Array.from(files).map((file, index) => ({
-            id: `${id}-${Date.now()}-${index}`,
-            url: URL.createObjectURL(file),
-            file,
-            type
-          }));
-          
-          return { 
-            ...service, 
-            photos: [...existingPhotos, ...newPhotos] 
-          };
-        }
-        return service;
-      })
-    );
-  };
-
-  const handleProductionToggle = (checked: boolean) => {
-    setProductionCompleted(checked);
-    
-    // Se produção foi marcada como concluída, atualize o status
-    if (checked && sector.status === "emExecucao") {
-      setSector(prev => ({
-        ...prev,
-        status: "checagemFinalPendente"
-      }));
+  useEffect(() => {
+    if (sector.services) {
+      setSelectedServices(sector.services);
     }
-    // Se produção foi desmarcada, volte ao status anterior
-    else if (!checked && sector.status === "checagemFinalPendente") {
-      setSector(prev => ({
-        ...prev,
-        status: "emExecucao"
-      }));
-    }
-  };
+  }, [sector.services]);
 
-  // New function to handle complete peritagem action
-  const handleCompletePeritagem = async () => {
-    try {
-      shadcnToast({
-        title: "Finalizando peritagem...",
-        description: "Atualizando status do setor para execução"
-      });
-      
-      // Update sector status - removendo completamente qualquer referência a modified_at
-      const { error } = await supabase
-        .from('sectors')
-        .update({ 
-          current_status: 'emExecucao',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', sector.id);
-        
-      if (error) {
-        console.error("Erro na atualização do status:", error);
-        throw new Error(`Erro ao finalizar peritagem: ${error.message}`);
-      }
-      
-      // Update local state
-      setSector(prev => ({
-        ...prev,
-        status: "emExecucao"
-      }));
-      
-      shadcnToast({
-        title: "Peritagem finalizada!",
-        description: "Setor enviado para execução",
-        variant: "default"
-      });
-      
-      // Navigate to execution page after a short delay
-      setTimeout(() => {
-        window.location.href = '/execucao';
-      }, 1500);
-    } catch (error) {
-      console.error("Erro ao finalizar peritagem:", error);
-      shadcnToast({
-        title: "Erro ao finalizar peritagem",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
+  const handleBeforePhotoChange = (files: FileList) => {
+    const newPhotos: PhotoWithFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const tempId = `temp-${Date.now()}-${i}`; // ID temporário
+      newPhotos.push({
+        id: tempId,
+        url: '',
+        type: 'before',
+        file: file
       });
     }
+    setBeforePhotos([...beforePhotos, ...newPhotos]);
   };
-  
-  // Function to handle scrap sector action
-  const handleScrapSector = async () => {
-    try {
-      const scrapReason = prompt("Informe o motivo do sucateamento:");
-      
-      if (!scrapReason) {
-        shadcnToast({
-          title: "Operação cancelada",
-          description: "É necessário informar o motivo do sucateamento",
-          variant: "default"
-        });
-        return;
-      }
-      
-      shadcnToast({
-        title: "Processando sucateamento...",
-        description: "Atualizando status do setor"
-      });
-      
-      // Update sector status - using updated_at instead of modified_at
-      // Importante: definir current_outcome como 'scrapped' (em minúsculas)
-      const { error } = await supabase
-        .from('sectors')
-        .update({ 
-          current_status: 'sucateadoPendente',
-          current_outcome: 'scrapped', // Valor correto conforme a restrição
-          scrap_observations: scrapReason,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', sector.id);
-        
-      if (error) {
-        console.error("Erro ao sucatear setor:", error);
-        throw new Error(`Erro ao sucatear setor: ${error.message}`);
-      }
-      
-      shadcnToast({
-        title: "Setor marcado para sucateamento!",
-        description: "Enviado para validação final",
-        variant: "default"
-      });
-      
-      // Navigate to sectors page after a short delay
-      setTimeout(() => {
-        window.location.href = '/sucateamento';
-      }, 1500);
-    } catch (error) {
-      console.error("Erro ao sucatear setor:", error);
-      shadcnToast({
-        title: "Erro ao sucatear setor",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive"
+
+  const handleAfterPhotoChange = (files: FileList) => {
+    const newPhotos: PhotoWithFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const tempId = `temp-${Date.now()}-${i}`; // ID temporário
+      newPhotos.push({
+        id: tempId,
+        url: '',
+        type: 'after',
+        file: file
       });
     }
+    setAfterPhotos([...afterPhotos, ...newPhotos]);
   };
 
-  const createCycle = (type: "recovered" | "scrapped", comments: string): Cycle => {
-    return {
-      id: Date.now().toString(),
-      tagNumber: sector.tagNumber,
-      entryInvoice: sector.entryInvoice,
-      entryDate: sector.entryDate,
-      peritagemDate: sector.peritagemDate,
-      services: sector.services,
-      beforePhotos: sector.beforePhotos || [],
-      status: type === "recovered" ? "concluido" : "sucateado",
-      outcome: type as CycleOutcome,
-      createdAt: new Date().toISOString(),
-      comments,
-      technicianId: "sistema", // Considere pegar do usuário atual em um sistema real
-      productionCompleted: true
-    };
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar campos obrigatórios
-    const errors = {
-      ...formErrors,
-      tagNumber: !tagNumber,
-      tagPhoto: photoRequired && !tagPhotoUrl,
-      entryInvoice: !entryInvoice,
-      entryDate: !entryDate,
-      services: mode === 'review' && !services.some(s => s.selected),
-      photos: mode === 'review' && !checkBeforePhotos() // Verifica fotos apenas se houver serviços selecionados
-    };
-    
-    setFormErrors(errors);
-    
-    if (Object.values(errors).some(Boolean)) {
-      shadcnToast({
-        title: "Formulário Incompleto",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Construir objeto do setor atualizado
-    const updatedSector = {
-      ...sector,
-      tagNumber,
-      tagPhotoUrl,
-      entryInvoice,
-      entryDate: entryDate ? format(entryDate, 'yyyy-MM-dd') : '',
-      entryObservations,
-      services,
-    };
-    
-    // Lógica específica para cada modo
-    if (mode === 'production') {
-      // Se a produção está concluída, atualize o status
-      if (productionCompleted && sector.status === "emExecucao") {
-        updatedSector.status = "checagemFinalPendente";
+    if (onSubmit) {
+      // Validar os campos do formulário
+      let isValid = true;
+      const newErrors = {
+        tagNumber: false,
+        entryInvoice: false,
+        entryDate: false,
+        peritagemDate: false,
+        scrapObservations?: false,
+        scrapDate?: false,
+        scrapInvoice?: false
+      };
+      
+      if (!tagNumber.trim()) {
+        newErrors.tagNumber = true;
+        isValid = false;
       }
-    } 
-    else if (mode === 'quality') {
-      // Se qualidade está concluída, marque como concluído e adicione dados da saída
-      if (qualityCompleted) {
-        updatedSector.status = "concluido";
-        updatedSector.exitDate = exitDate ? format(exitDate, 'yyyy-MM-dd') : undefined;
-        updatedSector.exitInvoice = exitInvoice;
-        updatedSector.exitObservations = exitObservations;
-        
-        // Criar um ciclo para o setor recuperado
-        const newCycle: Cycle = {
-          id: Date.now().toString(),
-          tagNumber: updatedSector.tagNumber,
-          entryInvoice: updatedSector.entryInvoice,
-          entryDate: updatedSector.entryDate,
-          peritagemDate: updatedSector.peritagemDate,
-          services: updatedSector.services,
-          beforePhotos: updatedSector.beforePhotos || [],
-          status: "concluido",
-          outcome: "recovered" as CycleOutcome,
-          createdAt: new Date().toISOString(),
-          comments: exitObservations || "",
-          technicianId: "sistema", // Considere pegar do usuário atual em um sistema real
-          productionCompleted: true
+      if (!entryInvoice.trim()) {
+        newErrors.entryInvoice = true;
+        isValid = false;
+      }
+      if (!entryDate) {
+        newErrors.entryDate = true;
+        isValid = false;
+      }
+      if (!peritagemDate) {
+        newErrors.peritagemDate = true;
+        isValid = false;
+      }
+      
+      // Em modo de sucateamento, validar campos específicos
+      if (mode === 'scrap' && isScrap) {
+        if (!scrapObservations.trim()) {
+          newErrors.scrapObservations = true;
+          isValid = false;
+        }
+        if (!scrapInvoice.trim()) {
+          newErrors.scrapInvoice = true;
+          isValid = false;
+        }
+        if (!scrapDate) {
+          newErrors.scrapDate = true;
+          isValid = false;
+        }
+      }
+      
+      setFormErrors(newErrors);
+
+      if (isValid) {
+        // Montar o objeto de dados baseado no modo
+        const formData: Partial<Sector> = {
+          tagNumber,
+          entryInvoice,
+          entryDate,
+          entryObservations,
+          peritagemDate,
+          services: selectedServices,
+          beforePhotos,
+          afterPhotos
         };
         
-        updatedSector.cycles = [...(sector.cycles || []), newCycle];
+        // Adicionar informações específicas para cada modo
+        if (mode === 'checagem') {
+          formData.afterPhotos = afterPhotos;
+        }
+        
+        // Informações específicas de sucateamento
+        if (mode === 'scrap' && isScrap) {
+          formData.scrapObservations = scrapObservations;
+          formData.scrapReturnInvoice = scrapInvoice;
+          formData.scrapReturnDate = scrapDate ? format(scrapDate, "yyyy-MM-dd") : undefined;
+          formData.scrapValidated = true;
+        }
+        
+        // Enviar dados para o componente pai
+        onSubmit(formData);
+      } else {
+        setFormErrors(newErrors);
       }
     }
-    else if (mode === 'scrap') {
-      // Marcar como sucateado se necessário
-      if (isScrap) {
-        updatedSector.status = "sucateado";
-        updatedSector.scrapObservations = scrapObservations;
-        updatedSector.scrapReturnDate = scrapDate ? format(scrapDate, 'yyyy-MM-dd') : undefined;
-        updatedSector.scrapReturnInvoice = scrapInvoice;
-        
-        // Criar um ciclo para o setor sucateado
-        const newCycle: Cycle = {
-          id: Date.now().toString(),
-          tagNumber: updatedSector.tagNumber,
-          entryInvoice: updatedSector.entryInvoice,
-          entryDate: updatedSector.entryDate,
-          peritagemDate: updatedSector.peritagemDate,
-          services: updatedSector.services,
-          beforePhotos: updatedSector.beforePhotos || [],
-          status: "sucateado",
-          outcome: "scrapped" as CycleOutcome,
-          createdAt: new Date().toISOString(),
-          comments: scrapObservations || "",
-          technicianId: "sistema",
-          productionCompleted: true
-        };
-        
-        updatedSector.cycles = [...(sector.cycles || []), newCycle];
-      }
-    }
-    
-    onSubmit(updatedSector);
   };
 
-  // Renderização condicional com base no modo
-  const renderFormContent = () => {
-    switch (mode) {
-      case 'review':
-        return (
-          <ReviewForm
-            tagNumber={tagNumber}
-            setTagNumber={setTagNumber}
-            entryInvoice={entryInvoice}
-            setEntryInvoice={setEntryInvoice}
-            entryDate={entryDate}
-            setEntryDate={setEntryDate}
-            tagPhotoUrl={tagPhotoUrl}
-            handleTagPhotoUpload={handleTagPhotoUpload}
-            entryObservations={entryObservations}
-            setEntryObservations={setEntryObservations}
-            services={services}
-            handleServiceChange={handleServiceChange}
-            handleQuantityChange={handleQuantityChange}
-            handleObservationChange={handleObservationChange}
-            handlePhotoUpload={handlePhotoUpload}
-            formErrors={formErrors}
-            photoRequired={photoRequired}
+  // Atualizar informações do ciclo atual
+  const currentCycle = sector.cycles && sector.cycles.length > 0 
+    ? sector.cycles[0] 
+    : {
+        tag_number: sector.tagNumber,
+        entry_invoice: sector.entryInvoice,
+        entry_date: sector.entryDate,
+        peritagem_date: sector.peritagemDate,
+        production_completed: sector.productionCompleted,
+        status: sector.status,
+        outcome: sector.outcome
+      };
+
+  // Renderizar formulário baseado no modo
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações do Setor</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="tagNumber" className={formErrors.tagNumber ? "text-red-500" : ""}>
+                Número da TAG*
+              </Label>
+              <Input
+                id="tagNumber"
+                type="text"
+                value={tagNumber}
+                onChange={(e) => setTagNumber(e.target.value)}
+                placeholder="Número da TAG"
+                disabled={isLoading || mode === 'view'}
+                className={formErrors.tagNumber ? "border-red-500" : ""}
+              />
+              {formErrors.tagNumber && (
+                <p className="text-xs text-red-500">Número da TAG é obrigatório</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
+                Nota Fiscal de Entrada*
+              </Label>
+              <Input
+                id="entryInvoice"
+                type="text"
+                value={entryInvoice}
+                onChange={(e) => setEntryInvoice(e.target.value)}
+                placeholder="Número da Nota Fiscal"
+                disabled={isLoading || mode === 'view'}
+                className={formErrors.entryInvoice ? "border-red-500" : ""}
+              />
+              {formErrors.entryInvoice && (
+                <p className="text-xs text-red-500">Nota Fiscal é obrigatória</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="entryDate" className={formErrors.entryDate ? "text-red-500" : ""}>
+                Data de Entrada*
+              </Label>
+              <Input
+                id="entryDate"
+                type="date"
+                value={entryDate}
+                onChange={(e) => setEntryDate(e.target.value)}
+                disabled={isLoading || mode === 'view'}
+                className={formErrors.entryDate ? "border-red-500" : ""}
+              />
+              {formErrors.entryDate && (
+                <p className="text-xs text-red-500">Data de Entrada é obrigatória</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="peritagemDate" className={formErrors.peritagemDate ? "text-red-500" : ""}>
+                Data da Peritagem*
+              </Label>
+              <Input
+                id="peritagemDate"
+                type="date"
+                value={peritagemDate}
+                onChange={(e) => setPeritagemDate(e.target.value)}
+                disabled={isLoading || mode === 'view'}
+                className={formErrors.peritagemDate ? "border-red-500" : ""}
+              />
+              {formErrors.peritagemDate && (
+                <p className="text-xs text-red-500">Data da Peritagem é obrigatória</p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Observações</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="entryObservations">Observações da Entrada</Label>
+          <Textarea
+            id="entryObservations"
+            placeholder="Observações sobre a entrada do setor..."
+            value={entryObservations}
+            onChange={(e) => setEntryObservations(e.target.value)}
+            disabled={isLoading || mode === 'view'}
           />
-        );
-        
-      case 'production':
-        return (
-          <ProductionForm
-            services={services}
-            productionCompleted={productionCompleted}
-            handleProductionToggle={handleProductionToggle}
-            sectorStatus={sector.status}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Fotos da Entrada</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PhotoUpload
+            photos={beforePhotos}
+            onChange={handleBeforePhotoChange}
+            disabled={isLoading || mode === 'view'}
+            title="Adicionar fotos da entrada"
           />
-        );
-        
-      case 'quality':
-        return (
-          <QualityForm
-            services={services}
-            selectedTab={selectedTab}
-            setSelectedTab={setSelectedTab}
-            exitDate={exitDate}
-            setExitDate={setExitDate}
-            exitInvoice={exitInvoice}
-            setExitInvoice={setExitInvoice}
-            exitObservations={exitObservations}
-            setExitObservations={setExitObservations}
-            qualityCompleted={qualityCompleted}
-            setQualityCompleted={setQualityCompleted}
-            handlePhotoUpload={handlePhotoUpload}
-            formErrors={formErrors}
-          />
-        );
-        
-      case 'scrap':
-        return (
-          <ScrapForm
+        </CardContent>
+      </Card>
+      
+      {/* Informações de sucateamento */}
+      {mode === 'scrap' && (
+        <div>
+          <ScrapForm 
             sector={sector}
             isScrap={isScrap}
             setIsScrap={setIsScrap}
@@ -494,71 +320,12 @@ export default function SectorForm({
             setScrapInvoice={setScrapInvoice}
             formErrors={formErrors}
           />
-        );
-        
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {renderFormContent()}
+        </div>
+      )}
       
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
-        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row sm:space-x-2">
-          {/* Botão de Sucatear para modo peritagem */}
-          {mode === 'review' && initialSector.id && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleScrapSector}
-              className="mb-2 sm:mb-0"
-            >
-              Sucatear setor
-            </Button>
-          )}
-        </div>
-        
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          {/* Botão de finalizar peritagem para modo peritagem */}
-          {mode === 'review' && initialSector.id && (
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleCompletePeritagem}
-              className="mb-2 sm:mb-0 sm:mr-2"
-            >
-              Completar peritagem
-            </Button>
-          )}
-          
-          {/* Botão de submissão padrão */}
-          <Button 
-            type="submit" 
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
-                Processando...
-              </span>
-            ) : (
-              <>
-                {mode === 'review' && !initialSector.id && "Cadastrar Peritagem"}
-                {mode === 'review' && initialSector.id && "Atualizar Peritagem"}
-                {mode === 'production' && "Salvar Produção"}
-                {mode === 'quality' && "Finalizar Checagem"}
-                {mode === 'scrap' && isScrap && "Confirmar Sucateamento"}
-                {mode === 'scrap' && !isScrap && "Salvar"}
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? "Salvando..." : "Salvar"}
+      </Button>
     </form>
   );
 }

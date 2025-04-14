@@ -50,6 +50,9 @@ export const usePhotoService = () => {
         ? [...(sector.afterPhotos || []), newPhoto]
         : [...(sector.afterPhotos || [])];
       
+      // Garantir que scrapPhotos existe
+      const scrapPhotos = sector.scrapPhotos || [];
+      
       // Preparar objeto simplificado para atualização com tipos corretos
       const updateData = {
         id: sector.id,
@@ -58,6 +61,7 @@ export const usePhotoService = () => {
         entryDate: sector.entryDate,
         beforePhotos: updatedBeforePhotos,
         afterPhotos: updatedAfterPhotos,
+        scrapPhotos: scrapPhotos,
         services: sector.services || [],
         status: sector.status,
         productionCompleted: sector.productionCompleted || false,
@@ -68,6 +72,46 @@ export const usePhotoService = () => {
       
       // Tenta atualizar o setor
       await api.updateSector(updateData);
+      
+      // Adicionar a foto diretamente na tabela photos com metadados
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Buscar o ciclo atual
+          const { data: cycleData } = await supabase
+            .from('cycles')
+            .select('id')
+            .eq('sector_id', sectorId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          if (cycleData) {
+            // Adicionar a foto na tabela photos
+            const { error } = await supabase
+              .from('photos')
+              .insert({
+                cycle_id: cycleData.id,
+                service_id: serviceId,
+                url: photoUrl,
+                type,
+                created_by: user.id,
+                metadata: {
+                  sector_id: sectorId,
+                  service_id: serviceId,
+                  stage: type === 'before' ? 'peritagem' : 'checagem',
+                  type: 'servico'
+                }
+              });
+              
+            if (error) {
+              console.error("Erro ao adicionar foto na tabela photos:", error);
+            }
+          }
+        }
+      } catch (directError) {
+        console.error("Erro ao adicionar foto diretamente:", directError);
+      }
       
       toast.success("Foto adicionada");
       return true;

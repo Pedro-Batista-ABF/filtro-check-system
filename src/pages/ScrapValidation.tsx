@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { format, parse, isAfter, isBefore, isWithinInterval, isValid } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ScrapValidation() {
   const { sectors, isLoading, refreshData } = useApi();
@@ -19,14 +20,65 @@ export default function ScrapValidation() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [hasRefreshed, setHasRefreshed] = useState(false);
+  const [pendingSectors, setPendingSectors] = useState<Sector[]>([]);
   const navigate = useNavigate();
   
-  // Force refresh on first load
+  // Force refresh on first load and direct query to database
   useEffect(() => {
     document.title = "Validação de Sucateamento - Gestão de Recuperação";
     
+    const fetchPendingSectors = async () => {
+      try {
+        console.log("Buscando setores com status sucateadoPendente diretamente do banco...");
+        // Buscar diretamente do Supabase setores com status 'sucateadoPendente'
+        const { data, error } = await supabase
+          .from('sectors')
+          .select('*')
+          .eq('current_status', 'sucateadoPendente');
+          
+        if (error) {
+          throw error;
+        }
+        
+        console.log(`Busca direta: Encontrados ${data?.length || 0} setores com status sucateadoPendente`);
+        
+        // Mapear para o formato utilizado na aplicação
+        if (data && data.length > 0) {
+          const mappedSectors: Sector[] = data.map(sector => ({
+            id: sector.id,
+            tagNumber: sector.tag_number,
+            tagPhotoUrl: sector.tag_photo_url,
+            status: sector.current_status as any,
+            outcome: sector.current_outcome as any || 'EmAndamento',
+            cycleCount: sector.cycle_count || 1,
+            services: [],
+            beforePhotos: [],
+            afterPhotos: [],
+            scrapPhotos: [],
+            entryInvoice: sector.nf_entrada || '',
+            entryDate: sector.data_entrada ? new Date(sector.data_entrada).toISOString().split('T')[0] : '',
+            peritagemDate: '',
+            productionCompleted: false,
+            updated_at: sector.updated_at
+          }));
+          
+          setPendingSectors(mappedSectors);
+        }
+      } catch (fetchError) {
+        console.error("Erro ao buscar setores pendentes diretamente:", fetchError);
+      }
+    };
+
     if (!hasRefreshed) {
-      refreshData().then(() => setHasRefreshed(true));
+      console.log("Atualizando dados via refreshData...");
+      refreshData().then(() => {
+        setHasRefreshed(true);
+        // Depois de atualizar via API, tenta buscar diretamente do banco
+        fetchPendingSectors();
+      });
+    } else {
+      // Em carregamentos subsequentes, mantém a busca direta
+      fetchPendingSectors();
     }
     
     // Diagnóstico
@@ -40,123 +92,94 @@ export default function ScrapValidation() {
     })));
   }, [sectors, refreshData, hasRefreshed]);
   
-  // Filtra setores apenas com status 'sucateadoPendente'
-  const filteredSectors = sectors.filter(sector => {
+  // Filtra setores para exibição
+  const filteredSectors = [...pendingSectors, ...sectors.filter(sector => 
+    sector && sector.status === 'sucateadoPendente'
+  )].filter((sector, index, self) => 
+    // Remover duplicados pelo ID
+    index === self.findIndex(s => s.id === sector.id)
+  ).filter(sector => {
     if (!sector) return false;
     
-    // Aplica filtro de data se fornecido
-    let dateMatch = true;
-    if (startDate && endDate) {
-      // Verificar se peritagemDate é uma string válida antes de tentar criar uma data
-      if (!sector.peritagemDate) {
-        return false;
+    // Aplica filtro de busca de texto
+    const matchesSearch = 
+      sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sector.entryInvoice && sector.entryInvoice.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+    // Se não há filtro de data, retorna pelo texto
+    if (!startDate && !endDate) {
+      return matchesSearch;
+    }
+    
+    // Verifica se há data válida no setor para filtrar
+    if (!sector.peritagemDate && !sector.entryDate) {
+      return false;
+    }
+    
+    // Tenta usar peritagemDate ou entryDate para o filtro
+    const dateToFilter = sector.peritagemDate || sector.entryDate;
+    
+    try {
+      const sectorDate = new Date(dateToFilter);
+      
+      // Verificar se a data é válida
+      if (!isValid(sectorDate)) {
+        console.log("Data inválida:", dateToFilter, "para setor:", sector.tagNumber);
+        return matchesSearch; // Inclui mesmo com data inválida se o texto corresponder
       }
-
-      try {
-        const sectorDate = new Date(sector.peritagemDate);
-        
-        // Verificar se a data é válida
-        if (!isValid(sectorDate)) {
-          console.log("Data inválida:", sector.peritagemDate, "para setor:", sector.tagNumber);
-          return false;
-        }
-        
+      
+      let dateMatch = true;
+      
+      if (startDate && endDate) {
         const start = parse(startDate, "yyyy-MM-dd", new Date());
         const end = parse(endDate, "yyyy-MM-dd", new Date());
         
         // Verificar se as datas de início e fim são válidas
         if (!isValid(start) || !isValid(end)) {
-          return false;
+          return matchesSearch;
         }
         
         dateMatch = isWithinInterval(sectorDate, { start, end });
-      } catch (error) {
-        console.error("Erro ao processar data:", error, sector.peritagemDate);
-        return false;
-      }
-    } else if (startDate) {
-      if (!sector.peritagemDate) {
-        return false;
-      }
-
-      try {
-        const sectorDate = new Date(sector.peritagemDate);
-        
-        // Verificar se a data é válida
-        if (!isValid(sectorDate)) {
-          console.log("Data inválida para filtro de data inicial:", sector.peritagemDate, "para setor:", sector.tagNumber);
-          return false;
-        }
-        
+      } else if (startDate) {
         const start = parse(startDate, "yyyy-MM-dd", new Date());
         
         // Verificar se a data de início é válida
         if (!isValid(start)) {
-          return false;
+          return matchesSearch;
         }
         
-        const formattedSectorDate = isValid(sectorDate) ? format(sectorDate, "yyyy-MM-dd") : "";
-        
-        dateMatch = isAfter(sectorDate, start) || formattedSectorDate === startDate;
-      } catch (error) {
-        console.error("Erro ao processar data de início:", error, sector.peritagemDate);
-        return false;
-      }
-    } else if (endDate) {
-      if (!sector.peritagemDate) {
-        return false;
-      }
-
-      try {
-        const sectorDate = new Date(sector.peritagemDate);
-        
-        // Verificar se a data é válida
-        if (!isValid(sectorDate)) {
-          console.log("Data inválida para filtro de data final:", sector.peritagemDate, "para setor:", sector.tagNumber);
-          return false;
-        }
-        
+        dateMatch = isAfter(sectorDate, start) || format(sectorDate, "yyyy-MM-dd") === startDate;
+      } else if (endDate) {
         const end = parse(endDate, "yyyy-MM-dd", new Date());
         
         // Verificar se a data de fim é válida
         if (!isValid(end)) {
-          return false;
+          return matchesSearch;
         }
         
-        const formattedSectorDate = isValid(sectorDate) ? format(sectorDate, "yyyy-MM-dd") : "";
-        
-        dateMatch = isBefore(sectorDate, end) || formattedSectorDate === endDate;
-      } catch (error) {
-        console.error("Erro ao processar data final:", error, sector.peritagemDate);
-        return false;
+        dateMatch = isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
       }
-    }
-
-    const matchesSearch = 
-      sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (sector.entryInvoice && sector.entryInvoice.toLowerCase().includes(searchTerm.toLowerCase()));
       
-    return sector.status === 'sucateadoPendente' && matchesSearch && dateMatch;
+      return matchesSearch && dateMatch;
+    } catch (error) {
+      console.error("Erro ao processar data para filtro:", error);
+      return matchesSearch; // Inclui mesmo com erro se o texto corresponder
+    }
   });
   
   // Ordena setores pelo mais recente primeiro
   const sortedSectors = [...filteredSectors].sort((a, b) => {
     try {
-      // Verificar se ambas as datas são válidas
-      if (!a.peritagemDate || !b.peritagemDate) {
-        return 0;
-      }
-      
-      // Verificar se as strings de data são válidas antes de converter
-      if (!a.peritagemDate.match(/^\d{4}-\d{2}-\d{2}/) || !b.peritagemDate.match(/^\d{4}-\d{2}-\d{2}/)) {
-        return 0;
-      }
-      
-      const dateA = new Date(a.peritagemDate);
-      const dateB = new Date(b.peritagemDate);
+      // Usar o campo updated_at para ordenação, se disponível
+      const dateA = a.updated_at ? new Date(a.updated_at) : 
+                   a.peritagemDate ? new Date(a.peritagemDate) : 
+                   a.entryDate ? new Date(a.entryDate) : new Date(0);
+                   
+      const dateB = b.updated_at ? new Date(b.updated_at) : 
+                   b.peritagemDate ? new Date(b.peritagemDate) : 
+                   b.entryDate ? new Date(b.entryDate) : new Date(0);
       
       if (!isValid(dateA) || !isValid(dateB)) {
-        console.log("Datas inválidas durante ordenação:", a.peritagemDate, b.peritagemDate);
         return 0;
       }
       
@@ -171,17 +194,32 @@ export default function ScrapValidation() {
     navigate(`/sucateamento/${sector.id}`);
   };
 
+  const handleRefresh = async () => {
+    toast.info("Recarregando dados...");
+    await refreshData();
+    setHasRefreshed(false); // Força nova busca direta
+  };
+
   // Adicionar diagnóstico para debug
   useEffect(() => {
     console.log('Total de setores no estado:', sectors.length);
     console.log('Setores com status sucateadoPendente:', sectors.filter(s => s.status === 'sucateadoPendente').length);
+    console.log('Setores pendentes buscados diretamente:', pendingSectors.length);
     console.log('Setores filtrados para exibição:', filteredSectors.length);
-  }, [sectors, filteredSectors]);
+  }, [sectors, filteredSectors, pendingSectors]);
 
   return (
     <PageLayout>
       <div className="space-y-6">
-        <h1 className="page-title">Validação de Sucateamento</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="page-title">Validação de Sucateamento</h1>
+          <button 
+            onClick={handleRefresh} 
+            className="text-sm text-blue-500 px-3 py-1 rounded border border-blue-300 hover:bg-blue-50"
+          >
+            Atualizar Dados
+          </button>
+        </div>
         
         <Alert variant="destructive" className="bg-red-50 border-red-200">
           <AlertTriangle className="h-4 w-4" />
@@ -257,7 +295,7 @@ export default function ScrapValidation() {
                 ? "Nenhum setor encontrado com os critérios de busca" 
                 : "Nenhum setor aguardando validação de sucateamento"}
             </p>
-            {sectors.some(s => s.status === 'sucateadoPendente') === false && (
+            {sectors.length > 0 && (
               <button 
                 onClick={() => {
                   toast.info("Diagnóstico", {

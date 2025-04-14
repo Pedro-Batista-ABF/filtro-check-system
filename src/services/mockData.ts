@@ -1,131 +1,73 @@
-import { Sector, Service, Photo, SectorStatus, CycleOutcome } from "@/types";
 
-// Mock data for services
-export const createMockServices = (): Service[] => {
-  return [
-    {
-      id: "limpeza",
-      name: "Limpeza",
-      description: "Limpeza geral do equipamento",
-      selected: false,
-      quantity: 1,
-      photos: [],
-      observations: "",
-      completed: false,
-      type: "Limpeza"
-    },
-    {
-      id: "teste",
-      name: "Teste",
-      description: "Teste de funcionamento",
-      selected: false,
-      quantity: 1,
-      photos: [],
-      observations: "",
-      completed: false,
-      type: "Teste"
-    },
-    {
-      id: "reparo",
-      name: "Reparo",
-      description: "Reparo de componentes",
-      selected: false,
-      quantity: 1,
-      photos: [],
-      observations: "",
-      completed: false,
-      type: "Reparo"
-    },
-    {
-      id: "substituicao",
-      name: "Substituição",
-      description: "Substituição de peças",
-      selected: false,
-      quantity: 1,
-      photos: [],
-      observations: "",
-      completed: false,
-      type: "Substituição"
-    },
-    {
-      id: "pintura",
-      name: "Pintura",
-      description: "Pintura e acabamento",
-      selected: false,
-      quantity: 1,
-      photos: [],
-      observations: "",
-      completed: false,
-      type: "Pintura"
-    }
-  ];
+import { Sector, Service, Photo } from '@/types';
+
+const services: Service[] = [
+  {
+    id: "substituicao_parafusos",
+    name: "Substituição de Parafusos",
+    description: "Substituição de parafusos danificados",
+    selected: true,
+    type: "substituicao_parafusos",
+    quantity: 10,
+    observations: "Parafusos oxidados",
+    photos: []
+  },
+  {
+    id: "troca_trecho",
+    name: "Troca de Trecho",
+    description: "Substituição de trecho danificado",
+    selected: true,
+    type: "troca_trecho",
+    quantity: 2,
+    observations: "Trecho com rachaduras",
+    photos: []
+  },
+  {
+    id: "desempeno",
+    name: "Desempeno",
+    description: "Correção de deformações",
+    selected: false,
+    type: "desempeno",
+    quantity: 0,
+    observations: "",
+    photos: []
+  },
+  {
+    id: "troca_tela_lado_a",
+    name: "Troca de Tela - Lado A",
+    description: "Substituição da tela do lado A",
+    selected: true,
+    type: "troca_tela_lado_a",
+    quantity: 1,
+    observations: "Tela rasgada",
+    photos: []
+  },
+  {
+    id: "troca_tela_lado_b",
+    name: "Troca de Tela - Lado B",
+    description: "Substituição da tela do lado B",
+    selected: false,
+    type: "troca_tela_lado_b",
+    quantity: 0,
+    observations: "",
+    photos: []
+  }
+];
+
+export const mockSector: Sector = {
+  id: "1",
+  tagNumber: "FIL-1234",
+  tagPhotoUrl: "https://via.placeholder.com/150",
+  entryInvoice: "NF-00001",
+  entryDate: "2023-01-15",
+  peritagemDate: "2023-01-16",
+  services: services,
+  beforePhotos: [],
+  afterPhotos: [],
+  scrapPhotos: [],
+  productionCompleted: false,
+  status: "peritagemPendente",
+  outcome: "EmAndamento",
+  cycleCount: 1,
+  updated_at: new Date().toISOString()
 };
-
-// Mock data for photos
-export const createMockPhotos = (count: number, type: 'before' | 'after' | 'tag' | 'scrap'): Photo[] => {
-  return Array(count).fill(0).map((_, index) => ({
-    id: `photo-${type}-${index}`,
-    url: `https://placehold.co/400x300/png?text=${type}+${index}`,
-    type,
-    serviceId: index % 2 === 0 ? 'limpeza' : 'reparo'
-  }));
-};
-
-// Create a mock sector
-export const createMockSector = (id: number): Sector => {
-  // Replace completedServices with appropriate properties from the Sector interface
-  return {
-    id: `mock-sector-${id}`,
-    tagNumber: `S-${1000 + id}`,
-    tagPhotoUrl: 'https://placehold.co/100x100/png',
-    entryInvoice: `NF-${5000 + id}`,
-    entryDate: new Date().toISOString().substring(0, 10),
-    peritagemDate: new Date().toISOString().substring(0, 10),
-    services: createMockServices(),
-    beforePhotos: [],
-    afterPhotos: [],
-    status: 'peritagemPendente' as SectorStatus,
-    outcome: 'EmAndamento' as CycleOutcome,
-    productionCompleted: false,
-    // Remove completedServices property - not in the Sector interface
-    // completedServices: [],
-    cycleCount: 1,
-    updated_at: new Date().toISOString()
-  };
-};
-
-// Create mock sectors
-export const createMockSectors = (count: number): Sector[] => {
-  return Array(count).fill(0).map((_, index) => {
-    const sector = createMockSector(index);
-    
-    // Add some variety to the sectors
-    if (index % 3 === 0) {
-      sector.status = 'emExecucao';
-      sector.services[0].selected = true;
-      sector.services[1].selected = true;
-      sector.beforePhotos = createMockPhotos(2, 'before');
-    } else if (index % 3 === 1) {
-      sector.status = 'checagemFinalPendente';
-      sector.services[0].selected = true;
-      sector.services[2].selected = true;
-      sector.beforePhotos = createMockPhotos(2, 'before');
-      sector.productionCompleted = true;
-    } else {
-      sector.status = 'concluido';
-      sector.services[1].selected = true;
-      sector.services[3].selected = true;
-      sector.beforePhotos = createMockPhotos(2, 'before');
-      sector.afterPhotos = createMockPhotos(2, 'after');
-      sector.productionCompleted = true;
-      sector.exitDate = new Date().toISOString().substring(0, 10);
-      sector.exitInvoice = `NF-S-${6000 + index}`;
-    }
-    
-    return sector;
-  });
-};
-
-// Default mock data
-export const mockSectors = createMockSectors(10);
-export const mockServices = createMockServices();

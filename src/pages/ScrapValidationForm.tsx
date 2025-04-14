@@ -10,6 +10,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -125,7 +126,29 @@ export default function ScrapValidationForm() {
         scrapValidated: updates.scrapValidated
       });
       
+      // Atualizar na API
       await updateSector(sector.id, updates);
+      
+      // Garantir a atualização direta no Supabase
+      try {
+        console.log("Atualizando status diretamente na tabela sectors...");
+        const { error } = await supabase.from('sectors')
+          .update({
+            current_status: 'sucateado',
+            current_outcome: 'scrapped',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sector.id);
+          
+        if (error) {
+          console.error("Erro ao atualizar status no Supabase:", error);
+        } else {
+          console.log("Status atualizado com sucesso no Supabase");
+        }
+      } catch (dbError) {
+        console.error("Erro na atualização direta:", dbError);
+      }
+      
       toast.success('Sucateamento validado com sucesso!');
       navigate('/sucateamento');
     } catch (error) {

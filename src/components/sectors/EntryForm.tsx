@@ -1,319 +1,148 @@
-
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Service, Cycle, Photo, CycleOutcome } from "@/types";
-import ServiceCheckbox from "./ServiceCheckbox";
-import { format } from "date-fns";
+import React, { useState } from 'react';
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
+import { Cycle } from "@/types";
 
 interface EntryFormProps {
-  onSubmit: (formData: {
-    tagNumber: string;
-    entryInvoice: string;
-    entryDate: string;
-    services: Service[];
-    status: string;
-    cycles: Cycle[];
-  }) => void;
-  initialData?: {
-    tagNumber: string;
-    entryInvoice: string;
-    entryDate: string;
-    services: Service[];
-    status: string;
-    cycles: Cycle[];
-  };
-  services: Service[];
-  loading?: boolean;
-  mode?: "create" | "edit";
+  cycle: Cycle;
+  onUpdate?: (data: Partial<Cycle>) => void;
+  readonly?: boolean;
+  isLoading?: boolean;
 }
 
-export default function EntryForm({ onSubmit, initialData, services, loading, mode = "create" }: EntryFormProps) {
-  const [tagNumber, setTagNumber] = useState(initialData?.tagNumber || "");
-  const [entryInvoice, setEntryInvoice] = useState(initialData?.entryInvoice || "");
-  const [entryDate, setEntryDate] = useState<Date | undefined>(
-    initialData?.entryDate ? new Date(initialData.entryDate) : new Date()
-  );
-  const [isScrap, setIsScrap] = useState(false);
-  const [scrapReason, setScrapReason] = useState("");
-  const [selectedServices, setSelectedServices] = useState<Service[]>(
-    initialData?.services || services.map(service => ({ ...service, selected: false, quantity: 1 }))
-  );
-
-  // Form validation
+export default function EntryForm({
+  cycle,
+  onUpdate,
+  readonly = false,
+  isLoading = false
+}: EntryFormProps) {
+  const [tagNumber, setTagNumber] = useState(cycle.tag_number || '');
+  const [entryInvoice, setEntryInvoice] = useState(cycle.entry_invoice || '');
+  const [entryDate, setEntryDate] = useState(cycle.entry_date || '');
+  const [entryObservations, setEntryObservations] = useState(cycle.entry_observations || '');
   const [formErrors, setFormErrors] = useState({
     tagNumber: false,
     entryInvoice: false,
-    entryDate: false,
-    services: false,
-    scrapReason: false
+    entryDate: false
   });
-
-  useEffect(() => {
-    if (initialData?.services) {
-      setSelectedServices(initialData.services);
-    } else if (services) {
-      setSelectedServices(services.map(service => ({ ...service, selected: false, quantity: 1 })));
-    }
-  }, [initialData?.services, services]);
-
-  const handleServiceChange = (id: string, checked: boolean) => {
-    setSelectedServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, selected: checked } 
-          : service
-      )
-    );
-  };
-
-  const handleQuantityChange = (id: string, quantity: number) => {
-    setSelectedServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, quantity } 
-          : service
-      )
-    );
-  };
-
-  const handleObservationChange = (id: string, observations: string) => {
-    setSelectedServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, observations } 
-          : service
-      )
-    );
-  };
-
-  const handlePhotoUpload = (id: string, files: FileList, type: "before" | "after") => {
-    setSelectedServices(prev => 
-      prev.map(service => {
-        if (service.id === id) {
-          const existingPhotos = service.photos || [];
-          const newPhotos: Photo[] = Array.from(files).map((file, index) => ({
-            id: `${id}-${Date.now()}-${index}`,
-            url: URL.createObjectURL(file),
-            file,
-            type
-          }));
-          
-          return { 
-            ...service, 
-            photos: [...existingPhotos, ...newPhotos] 
-          };
-        }
-        return service;
-      })
-    );
-  };
-
-  const validateForm = () => {
-    const errors = {
-      tagNumber: !tagNumber,
-      entryInvoice: !entryInvoice,
-      entryDate: !entryDate,
-      services: !isScrap && !selectedServices.some(s => s.selected),
-      scrapReason: isScrap && !scrapReason
-    };
-    
-    setFormErrors(errors);
-    return !Object.values(errors).some(Boolean);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
-    
-    let status = "peritagemPendente";
-    let cycles: Cycle[] = [];
-    
-    if (isScrap) {
-      status = "sucateadoPendente";
-      
-      const formattedEntryDate = entryDate ? format(entryDate, 'yyyy-MM-dd') : '';
-      
-      // Criar um ciclo completo para sucateamento
-      const newCycle: Cycle = {
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        outcome: "scrapped" as CycleOutcome,
-        comments: scrapReason,
-        technicianId: "sistema",
-        tagNumber,
-        entryInvoice,
-        entryDate: formattedEntryDate,
-        peritagemDate: formattedEntryDate,
-        services: selectedServices,
-        beforePhotos: [],
-        productionCompleted: false,
-        status: "sucateadoPendente"
+    if (onUpdate) {
+      // Validate required fields
+      let isValid = true;
+      const newErrors = {
+        tagNumber: false,
+        entryInvoice: false,
+        entryDate: false
       };
       
-      cycles = [newCycle];
+      if (!tagNumber.trim()) {
+        newErrors.tagNumber = true;
+        isValid = false;
+      }
+      if (!entryInvoice.trim()) {
+        newErrors.entryInvoice = true;
+        isValid = false;
+      }
+      if (!entryDate.trim()) {
+        newErrors.entryDate = true;
+        isValid = false;
+      }
+      
+      if (isValid) {
+        const data: Partial<Cycle> = {
+          tag_number: tagNumber,
+          entry_invoice: entryInvoice,
+          entry_date: entryDate,
+          entry_observations: entryObservations,
+          created_at: new Date().toISOString()
+        };
+        
+        onUpdate(data);
+      } else {
+        setFormErrors(newErrors);
+      }
     }
-    
-    onSubmit({
-      tagNumber,
-      entryInvoice,
-      entryDate: entryDate ? format(entryDate, 'yyyy-MM-dd') : '',
-      services: selectedServices,
-      status,
-      cycles: initialData?.cycles || cycles
-    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações do Setor</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="tagNumber" className={formErrors.tagNumber ? "text-red-500" : ""}>
-                Número da TAG*
-              </Label>
-              <Input
-                id="tagNumber"
-                value={tagNumber}
-                onChange={(e) => setTagNumber(e.target.value)}
-                placeholder="Ex: ABC-123"
-                className={formErrors.tagNumber ? "border-red-500" : ""}
-              />
-              {formErrors.tagNumber && (
-                <p className="text-xs text-red-500">TAG é obrigatória</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
-                Nota Fiscal de Entrada*
-              </Label>
-              <Input
-                id="entryInvoice"
-                value={entryInvoice}
-                onChange={(e) => setEntryInvoice(e.target.value)}
-                placeholder="Ex: NF-12345"
-                className={formErrors.entryInvoice ? "border-red-500" : ""}
-              />
-              {formErrors.entryInvoice && (
-                <p className="text-xs text-red-500">Nota fiscal é obrigatória</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="entryDate" className={formErrors.entryDate ? "text-red-500" : ""}>
-                Data de Entrada*
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !entryDate && "text-muted-foreground",
-                      formErrors.entryDate && "border-red-500"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {entryDate ? format(entryDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={entryDate}
-                    onSelect={setEntryDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              {formErrors.entryDate && (
-                <p className="text-xs text-red-500">Data é obrigatória</p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="isScrap" 
-                  checked={isScrap} 
-                  onCheckedChange={setIsScrap} 
-                />
-                <Label htmlFor="isScrap">Marcar como Sucateado</Label>
-              </div>
-              <p className="text-xs text-gray-500">
-                Marque esta opção se o setor já chegou sucateado ou não pode ser recuperado
-              </p>
-            </div>
-          </div>
-          
-          {isScrap && (
-            <div className="space-y-2">
-              <Label htmlFor="scrapReason" className={formErrors.scrapReason ? "text-red-500" : ""}>
-                Motivo do Sucateamento*
-              </Label>
-              <Textarea
-                id="scrapReason"
-                value={scrapReason}
-                onChange={(e) => setScrapReason(e.target.value)}
-                placeholder="Descreva o motivo pelo qual o setor deve ser sucateado"
-                className={formErrors.scrapReason ? "border-red-500" : ""}
-              />
-              {formErrors.scrapReason && (
-                <p className="text-xs text-red-500">O motivo do sucateamento é obrigatório</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {!isScrap && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Serviços Necessários</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {formErrors.services && (
-              <p className="text-xs text-red-500 mb-4">Selecione pelo menos um serviço</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Dados de Entrada</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="tagNumber" className={formErrors.tagNumber ? "text-red-500" : ""}>
+              Número da TAG*
+            </Label>
+            <Input
+              id="tagNumber"
+              type="text"
+              value={tagNumber}
+              onChange={(e) => setTagNumber(e.target.value)}
+              placeholder="Número da TAG"
+              readOnly={readonly || isLoading}
+              className={formErrors.tagNumber ? "border-red-500" : ""}
+            />
+            {formErrors.tagNumber && (
+              <p className="text-xs text-red-500">Número da TAG é obrigatório</p>
             )}
-            
-            <div className="space-y-2">
-              {selectedServices.map((service) => (
-                <ServiceCheckbox
-                  key={service.id}
-                  service={service}
-                  onServiceChange={handleServiceChange}
-                  onQuantityChange={handleQuantityChange}
-                  onObservationChange={handleObservationChange}
-                  onPhotoUpload={handlePhotoUpload}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <div className="flex justify-end space-x-2">
-        <Button variant="outline" type="button" onClick={() => window.history.back()}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Salvando..." : mode === "create" ? "Registrar Setor" : "Atualizar Setor"}
-        </Button>
-      </div>
-    </form>
+          </div>
+          <div>
+            <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
+              Nota Fiscal de Entrada*
+            </Label>
+            <Input
+              id="entryInvoice"
+              type="text"
+              value={entryInvoice}
+              onChange={(e) => setEntryInvoice(e.target.value)}
+              placeholder="Número da Nota Fiscal"
+              readOnly={readonly || isLoading}
+              className={formErrors.entryInvoice ? "border-red-500" : ""}
+            />
+            {formErrors.entryInvoice && (
+              <p className="text-xs text-red-500">Nota Fiscal é obrigatória</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="entryDate" className={formErrors.entryDate ? "text-red-500" : ""}>
+              Data de Entrada*
+            </Label>
+            <Input
+              id="entryDate"
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              readOnly={readonly || isLoading}
+              className={formErrors.entryDate ? "border-red-500" : ""}
+            />
+            {formErrors.entryDate && (
+              <p className="text-xs text-red-500">Data de Entrada é obrigatória</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="entryObservations">Observações</Label>
+            <Textarea
+              id="entryObservations"
+              value={entryObservations}
+              onChange={(e) => setEntryObservations(e.target.value)}
+              placeholder="Observações sobre a entrada"
+              readOnly={readonly || isLoading}
+            />
+          </div>
+          {!readonly && (
+            <button type="submit" className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+              Atualizar
+            </button>
+          )}
+        </form>
+      </CardContent>
+    </Card>
   );
 }
