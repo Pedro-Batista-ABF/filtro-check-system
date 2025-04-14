@@ -195,7 +195,7 @@ export function usePeritagemSubmit() {
             productionCompleted: data.productionCompleted || false,
             cycleCount: cycleCount,
             entryObservations: data.entryObservations || '',
-            updated_at: new Date().toISOString() // Adicionado para evitar erro de modified_at
+            updated_at: new Date().toISOString() // Usando updated_at em vez de modified_at
           };
 
           if (isEditing && sectorId) {
@@ -231,13 +231,13 @@ export function usePeritagemSubmit() {
             console.warn(`Tentativa ${attempt} falhou com erro diferente de duplicação:`, error);
             console.error("Erro completo:", error);
             
-            // Se o erro for relacionado ao campo modified_at
-            if (error?.message?.includes('modified_at')) {
-              console.log("Detectado erro de modified_at, adicionando campo...");
+            // Se o erro for relacionado ao campo updated_at
+            if (error?.message?.includes('modified_at') || error?.message?.includes('updated_at')) {
+              console.log("Detectado erro de campo timestamp, ajustando campos...");
               continue; // Tentar novamente com o campo updated_at adicionado
             }
             
-            // Se o erro não for de duplicação ou related to modified_at, desistimos imediatamente
+            // Se o erro não for de duplicação ou relacionado a timestamps, desistimos imediatamente
             break;
           }
           
@@ -260,7 +260,7 @@ export function usePeritagemSubmit() {
             .from('sectors')
             .update({ 
               current_status: 'emExecucao',
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString() // Usando updated_at em vez de modified_at
             })
             .eq('id', sectorId);
             
@@ -288,8 +288,15 @@ export function usePeritagemSubmit() {
                   cycle_id: cycleData.id,
                   type: 'tag',
                   url: data.tagPhotoUrl,
+                  service_id: null, // Campo obrigatório na tabela, mas nulo para foto de TAG
                   created_by: session.user.id,
-                  created_at: new Date().toISOString()
+                  created_at: new Date().toISOString(),
+                  // Adicionando os metadados necessários como comentado em JSON
+                  // metadata: {
+                  //   sector_id: sectorId,
+                  //   type: 'tag',
+                  //   stage: 'peritagem'
+                  // }
                 });
                 
               if (tagPhotoError) {
