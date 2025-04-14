@@ -58,13 +58,16 @@ export function usePeritagemData(id?: string) {
         // Se tem ID, buscar o setor
         if (id) {
           console.log("Buscando setor pelo ID:", id);
-          const sectorData = await getSectorById(id);
           
+          // Primeiro tentar a função do contexto
+          let sectorData = await getSectorById(id);
+          
+          // Se falhar, tentar buscar diretamente do Supabase
           if (!sectorData) {
-            console.log(`Setor com ID ${id} não encontrado via getSectorById. Tentando buscar diretamente do Supabase...`);
-            
-            // Tentar buscar diretamente do Supabase se a função do contexto falhar
             try {
+              console.log(`Setor com ID ${id} não encontrado via getSectorById. Tentando buscar diretamente do Supabase...`);
+              
+              // Buscar o setor
               const { data: sectorDb, error: sectorError } = await supabase
                 .from('sectors')
                 .select('*')
@@ -82,27 +85,120 @@ export function usePeritagemData(id?: string) {
                 return;
               }
               
-              // Criar um setor mínimo com base nos dados da tabela sectors
-              console.log("Criando setor mínimo a partir dos dados do Supabase:", sectorDb);
-              const minimalSector: Sector = {
+              // Buscar o ciclo atual do setor
+              const { data: cycleData, error: cycleError } = await supabase
+                .from('cycles')
+                .select('*')
+                .eq('sector_id', id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+              
+              if (cycleError) {
+                console.warn(`Ciclo para o setor ${id} não encontrado.`);
+                // Criar um setor mínimo apenas com dados básicos
+                const minimalSector: Sector = {
+                  id: sectorDb.id,
+                  tagNumber: sectorDb.tag_number,
+                  tagPhotoUrl: sectorDb.tag_photo_url || undefined,
+                  entryInvoice: "Pendente",
+                  entryDate: new Date().toISOString().split('T')[0],
+                  peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+                  services: processedServices,
+                  beforePhotos: [],
+                  afterPhotos: [],
+                  productionCompleted: false,
+                  status: sectorDb.current_status as any || 'peritagemPendente',
+                  outcome: sectorDb.current_outcome as any || 'EmAndamento',
+                  cycleCount: sectorDb.cycle_count || 1,
+                  updated_at: new Date().toISOString()
+                };
+                
+                setSector(minimalSector);
+                return;
+              }
+              
+              // Buscar serviços associados ao ciclo
+              const { data: cycleServicesData, error: servicesError } = await supabase
+                .from('cycle_services')
+                .select('*')
+                .eq('cycle_id', cycleData.id);
+              
+              if (servicesError) {
+                console.warn(`Erro ao buscar serviços para o ciclo ${cycleData.id}:`, servicesError);
+              }
+              
+              // Buscar fotos associadas ao ciclo
+              const { data: photosData, error: photosError } = await supabase
+                .from('photos')
+                .select('*')
+                .eq('cycle_id', cycleData.id);
+              
+              if (photosError) {
+                console.warn(`Erro ao buscar fotos para o ciclo ${cycleData.id}:`, photosError);
+              }
+              
+              // Mapear serviços para o formato esperado pelo frontend
+              const servicesWithDetails = processedServices.map(service => {
+                const cycleService = (cycleServicesData || []).find(cs => cs.service_id === service.id);
+                
+                // Se o serviço existe no ciclo, adicionar detalhes
+                if (cycleService) {
+                  const servicePhotos = (photosData || [])
+                    .filter(photo => photo.service_id === service.id)
+                    .map(photo => ({
+                      id: photo.id,
+                      url: photo.url,
+                      type: photo.type,
+                      serviceId: photo.service_id
+                    }));
+                  
+                  return {
+                    ...service,
+                    selected: cycleService.selected || false,
+                    quantity: cycleService.quantity || 1,
+                    observations: cycleService.observations || "",
+                    photos: servicePhotos
+                  };
+                }
+                
+                return service;
+              });
+              
+              // Criar objeto de setor completo
+              const completeSector: Sector = {
                 id: sectorDb.id,
                 tagNumber: sectorDb.tag_number,
                 tagPhotoUrl: sectorDb.tag_photo_url || undefined,
-                entryInvoice: "Pendente",
-                entryDate: new Date().toISOString().split('T')[0],
-                peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-                services: processedServices,
-                beforePhotos: [],
-                afterPhotos: [],
-                productionCompleted: false,
-                status: sectorDb.current_status as any || 'peritagemPendente',
-                outcome: sectorDb.current_outcome as any || 'EmAndamento',
+                entryInvoice: cycleData.entry_invoice || "Pendente",
+                entryDate: cycleData.entry_date || new Date().toISOString().split('T')[0],
+                peritagemDate: cycleData.peritagem_date || format(new Date(), 'yyyy-MM-dd'),
+                services: servicesWithDetails,
+                beforePhotos: (photosData || [])
+                  .filter(photo => photo.type === 'before' && !photo.service_id)
+                  .map(photo => ({
+                    id: photo.id,
+                    url: photo.url,
+                    type: 'before'
+                  })),
+                afterPhotos: (photosData || [])
+                  .filter(photo => photo.type === 'after' && !photo.service_id)
+                  .map(photo => ({
+                    id: photo.id,
+                    url: photo.url,
+                    type: 'after'
+                  })),
+                productionCompleted: cycleData.production_completed || false,
+                status: cycleData.status as any || sectorDb.current_status,
+                outcome: cycleData.outcome as any || sectorDb.current_outcome || 'EmAndamento',
                 cycleCount: sectorDb.cycle_count || 1,
+                entryObservations: cycleData.entry_observations || '',
                 updated_at: new Date().toISOString()
               };
               
-              console.log("Definindo setor mínimo:", minimalSector);
-              setSector(minimalSector);
+              console.log("Setor construído com dados do Supabase:", completeSector);
+              setSector(completeSector);
+              setServices(servicesWithDetails);
             } catch (directError) {
               console.error("Erro ao tentar buscar setor diretamente:", directError);
               toast({
@@ -114,12 +210,12 @@ export function usePeritagemData(id?: string) {
               return;
             }
           } else {
-            console.log("Setor encontrado:", sectorData);
+            console.log("Setor encontrado via getSectorById:", sectorData);
             setSector(sectorData);
             
             // Se o setor já tem serviços, atualizar a lista de serviços
             if (sectorData.services && sectorData.services.length > 0) {
-              console.log("Usando serviços do setor:", sectorData.services);
+              console.log("Usando serviços do setor encontrado:", sectorData.services);
               setServices(sectorData.services);
             } else {
               console.log("Setor não tem serviços, usando serviços padrão");

@@ -164,6 +164,7 @@ export default function ServiceCheckbox({
                     disabled={!checked}
                     title={`Adicionar fotos ${photoType === "before" ? "do defeito" : "da execução"}`}
                     required={required}
+                    onCameraCapture={onCameraCapture}
                   />
                 </div>
               )}
