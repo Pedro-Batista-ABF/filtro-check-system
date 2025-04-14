@@ -48,6 +48,7 @@ interface PhotoDB {
   service_id: string | null;
   url: string;
   type: string;
+  metadata?: any;
 }
 
 /**
@@ -933,7 +934,10 @@ export const supabaseService = {
   }
 };
 
-const mapPhotosFromDB = (photosData: any[]): Photo[] => {
+/**
+ * Mapeia fotos do formato do banco para o formato da aplicação
+ */
+const mapPhotosFromDB = (photosData: PhotoDB[]): Photo[] => {
   return (photosData || []).map(photo => {
     let photoType = photo.type;
     
@@ -945,6 +949,4 @@ const mapPhotosFromDB = (photosData: any[]): Photo[] => {
     
     return {
       id: photo.id,
-      url: photo.url,
-      type: photoType as 'before' | 'after' | 'tag' | 'scrap',
-      service
+      url: photo.url
