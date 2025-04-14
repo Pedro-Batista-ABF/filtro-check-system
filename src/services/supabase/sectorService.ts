@@ -16,6 +16,7 @@ export const sectorService = {
    * Busca todos os setores
    */
   getAllSectors: async (): Promise<Sector[]> => {
+    
     try {
       console.log("Iniciando busca de todos os setores");
       
@@ -78,6 +79,7 @@ export const sectorService = {
                 services: [],
                 beforePhotos: [],
                 afterPhotos: [],
+                scrapPhotos: [],
                 productionCompleted: false,
                 status: sector.current_status as SectorStatus,
                 outcome: sector.current_outcome as CycleOutcome || 'EmAndamento',
@@ -143,14 +145,17 @@ export const sectorService = {
           });
           
           // 6. Adiciona o setor completo à lista
-          const mappedSector = mapSectorFromDB(
-            sector, 
-            cyclesData, 
-            services, 
-            beforePhotos, 
-            afterPhotos, 
-            scrapPhotos
-          );
+          const mappedSector = {
+            ...mapSectorFromDB(
+              sector, 
+              cyclesData, 
+              services, 
+              beforePhotos, 
+              afterPhotos, 
+              scrapPhotos
+            ),
+            scrapPhotos // Garantir que scrapPhotos esteja sempre presente
+          };
           
           // Adiciona a foto da TAG se encontrada
           if (tagPhoto) {
@@ -176,6 +181,8 @@ export const sectorService = {
       throw error;
     }
   },
+  
+  
   
   /**
    * Busca um setor pelo ID
@@ -243,114 +250,30 @@ export const sectorService = {
         return mapServiceFromDB(serviceType, cycleService, servicePhotos);
       });
       
-      // 6. Retorna o setor completo
-      return mapSectorFromDB(
-        sectorData, 
-        cycleData, 
-        services, 
-        beforePhotos, 
-        afterPhotos, 
-        scrapPhotos
-      );
+      // 6. Retorna o setor completo com garantia que scrapPhotos está presente
+      const mappedSector = {
+        ...mapSectorFromDB(
+          sectorData, 
+          cycleData, 
+          services, 
+          beforePhotos, 
+          afterPhotos, 
+          scrapPhotos
+        ),
+        scrapPhotos // Garantir que scrapPhotos esteja sempre presente
+      };
+      
+      return mappedSector;
     } catch (error) {
       console.error(`Erro ao buscar setor com ID ${id}:`, error);
       return undefined;
     }
   },
   
-  /**
-   * Busca setores pela TAG
-   */
-  getSectorsByTag: async (tagNumber: string): Promise<Sector[]> => {
-    try {
-      // 1. Busca os setores com a TAG especificada
-      const { data: sectorsData, error: sectorsError } = await supabase
-        .from('sectors')
-        .select('*')
-        .ilike('tag_number', `%${tagNumber}%`);
-        
-      if (sectorsError) throw sectorsError;
-      
-      // 2. Para cada setor, busca seu ciclo completo
-      const sectors: Sector[] = [];
-      
-      for (const sector of sectorsData || []) {
-        const { data: cycleData, error: cycleError } = await supabase
-          .from('cycles')
-          .select('*')
-          .eq('sector_id', sector.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (cycleError) {
-          console.error(`Erro ao buscar ciclo para o setor ${sector.id}:`, cycleError);
-          continue;
-        }
-        
-        // 3. Busca os serviços e fotos
-        const { data: serviceTypesData } = await supabase
-          .from('service_types')
-          .select('*');
-          
-        const { data: cycleServicesData } = await supabase
-          .from('cycle_services')
-          .select('*')
-          .eq('cycle_id', cycleData.id);
-          
-        const { data: photosData } = await supabase
-          .from('photos')
-          .select('*')
-          .eq('cycle_id', cycleData.id);
-          
-        // 4. Organiza as fotos
-        const beforePhotos = (photosData || [])
-          .filter(photo => photo.type === 'before')
-          .map(mapPhotoFromDB);
-          
-        const afterPhotos = (photosData || [])
-          .filter(photo => photo.type === 'after')
-          .map(mapPhotoFromDB);
-          
-        const scrapPhotos = (photosData || [])
-          .filter(photo => photo.type === 'scrap')
-          .map(mapPhotoFromDB);
-        
-        // 5. Monta os serviços
-        const services = (serviceTypesData || []).map(serviceType => {
-          const cycleService = (cycleServicesData || []).find(
-            cs => cs.service_id === serviceType.id
-          );
-          
-          const servicePhotos = (photosData || []).filter(
-            photo => photo.service_id === serviceType.id
-          );
-          
-          return mapServiceFromDB(serviceType, cycleService, servicePhotos);
-        });
-        
-        // 6. Adiciona o setor à lista
-        sectors.push(
-          mapSectorFromDB(
-            sector, 
-            cycleData, 
-            services, 
-            beforePhotos, 
-            afterPhotos, 
-            scrapPhotos
-          )
-        );
-      }
-      
-      return sectors;
-    } catch (error) {
-      console.error(`Erro ao buscar setores com TAG ${tagNumber}:`, error);
-      return [];
-    }
-  },
+  
   
   /**
-   * Cria um novo setor
+   * Adiciona um setor (resto do método existente)
    */
   addSector: async (sectorData: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
@@ -530,6 +453,8 @@ export const sectorService = {
       throw error;
     }
   },
+  
+  
   
   /**
    * Atualiza um setor existente

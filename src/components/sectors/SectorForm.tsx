@@ -120,9 +120,9 @@ export default function SectorForm({
         entryInvoice: false,
         entryDate: false,
         peritagemDate: false,
-        scrapObservations: false,  
-        scrapDate: false,         
-        scrapInvoice: false        
+        scrapObservations: false,
+        scrapDate: false,
+        scrapInvoice: false
       };
       
       if (!tagNumber.trim()) {

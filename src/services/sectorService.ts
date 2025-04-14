@@ -31,7 +31,7 @@ export const useSectorService = () => {
       // Certifique-se de que todos os serviços tenham o campo 'type' definido corretamente
       const processedServices = sectorData.services?.map(service => ({
         ...service,
-        type: service.id as ServiceType,
+        type: service.id as unknown as ServiceType,
         // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
         photos: service.photos?.map(photo => ({
           id: photo.id,
@@ -58,6 +58,7 @@ export const useSectorService = () => {
         services: processedServices,
         beforePhotos: processedBeforePhotos,
         afterPhotos: sectorData.afterPhotos || [],
+        scrapPhotos: sectorData.scrapPhotos || [],
         productionCompleted: sectorData.productionCompleted || false,
         status,
         outcome,
@@ -126,7 +127,7 @@ export const useSectorService = () => {
       // Certifique-se de que todos os serviços atualizados tenham o campo 'type' definido corretamente
       const processedServices = updates.services?.map(service => ({
         ...service,
-        type: service.id as ServiceType,
+        type: service.id as unknown as ServiceType,
         // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
         photos: service.photos?.map(photo => ({
           id: photo.id,
@@ -150,6 +151,13 @@ export const useSectorService = () => {
         type: photo.type,
         serviceId: photo.serviceId
       }));
+      
+      const processedScrapPhotos = (updates.scrapPhotos || currentSector.scrapPhotos || []).map(photo => ({
+        id: photo.id,
+        url: photo.url,
+        type: photo.type,
+        serviceId: photo.serviceId
+      }));
 
       // Garantir que apenas os campos necessários sejam modificados (para reduzir problemas com RLS)
       const safeUpdateData: Sector = {
@@ -162,6 +170,7 @@ export const useSectorService = () => {
         status: status,
         beforePhotos: processedBeforePhotos,
         afterPhotos: processedAfterPhotos,
+        scrapPhotos: processedScrapPhotos,
         productionCompleted: updates.productionCompleted !== undefined ? updates.productionCompleted : currentSector.productionCompleted || false,
         outcome: outcome,
         cycleCount: updates.cycleCount || currentSector.cycleCount || 1,
