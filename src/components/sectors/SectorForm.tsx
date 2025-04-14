@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
@@ -208,12 +209,12 @@ export default function SectorForm({
         description: "Atualizando status do setor para execução"
       });
       
-      // Update sector status - usando updated_at em vez de modified_at
+      // Update sector status - removendo completamente qualquer referência a modified_at
       const { error } = await supabase
         .from('sectors')
         .update({ 
           current_status: 'emExecucao',
-          updated_at: new Date().toISOString() // Alterado de modified_at para updated_at
+          updated_at: new Date().toISOString()
         })
         .eq('id', sector.id);
         

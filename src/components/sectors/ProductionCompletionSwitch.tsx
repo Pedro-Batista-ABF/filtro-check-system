@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,7 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
       
       console.log(`Atualizando status do setor de ${sector.status} para ${newStatus}`);
       
-      // Atualiza o setor no Supabase - usando updated_at
+      // Atualiza o setor no Supabase - usando apenas updated_at
       const { error } = await supabase
         .from('sectors')
         .update({
