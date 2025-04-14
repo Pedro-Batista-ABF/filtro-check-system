@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Sector, Service, Photo, CycleOutcome, SectorStatus, ServiceType } from "@/types";
 import { toast } from "sonner";
@@ -133,7 +134,7 @@ const mapSectorFromDB = (
     scrapPhotos,
     scrapValidated: cycle.scrap_validated || false,
     scrapReturnDate: cycle.scrap_return_date || undefined,
-    scrapReturnInvoice: cycle.scrapReturnInvoice || undefined,
+    scrapReturnInvoice: cycle.scrap_return_invoice || undefined,
     status: cycle.status as SectorStatus,
     outcome: cycle.outcome as CycleOutcome || undefined,
     cycleCount: sector.cycle_count,
@@ -185,7 +186,7 @@ export const supabaseService = {
             // Em vez de pular este setor, vamos tentar criar um ciclo básico
             console.log("Buscando todos os ciclos para este setor para diagnóstico...");
             
-            const { data: allCycles } } = await supabase
+            const { data: allCycles } = await supabase
               .from('cycles')
               .select('*')
               .eq('sector_id', sector.id);
