@@ -12,35 +12,40 @@ export default function Execucao() {
   const { sectors, loading, refreshData } = useApi();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasRefreshed, setHasRefreshed] = useState(false);
   
-  // Forçar atualização dos dados ao carregar a página
+  // Forçar atualização dos dados ao carregar a página apenas uma vez
   useEffect(() => {
     const fetchData = async () => {
-      setIsRefreshing(true);
-      try {
-        await refreshData();
-        
-        // Verificar setores diretamente no Supabase para diagnóstico
-        const { data: dbSectors, error } = await supabase
-          .from('sectors')
-          .select('id, tag_number, current_status')
-          .eq('current_status', 'emExecucao');
+      if (!hasRefreshed) {
+        setIsRefreshing(true);
+        try {
+          await refreshData();
           
-        if (error) {
-          console.error("Erro ao buscar setores do banco:", error);
-        } else {
-          console.log("Setores em execução encontrados diretamente no banco:", dbSectors?.length);
-          console.log("Dados dos setores:", dbSectors);
+          // Verificar setores diretamente no Supabase para diagnóstico
+          const { data: dbSectors, error } = await supabase
+            .from('sectors')
+            .select('id, tag_number, current_status')
+            .eq('current_status', 'emExecucao');
+            
+          if (error) {
+            console.error("Erro ao buscar setores do banco:", error);
+          } else {
+            console.log("Setores em execução encontrados diretamente no banco:", dbSectors?.length);
+            console.log("Dados dos setores:", dbSectors);
+          }
+          
+          setHasRefreshed(true);
+        } catch (error) {
+          console.error("Erro ao atualizar dados:", error);
+        } finally {
+          setIsRefreshing(false);
         }
-      } catch (error) {
-        console.error("Erro ao atualizar dados:", error);
-      } finally {
-        setIsRefreshing(false);
       }
     };
     
     fetchData();
-  }, [refreshData]);
+  }, [refreshData, hasRefreshed]);
   
   // Filtra apenas setores em execução
   const sectorsInExecution = sectors.filter(sector => 

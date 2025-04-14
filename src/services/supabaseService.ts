@@ -261,7 +261,7 @@ export const supabaseService = {
           // Busca foto da TAG com metadata
           const tagPhoto = (photosData || [])
             .find(photo => photo.type === 'tag' || 
-                  (photo.metadata && photo.metadata.type === 'tag'));
+                  (photo.metadata && typeof photo.metadata === 'object' && 'type' in photo.metadata && photo.metadata.type === 'tag'));
           
           // 5. Monta os serviços com suas fotos
           const services = (serviceTypesData || []).map(serviceType => {

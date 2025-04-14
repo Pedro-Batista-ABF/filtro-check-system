@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Sector, Service, Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
@@ -71,16 +70,18 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error("Erro ao atualizar sessão:", error);
       }
       
-      // Tentar recarregar os dados explicitamente
+      // Tentar recarregar os dados explicitamente usando o método original
       try {
-        // Limpar o cache do Supabase
-        const channels = supabase.getChannels();
-        for (const channel of channels) {
-          supabase.removeChannel(channel);
+        // Tentar usar o método da API original primeiro
+        if (api.refreshData) {
+          await api.refreshData();
+        } else {
+          // Se não existir, limpar o cache do Supabase e tentar recarregar manualmente
+          const channels = supabase.getChannels();
+          for (const channel of channels) {
+            supabase.removeChannel(channel);
+          }
         }
-
-        // Caso não exista um método de refresh, recarregar a página
-        window.location.reload();
         
         toast.success("Dados atualizados com sucesso");
       } catch (error) {
