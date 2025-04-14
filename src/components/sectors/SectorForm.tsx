@@ -208,12 +208,12 @@ export default function SectorForm({
         description: "Atualizando status do setor para execução"
       });
       
-      // Update sector status - garantir que usamos updated_at em vez de modified_at
+      // Update sector status - usando updated_at em vez de modified_at
       const { error } = await supabase
         .from('sectors')
         .update({ 
           current_status: 'emExecucao',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString() // Alterado de modified_at para updated_at
         })
         .eq('id', sector.id);
         

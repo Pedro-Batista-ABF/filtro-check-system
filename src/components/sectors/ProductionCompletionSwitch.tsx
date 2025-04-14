@@ -1,7 +1,3 @@
-
-// Se o componente ProductionCompletionSwitch faz atualização direta no banco,
-// vamos atualizar o código:
-
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
