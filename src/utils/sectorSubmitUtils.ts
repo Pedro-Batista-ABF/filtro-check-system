@@ -1,123 +1,125 @@
 
-import { Sector, Photo, Service, SectorStatus, CycleOutcome } from "@/types";
-import { v4 as uuidv4 } from 'uuid';
+import { Sector, Photo, PhotoWithFile, SectorStatus, Service } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Processes photos from services, uploading them and returning the URLs
- * @param services The services to process
- * @param uploadPhoto The function to upload the photo
- * @returns An array of processed photo URLs
+ * Process service photos for submission (upload any File objects)
  */
-export const processServicePhotos = async (services: Service[], uploadPhoto: (file: File, folder?: string) => Promise<string>): Promise<string[]> => {
-  const photoUrls: string[] = [];
-
+export async function processServicePhotos(
+  services: Service[],
+  uploadPhoto: (file: File, folder: string) => Promise<string>
+): Promise<Photo[]> {
+  const processedPhotos: Photo[] = [];
+  
   for (const service of services) {
-    if (service.photos) {
+    if (service.selected && service.photos) {
       for (const photo of service.photos) {
-        if (typeof photo === 'object' && photo.file) {
+        // Check if this is a PhotoWithFile and has a file
+        const photoWithFile = photo as PhotoWithFile;
+        if (photoWithFile && photoWithFile.file) {
           try {
-            const url = await uploadPhoto(photo.file, 'service-photos');
-            photoUrls.push(url);
-          } catch (uploadError) {
-            console.error("Error uploading photo:", uploadError);
-            throw uploadError;
+            // Upload the photo and get its URL
+            const url = await uploadPhoto(photoWithFile.file, 'services');
+            
+            // Add to processed photos
+            processedPhotos.push({
+              id: photo.id,
+              url,
+              type: photo.type,
+              serviceId: service.id
+            });
+          } catch (error) {
+            console.error(`Error uploading photo for service ${service.id}:`, error);
           }
+        } else if (photo.url) {
+          // Photo already has a URL, just add it to the list
+          processedPhotos.push({
+            id: photo.id,
+            url: photo.url,
+            type: photo.type,
+            serviceId: service.id
+          });
         }
       }
     }
   }
-
-  return photoUrls;
-};
+  
+  return processedPhotos;
+}
 
 /**
- * Updates the status and metadata of a sector in Supabase
- * @param sectorId The ID of the sector to update
- * @param data The sector data to update
+ * Update the status of a sector and related metadata in the database
  */
-export const updateSectorStatusAndMetadata = async (sectorId: string, data: Partial<Sector>): Promise<void> => {
+export async function updateSectorStatusAndMetadata(
+  sectorId: string,
+  data: Partial<Sector>
+): Promise<boolean> {
   try {
-    console.log(`Atualizando status do setor ${sectorId} para 'emExecucao'`);
-    
-    // Obter dados da sessão para registrar quem fez a alteração
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      console.warn("Sem sessão de usuário ao atualizar status");
-      return;
-    }
-    
-    // Atualizar o setor diretamente no Supabase
+    // Update sector status
     const { error } = await supabase
       .from('sectors')
       .update({
-        current_status: 'emExecucao' as SectorStatus,
-        current_outcome: data.outcome || 'EmAndamento', // Garantir que outcome seja atualizado
-        updated_by: session.user.id,
-        updated_at: new Date().toISOString(),
-        // Adicionar campos extras se existirem
-        nf_entrada: data.entryInvoice || data.nf_entrada, // Usar ambas as fontes
-        data_entrada: data.entryDate ? new Date(data.entryDate).toISOString() : new Date().toISOString()
+        current_status: 'emExecucao', // Directly setting to emExecucao
+        updated_at: new Date().toISOString()
       })
       .eq('id', sectorId);
       
     if (error) {
-      console.error("Erro ao atualizar status do setor:", error);
       throw error;
     }
     
-    console.log(`Status do setor ${sectorId} atualizado com sucesso para 'emExecucao'`);
+    // Update cycle status
+    const { error: cycleError } = await supabase
+      .from('cycles')
+      .update({
+        status: 'emExecucao', // Directly setting to emExecucao
+        updated_at: new Date().toISOString(),
+        // Additional metadata
+        entry_invoice: data.entryInvoice,
+        tag_number: data.tagNumber,
+        peritagem_date: data.peritagemDate
+      })
+      .eq('sector_id', sectorId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (cycleError) {
+      throw cycleError;
+    }
+    
+    return true;
   } catch (error) {
-    console.error("Erro ao atualizar status do setor:", error);
-    throw error;
+    console.error(`Error updating sector ${sectorId} status:`, error);
+    return false;
   }
-};
+}
 
 /**
- * Prepares sector data for submission, ensuring required fields are present
- * @param data The sector data to prepare
- * @param isEditing Whether this is an edit or a new sector
- * @param sectorId The ID of the sector (for editing)
- * @param status The status of the sector
- * @param processedPhotos The processed photo URLs
- * @param cycleCount The cycle count for the sector
- * @returns The prepared sector data
+ * Prepare sector data for submission to the API
  */
-export const prepareSectorData = (
-  data: Partial<Sector>, 
-  isEditing: boolean, 
-  sectorId: string | undefined, 
-  status: string, 
-  processedPhotos: string[],
+export function prepareSectorData(
+  data: Partial<Sector>,
+  isEditing: boolean,
+  sectorId: string | undefined,
+  status: SectorStatus,
+  processedPhotos: Photo[],
   cycleCount: number
-): Partial<Sector> => {
-  const now = new Date().toISOString();
-
-  // Ensure the invoice fields are set correctly
-  const invoiceNumber = data.entryInvoice || '';
-
-  const sectorData: Partial<Sector> = {
-    tagNumber: data.tagNumber || '',
-    entryInvoice: invoiceNumber,
-    entryDate: data.entryDate || now,
-    peritagemDate: data.peritagemDate || now,
-    services: data.services || [],
-    beforePhotos: data.beforePhotos || [],
-    afterPhotos: data.afterPhotos || [],
-    productionCompleted: data.productionCompleted || false,
-    status: status as SectorStatus,
+): Partial<Sector> {
+  return {
+    ...data,
+    id: isEditing ? sectorId : undefined,
+    status,
     outcome: data.outcome || 'EmAndamento',
-    cycleCount: cycleCount,
-    tagPhotoUrl: data.tagPhotoUrl,
-    entryObservations: data.entryObservations,
-    updated_at: now,
-    nf_entrada: invoiceNumber, // Explicitly set nf_entrada to match entryInvoice
-    data_entrada: data.entryDate ? new Date(data.entryDate).toISOString() : new Date().toISOString()
+    cycleCount,
+    productionCompleted: data.productionCompleted || false,
+    beforePhotos: processedPhotos.filter(p => p.type === 'before'),
+    afterPhotos: processedPhotos.filter(p => p.type === 'after'),
+    scrapPhotos: processedPhotos.filter(p => p.type === 'scrap'),
+    services: data.services?.map(service => ({
+      ...service,
+      // Ensure photos are provided
+      photos: service.photos || []
+    })) || [],
+    updated_at: new Date().toISOString() // Always provide updated_at
   };
-
-  if (isEditing && sectorId) {
-    sectorData.id = sectorId;
-  }
-
-  return sectorData;
-};
+}

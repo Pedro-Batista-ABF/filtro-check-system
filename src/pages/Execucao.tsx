@@ -7,6 +7,7 @@ import SectorStatusCard from "@/components/sectors/SectorStatusCard";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Execucao() {
   const { sectors, loading, refreshData } = useApi();
@@ -31,6 +32,9 @@ export default function Execucao() {
             
           if (error) {
             console.error("Erro ao buscar setores do banco:", error);
+            toast.error("Erro ao buscar setores do banco", {
+              description: error.message
+            });
           } else {
             console.log("Setores em execução encontrados diretamente no banco:", dbSectors?.length);
             console.log("Dados dos setores:", dbSectors);
@@ -40,6 +44,9 @@ export default function Execucao() {
           setHasRefreshed(true);
         } catch (error) {
           console.error("Erro ao atualizar dados:", error);
+          toast.error("Erro ao atualizar dados", {
+            description: error instanceof Error ? error.message : "Erro desconhecido"
+          });
         } finally {
           setIsRefreshing(false);
         }

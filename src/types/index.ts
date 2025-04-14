@@ -1,3 +1,4 @@
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -25,7 +26,7 @@ export interface Service {
   quantity?: number;
   observations?: string;
   photos?: (Photo | PhotoWithFile)[];
-  type?: ServiceType;
+  type?: ServiceType | string;
   created_at?: string;
   updated_at?: string;
 }
@@ -40,7 +41,7 @@ export interface Photo {
   updated_at?: string;
 }
 
-export interface PhotoWithFile {
+export interface PhotoWithFile extends Photo {
   id: string;
   file: File | null;
   url: string;
@@ -73,6 +74,7 @@ export interface Cycle {
   created_at?: string;
   updated_at?: string;
   comments?: string;
+  technician_id?: string;
 }
 
 // Make sure SectorStatus includes the sucateadoPendente and sucateado options
@@ -114,6 +116,6 @@ export interface Sector {
   cycles?: Cycle[];
   nf_entrada?: string;
   nf_saida?: string;
-	data_entrada?: string;
-	data_saida?: string;
+  data_entrada?: string;
+  data_saida?: string;
 }

@@ -1,6 +1,6 @@
 
 import PageLayout from "@/components/layout/PageLayout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,25 @@ import { format, parse, isAfter, isBefore, isWithinInterval } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ScrapValidation() {
-  const { sectors, loading } = useApi();
+  const { sectors, loading, refreshData } = useApi();
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [hasRefreshed, setHasRefreshed] = useState(false);
   const navigate = useNavigate();
+  
+  // Force refresh on first load
+  useEffect(() => {
+    if (!hasRefreshed) {
+      refreshData().then(() => setHasRefreshed(true));
+    }
+    
+    // Diagnostic logs
+    console.log("Total sectors:", sectors.length);
+    console.log("Sectors with sucateadoPendente status:", 
+      sectors.filter(s => s.status === 'sucateadoPendente').length);
+    console.log("All sector statuses:", sectors.map(s => s.status));
+  }, [sectors, refreshData, hasRefreshed]);
   
   // Filter sectors by status (only show sucateadoPendente), search term and date
   const filteredSectors = sectors.filter(sector => {

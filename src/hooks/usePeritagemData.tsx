@@ -50,7 +50,7 @@ export function usePeritagemData(id?: string) {
           id: service.id,
           name: service.name,
           selected: false,
-          type: service.id as ServiceType,
+          type: service.id as unknown as ServiceType,
           photos: []
         }));
         
@@ -108,6 +108,7 @@ export function usePeritagemData(id?: string) {
                   services: processedServices,
                   beforePhotos: [],
                   afterPhotos: [],
+                  scrapPhotos: [],
                   productionCompleted: false,
                   status: sectorDb.current_status as any || 'peritagemPendente',
                   outcome: sectorDb.current_outcome as any || 'EmAndamento',
@@ -202,6 +203,13 @@ export function usePeritagemData(id?: string) {
                     url: photo.url,
                     type: 'after' as const
                   })),
+                scrapPhotos: (photosData || [])
+                  .filter(photo => photo.type === 'scrap' && !photo.service_id)
+                  .map(photo => ({
+                    id: photo.id,
+                    url: photo.url,
+                    type: 'scrap' as const
+                  })),
                 productionCompleted: cycleData.production_completed || false,
                 status: cycleData.status as any || sectorDb.current_status,
                 outcome: cycleData.outcome as any || sectorDb.current_outcome || 'EmAndamento',
@@ -273,6 +281,7 @@ export function usePeritagemData(id?: string) {
     services: services,
     beforePhotos: [],
     afterPhotos: [],
+    scrapPhotos: [],
     productionCompleted: false,
     cycleCount: 1,
     status: 'peritagemPendente',

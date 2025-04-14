@@ -5,11 +5,12 @@ import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Peritagem() {
   const navigate = useNavigate();
-  const { sectors, isLoading } = useApi();
+  const { sectors, isLoading, refreshData } = useApi();
+  const [hasRefreshed, setHasRefreshed] = useState(false);
   
   // Calculate sector counts by status
   const statusCounts = {
@@ -23,9 +24,16 @@ export default function Peritagem() {
 
   useEffect(() => {
     document.title = "Peritagem - Gestão de Recuperação";
+    
+    // Force data refresh on first load
+    if (!hasRefreshed) {
+      refreshData().then(() => setHasRefreshed(true));
+    }
+    
     // Add diagnostic log to see sector data
     console.log("Dados de setores na tela Peritagem:", sectors);
-  }, [sectors]);
+    console.log("Contagem de setores por status:", statusCounts);
+  }, [sectors, refreshData, hasRefreshed, statusCounts]);
 
   return (
     <PageLayout>
