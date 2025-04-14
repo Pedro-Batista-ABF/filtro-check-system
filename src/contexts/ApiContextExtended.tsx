@@ -1,129 +1,210 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Sector, Service, Photo, PhotoWithFile } from '@/types';
-import { toast } from 'sonner';
-import { useAuth } from './AuthContext';
-import { useApiOriginal } from './ApiContext';
-import { useSectorService } from '@/services/sectorService';
-import { usePhotoService } from '@/services/photoService';
-import { supabase } from '@/integrations/supabase/client';
+import { useContext, useState, createContext, ReactNode, useEffect } from "react";
+import { Sector, Photo, PhotoWithFile } from "@/types";
+import { useApi as useOriginalApi, ApiContextType } from "./ApiContext";
+import { supabaseService } from "@/services/supabaseService";
+import { useSectorService } from "@/services/sectorService";
+import { usePhotoService } from "@/services/photoService";
+import { toast } from "sonner";
 
-interface ApiContextValue {
+/**
+ * Extended API context that includes additional methods for sector management
+ */
+interface ApiContextExtendedType extends ApiContextType {
+  isLoading: boolean;
+  error: string | null;
   sectors: Sector[];
-  loading: boolean;
-  addSector: (sector: Omit<Sector, 'id'>) => Promise<string>;
-  updateSector: (id: string, updates: Partial<Sector>) => Promise<boolean>;
+  pendingSectors: Sector[];
+  inProgressSectors: Sector[];
+  qualityCheckSectors: Sector[];
+  completedSectors: Sector[];
+  addSector: (sectorData: Omit<Sector, 'id'>) => Promise<string>;
+  updateSector: (sector: Partial<Sector>) => Promise<boolean>;
   getSectorById: (id: string) => Promise<Sector | undefined>;
   getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
-  getDefaultServices: () => Promise<Service[]>;
-  updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
+  updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   refreshData: () => Promise<void>;
-  
-  // Auth properties and methods from AuthContext
-  user: { id: string; email: string; } | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
 }
 
-// Create a new context that extends the original ApiContext
-const ApiContextExtended = createContext<ApiContextValue | undefined>(undefined);
-
-// This provider will combine both original API functionality and authentication
-export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use the original api context
-  const api = useApiOriginal();
+/**
+ * Default context values
+ */
+const defaultContext: ApiContextExtendedType = {
+  isLoading: false,
+  error: null,
+  sectors: [],
+  pendingSectors: [],
+  inProgressSectors: [],
+  qualityCheckSectors: [],
+  completedSectors: [],
+  addSector: async () => "",
+  updateSector: async () => false,
+  getSectorById: async () => undefined,
+  getSectorsByTag: async () => [],
+  uploadPhoto: async () => "",
+  updateServicePhotos: async () => false,
+  refreshData: async () => {},
   
-  // Use the auth context for authentication functionality
-  const auth = useAuth();
+  // From original ApiContext
+  createSector: async () => "",
+  updateProductionStatus: async () => false,
+  submitQualityCheck: async () => false,
+  validateScrapping: async () => false
+};
 
-  // Use our new service modules
+/**
+ * Create the context
+ */
+const ApiContextExtended = createContext<ApiContextExtendedType>(defaultContext);
+
+/**
+ * Provider component for the extended API context
+ */
+export function ApiContextExtendedProvider({ children }: { children: ReactNode }) {
+  const originalApi = useOriginalApi();
   const sectorService = useSectorService();
   const photoService = usePhotoService();
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sectors, setSectors] = useState<Sector[]>([]);
 
-  // Simplify user object to match expected API
-  const userInfo = auth.user ? {
-    id: auth.user.id,
-    email: auth.user.email || ''
-  } : null;
-
-  // Função aprimorada para recarregar dados
+  /**
+   * Fetch all sectors from the API
+   */
   const refreshData = async () => {
     try {
-      console.log("Iniciando recarregamento de dados...");
-      toast.info("Recarregando dados...");
+      setIsLoading(true);
+      setError(null);
       
-      // Verifica se o usuário está autenticado
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error("Erro de autenticação ao recarregar dados:", sessionError);
-        toast.error("Erro de autenticação", {
-          description: "Por favor, faça login novamente."
-        });
-        return;
-      }
-      
-      // Força o refresh da sessão
-      const { error } = await supabase.auth.refreshSession();
-      if (error) {
-        console.error("Erro ao atualizar sessão:", error);
-      }
-      
-      // Tentar recarregar os dados explicitamente usando o método original
-      try {
-        // Limpar o cache do Supabase manualmente
-        const channels = supabase.getChannels();
-        for (const channel of channels) {
-          supabase.removeChannel(channel);
-        }
-        
-        // Tenta buscar os dados novamente usando o método original
-        if (typeof api.fetchSectors === 'function') {
-          await api.fetchSectors();
-        }
-        
-        toast.success("Dados atualizados com sucesso");
-      } catch (error) {
-        console.error("Erro ao recarregar setores:", error);
-        toast.error("Erro ao recarregar dados");
-      }
-    } catch (error) {
-      console.error("Erro ao recarregar dados:", error);
-      toast.error("Erro ao recarregar dados");
+      const result = await supabaseService.getAllSectors();
+      setSectors(result);
+    } catch (err) {
+      console.error("Error fetching sectors:", err);
+      setError(err instanceof Error ? err.message : "Unknown error fetching sectors");
+      toast.error("Error loading sectors", {
+        description: err instanceof Error ? err.message : "Unknown error"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Combine the original API context with authentication context and our new services
-  const value: ApiContextValue = {
-    sectors: api.sectors,
-    loading: api.loading,
-    addSector: sectorService.addSector,
-    updateSector: sectorService.updateSector,
-    getSectorById: api.getSectorById,
-    getSectorsByTag: api.getSectorsByTag,
-    getDefaultServices: api.getDefaultServices,
-    updateServicePhotos: photoService.updateServicePhotos,
-    uploadPhoto: api.uploadPhoto,
-    refreshData,
-    
-    // Include auth properties and methods
-    user: userInfo,
-    isAuthenticated: auth.isAuthenticated,
-    login: auth.login,
-    logout: auth.logout,
-    registerUser: auth.registerUser,
+  // Initial data load
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  // Filter sectors by status
+  const pendingSectors = sectors.filter(s => s.status === 'peritagemPendente');
+  const inProgressSectors = sectors.filter(s => s.status === 'emExecucao');
+  const qualityCheckSectors = sectors.filter(s => s.status === 'checagemFinalPendente');
+  const completedSectors = sectors.filter(s => s.status === 'concluido');
+
+  // Get sector by ID
+  const getSectorById = async (id: string): Promise<Sector | undefined> => {
+    try {
+      return await supabaseService.getSectorById(id);
+    } catch (error) {
+      console.error(`Error fetching sector ${id}:`, error);
+      return undefined;
+    }
   };
 
-  return <ApiContextExtended.Provider value={value}>{children}</ApiContextExtended.Provider>;
-};
+  // Get sectors by tag number
+  const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
+    try {
+      return await supabaseService.getSectorsByTag(tagNumber);
+    } catch (error) {
+      console.error(`Error fetching sectors with tag ${tagNumber}:`, error);
+      return [];
+    }
+  };
 
-// Create a custom hook for using the extended API context
-export const useApi = (): ApiContextValue => {
-  const context = useContext(ApiContextExtended);
-  if (context === undefined) {
-    throw new Error('useApi must be used within an ApiProvider');
-  }
-  return context;
-};
+  // Upload a photo
+  const uploadPhoto = async (file: File, folder: string = 'general'): Promise<string> => {
+    try {
+      return await supabaseService.uploadPhoto(file, folder);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      throw error;
+    }
+  };
+
+  // Update service photos
+  const updateServicePhotos = async (
+    sectorId: string,
+    serviceId: string,
+    photoUrl: string,
+    type: 'before' | 'after'
+  ): Promise<boolean> => {
+    try {
+      return await photoService.updateServicePhotos(sectorId, serviceId, photoUrl, type);
+    } catch (error) {
+      console.error("Error updating service photos:", error);
+      return false;
+    }
+  };
+
+  // Add a new sector
+  const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
+    try {
+      const result = await sectorService.addSector(sectorData);
+      await refreshData();
+      return result;
+    } catch (error) {
+      console.error("Error adding sector:", error);
+      throw error;
+    }
+  };
+
+  // Update an existing sector
+  const updateSector = async (sectorData: Partial<Sector>): Promise<boolean> => {
+    try {
+      if (!sectorData.id) {
+        throw new Error("Sector ID is required for updates");
+      }
+      
+      const result = await sectorService.updateSector(sectorData.id, sectorData);
+      await refreshData();
+      return result;
+    } catch (error) {
+      console.error("Error updating sector:", error);
+      throw error;
+    }
+  };
+
+  return (
+    <ApiContextExtended.Provider
+      value={{
+        isLoading,
+        error,
+        sectors,
+        pendingSectors,
+        inProgressSectors,
+        qualityCheckSectors,
+        completedSectors,
+        addSector,
+        updateSector,
+        getSectorById,
+        getSectorsByTag,
+        uploadPhoto,
+        updateServicePhotos,
+        refreshData,
+        
+        // Pass through methods from the original context
+        ...originalApi
+      }}
+    >
+      {children}
+    </ApiContextExtended.Provider>
+  );
+}
+
+/**
+ * Hook to use the extended API context
+ */
+export function useApi() {
+  return useContext(ApiContextExtended);
+}

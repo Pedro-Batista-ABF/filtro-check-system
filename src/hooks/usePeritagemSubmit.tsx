@@ -2,47 +2,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector, Photo, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { Sector, Photo, SectorStatus } from "@/types";
 import { toast } from "sonner";
 import { ensureUserProfile } from "@/utils/ensureUserProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { generateUniqueCycleCount } from "@/utils/cycleUtils";
+import { validatePeritagemData, findServicesWithoutPhotos } from "@/utils/peritagemValidation";
+import { 
+  processServicePhotos, 
+  updateSectorStatusAndMetadata,
+  prepareSectorData 
+} from "@/utils/sectorSubmitUtils";
 
+/**
+ * Hook for handling peritagem submission
+ */
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { toast: shadcnToast } = useToast();
   const navigate = useNavigate();
   const { addSector, updateSector, uploadPhoto, refreshData } = useApi();
 
-  // Função para gerar um cycleCount único
-  const generateUniqueCycleCount = (attempt: number): number => {
-    // Base timestamp
-    const timestamp = Date.now();
-    
-    // Diferentes estratégias para cada tentativa
-    if (attempt === 0) {
-      // Primeira tentativa: timestamp base + random
-      const random = Math.floor(Math.random() * 10000);
-      return timestamp + random;
-    } 
-    else if (attempt >= 6) {
-      // Últimas tentativas: UUID totalmente aleatório convertido para número
-      const randomUUID = crypto.randomUUID();
-      const numericPart = parseInt(randomUUID.replace(/[^0-9]/g, '').slice(0, 8));
-      const highRandomness = timestamp * 1000 + numericPart + Math.floor(Math.random() * 1000000);
-      console.log(`Tentativa final (${attempt + 1}): gerando cycleCount totalmente aleatório: ${highRandomness}`);
-      return highRandomness;
-    } 
-    else {
-      // Tentativas intermediárias: aumentando progressivamente a aleatoriedade
-      const spacing = Math.pow(10, attempt + 2); // 100, 1000, 10000, etc.
-      const randomFactor = Math.floor(Math.random() * spacing);
-      return timestamp + randomFactor + (attempt * 10000);
-    }
-  };
-
+  /**
+   * Handles the submission of peritagem data
+   * @param data The sector data to submit
+   * @param isEditing Whether this is an edit or a new sector
+   * @param sectorId The ID of the sector (for editing)
+   */
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
       setIsSaving(true);
@@ -55,7 +41,7 @@ export function usePeritagemSubmit() {
         services: data.services?.filter(s => s.selected).length
       });
       
-      // Garantir que o perfil do usuário existe antes de continuar
+      // Ensure user profile exists before continuing
       try {
         console.log("⏳ Verificando/criando perfil do usuário...");
         await ensureUserProfile();
@@ -68,7 +54,7 @@ export function usePeritagemSubmit() {
         throw profileError;
       }
       
-      // Verificação de autenticação
+      // Authentication check
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       console.log("Session Details:", session?.user?.id ? "Autenticado" : "Não autenticado");
       
@@ -81,90 +67,36 @@ export function usePeritagemSubmit() {
       }
       
       // Validate required fields
-      if (!data.tagNumber) {
-        throw new Error("Número do TAG é obrigatório");
+      const validationResult = validatePeritagemData(data);
+      if (validationResult) {
+        throw new Error(validationResult.error);
       }
 
-      if (!data.entryInvoice) {
-        throw new Error("Nota fiscal de entrada é obrigatória");
-      }
-
-      if (!data.tagPhotoUrl) {
-        throw new Error("Foto do TAG é obrigatória");
-      }
-
-      // Verify services
-      const selectedServices = data.services?.filter(service => service.selected) || [];
-      if (selectedServices.length === 0) {
-        throw new Error("Selecione pelo menos um serviço");
-      }
-
-      // Verificar se todos os serviços selecionados possuem pelo menos uma foto
+      // Verify if all selected services have at least one photo
       if (!isEditing) {
-        const servicesWithoutPhotos = selectedServices.filter(
-          service => !service.photos || service.photos.length === 0
-        );
+        const selectedServices = data.services?.filter(service => service.selected) || [];
+        const servicesWithoutPhotos = findServicesWithoutPhotos(selectedServices);
         
         if (servicesWithoutPhotos.length > 0) {
-          const serviceNames = servicesWithoutPhotos.map(s => s.name).join(", ");
+          const serviceNames = servicesWithoutPhotos.join(", ");
           throw new Error(`Serviços sem fotos: ${serviceNames}. Cada serviço selecionado deve ter pelo menos uma foto.`);
         }
       }
 
+      const selectedServices = data.services?.filter(service => service.selected) || [];
       console.log("Selected Services:", selectedServices);
       
       // Process before photos from services
-      const processedPhotos: Photo[] = [];
-      const servicesToProcess = data.services || [];
-      
-      for (const service of servicesToProcess) {
-        if (service.selected && service.photos && service.photos.length > 0) {
-          for (const photo of service.photos) {
-            // Garantir que temos um objeto de foto válido
-            if (photo) {
-              if ('file' in photo && photo.file instanceof File) {
-                try {
-                  // Upload da foto e obter URL
-                  const photoWithFile = photo as PhotoWithFile;
-                  const photoUrl = await uploadPhoto(photoWithFile.file, 'before');
-                  
-                  // Criar objeto Photo simples sem a propriedade file
-                  const processedPhoto: Photo = {
-                    id: photo.id || `${service.id}-${Date.now()}`,
-                    url: photoUrl,
-                    type: 'before',
-                    serviceId: service.id // Usar service.id para serviceId
-                  };
-                  
-                  processedPhotos.push(processedPhoto);
-                } catch (uploadError) {
-                  console.error('Foto Upload Error:', uploadError);
-                  throw new Error(`Erro ao fazer upload de foto: ${uploadError instanceof Error ? uploadError.message : 'Erro desconhecido'}`);
-                }
-              } else if (photo.url) {
-                // Se a foto já tem URL, adicione-a como está (garantindo que não tenha file)
-                processedPhotos.push({
-                  id: photo.id,
-                  url: photo.url,
-                  type: photo.type,
-                  serviceId: service.id // Usar service.id para serviceId
-                });
-              }
-            }
-          }
-        }
-      }
+      const processedPhotos = await processServicePhotos(data.services || [], uploadPhoto);
 
       // Define initial status - CHANGE: Start with emExecucao instead of peritagemPendente
       // for new sectors after form completion
       const status: SectorStatus = isEditing 
         ? (data.status as SectorStatus) || 'peritagemPendente'
         : 'emExecucao'; // New sectors go directly to 'emExecucao' after form completion
-      
-      const outcome: CycleOutcome = (data.outcome as CycleOutcome) || 'EmAndamento';
 
-      // Implementa tentativas de adicionar o setor com cycleCount único
-      const maxRetries = 15; // Aumentamos para 15 tentativas
+      // Implement attempts to add sector with unique cycleCount
+      const maxRetries = 15;
       let attempt = 0;
       let result;
       let lastError;
@@ -172,31 +104,16 @@ export function usePeritagemSubmit() {
       
       while (attempt < maxRetries) {
         try {
-          // Gera uma chave única diferente para cada tentativa
+          // Generate a different unique key for each attempt
           const cycleCount = isEditing ? 
             (data.cycleCount || 1) : 
             generateUniqueCycleCount(attempt);
           
-          console.log(`Tentativa ${attempt + 1}/${maxRetries} - cycleCount: ${cycleCount}`);
+          console.log(`Attempt ${attempt + 1}/${maxRetries} - cycleCount: ${cycleCount}`);
           console.log(`TAG: ${data.tagNumber}, Time: ${new Date().toISOString()}, Attempt: ${attempt + 1}`);
 
-          // Prepare sector data com dados mínimos necessários e campo updated_at para evitar erro
-          const sectorData = {
-            tagNumber: data.tagNumber,
-            tagPhotoUrl: data.tagPhotoUrl,
-            entryInvoice: data.entryInvoice,
-            entryDate: data.entryDate || format(new Date(), 'yyyy-MM-dd'),
-            peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-            services: data.services || [],
-            status: status,
-            outcome: outcome,
-            beforePhotos: processedPhotos,
-            afterPhotos: [],
-            productionCompleted: data.productionCompleted || false,
-            cycleCount: cycleCount,
-            entryObservations: data.entryObservations || '',
-            updated_at: new Date().toISOString() // Usando updated_at em vez de modified_at
-          };
+          // Prepare sector data with minimum required fields and updated_at field to avoid error
+          const sectorData = prepareSectorData(data, isEditing, sectorId, status, processedPhotos, cycleCount);
 
           if (isEditing && sectorId) {
             result = await updateSector(sectorId, sectorData);
@@ -206,183 +123,60 @@ export function usePeritagemSubmit() {
               result = await addSector(sectorData);
               sectorResult = typeof result === 'string' ? result : false;
             } catch (addError) {
-              console.error("Erro detalhado ao adicionar setor:", addError);
+              console.error("Detailed error adding sector:", addError);
               throw addError;
             }
           }
           
-          // Se chegar aqui, a operação foi bem-sucedida
-          console.log("Setor salvo com sucesso:", result);
+          // If we get here, the operation was successful
+          console.log("Sector saved successfully:", result);
           break;
         } catch (error: any) {
           attempt++;
           lastError = error;
           
-          // Log específico para erros de duplicação
+          // Specific log for duplication errors
           if (error?.code === '23505' || error?.message?.includes('duplicate key')) {
-            console.warn(`CycleCount duplicado, tentando novamente... Tentativa ${attempt} de ${maxRetries}`, error);
-            console.error("Detalhes do erro de duplicação:", {
+            console.warn(`Duplicate cycleCount, trying again... Attempt ${attempt} of ${maxRetries}`, error);
+            console.error("Duplication error details:", {
               code: error?.code,
               message: error?.message,
               details: error?.details,
               hint: error?.hint
             });
             
-            // Adicionamos uma pequena espera entre tentativas para aumentar chance de sucesso
+            // Add a small delay between attempts to increase chance of success
             const delayMs = 500 * Math.pow(2, attempt - 1);
-            console.log(`Aguardando ${delayMs}ms antes da próxima tentativa...`);
+            console.log(`Waiting ${delayMs}ms before next attempt...`);
             await new Promise(resolve => setTimeout(resolve, delayMs));
           } else {
-            console.warn(`Tentativa ${attempt} falhou com erro diferente de duplicação:`, error);
-            console.error("Erro completo:", error);
+            console.warn(`Attempt ${attempt} failed with error other than duplication:`, error);
+            console.error("Complete error:", error);
             
-            // Se o erro for relacionado ao campo updated_at
+            // If the error is related to the updated_at field
             if (error?.message?.includes('modified_at') || error?.message?.includes('updated_at')) {
-              console.log("Detectado erro de campo timestamp, ajustando campos...");
-              continue; // Tentar novamente com o campo updated_at adicionado
+              console.log("Detected timestamp field error, adjusting fields...");
+              continue; // Try again with updated_at field added
             }
             
-            // Se o erro não for de duplicação ou relacionado a timestamps, desistimos imediatamente
+            // If the error is not duplication or timestamp related, give up immediately
             break;
           }
           
-          // Se já chegou ao número máximo de tentativas, desiste
+          // If we've reached the maximum number of attempts, give up
           if (attempt >= maxRetries) {
-            console.error(`Todas as ${maxRetries} tentativas falharam. Último erro:`, lastError);
-            throw new Error(`Falha ao salvar setor após ${maxRetries} tentativas. Verifique se já existe um setor com a mesma TAG e ciclo.`);
+            console.error(`All ${maxRetries} attempts failed. Last error:`, lastError);
+            throw new Error(`Failed to save sector after ${maxRetries} attempts. Check if a sector with the same TAG and cycle already exists.`);
           }
         }
       }
 
-      // Após salvar com sucesso, atualize diretamente o status do setor no Supabase para emExecucao
+      // After saving successfully, directly update the sector status in Supabase to emExecucao
       if (sectorResult && typeof sectorResult === 'string') {
-        try {
-          const sectorId = sectorResult;
-          console.log("Atualizando status do setor para emExecucao:", sectorId);
-          
-          // 1. Atualizar status do setor
-          const { error: updateStatusError } = await supabase
-            .from('sectors')
-            .update({ 
-              current_status: 'emExecucao',
-              updated_at: new Date().toISOString() // Usando updated_at em vez de modified_at
-            })
-            .eq('id', sectorId);
-            
-          if (updateStatusError) {
-            console.error("Erro ao atualizar status do setor:", updateStatusError);
-          } else {
-            console.log("Status do setor atualizado com sucesso para emExecucao");
-          }
-          
-          // 2. Salvar a foto da TAG corretamente com metadata
-          if (data.tagPhotoUrl) {
-            // Use correct schema for photos table - adding cycle_id is required
-            const { data: cycleData } = await supabase
-              .from('cycles')
-              .select('id')
-              .eq('sector_id', sectorId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-              
-            if (cycleData) {
-              const { error: tagPhotoError } = await supabase
-                .from('photos')
-                .insert({
-                  cycle_id: cycleData.id,
-                  type: 'tag',
-                  url: data.tagPhotoUrl,
-                  service_id: null, // Campo obrigatório na tabela, mas nulo para foto de TAG
-                  created_by: session.user.id,
-                  created_at: new Date().toISOString(),
-                  metadata: {
-                    sector_id: sectorId,
-                    type: 'tag',
-                    stage: 'peritagem'
-                  }
-                });
-                
-              if (tagPhotoError) {
-                console.error("Erro ao salvar foto da TAG:", tagPhotoError);
-              } else {
-                console.log("Foto da TAG salva com sucesso com metadata");
-              }
-            }
-          }
-          
-          // 3. Salvar os serviços selecionados em cycle_services e também em sector_services
-          try {
-            const { data: cycleData } = await supabase
-              .from('cycles')
-              .select('id')
-              .eq('sector_id', sectorId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-              
-            if (cycleData) {
-              // First delete existing services for this cycle
-              const { error: deleteError } = await supabase
-                .from('cycle_services')
-                .delete()
-                .eq('cycle_id', cycleData.id);
-                
-              if (deleteError) {
-                console.error("Erro ao deletar serviços antigos:", deleteError);
-              }
-              
-              // Now insert the updated services in cycle_services
-              if (selectedServices.length > 0) {
-                const { error: servicesError } = await supabase
-                  .from('cycle_services')
-                  .insert(
-                    selectedServices.map(service => ({
-                      cycle_id: cycleData.id,
-                      service_id: service.id,
-                      quantity: service.quantity || 1,
-                      observations: service.observations || "",
-                      selected: true,
-                      completed: false
-                    }))
-                  );
-                  
-                if (servicesError) {
-                  console.error("Erro ao salvar serviços do ciclo:", servicesError);
-                } else {
-                  console.log(`${selectedServices.length} serviços salvos com sucesso em cycle_services`);
-                }
-                
-                // Also insert services in sector_services for better queries
-                const { error: sectorServicesError } = await supabase
-                  .from('sector_services')
-                  .insert(
-                    selectedServices.map(service => ({
-                      sector_id: sectorId,
-                      service_id: service.id,
-                      quantity: service.quantity || 1,
-                      stage: 'peritagem',
-                      selected: true
-                    }))
-                  );
-                  
-                if (sectorServicesError) {
-                  console.error("Erro ao salvar serviços no setor:", sectorServicesError);
-                } else {
-                  console.log(`${selectedServices.length} serviços salvos com sucesso em sector_services`);
-                }
-              }
-            }
-          } catch (servicesError) {
-            console.error("Erro ao tentar salvar serviços:", servicesError);
-          }
-        } catch (statusUpdateError) {
-          console.error("Erro ao tentar atualizar status:", statusUpdateError);
-          // Não precisamos interromper o fluxo por causa dessa atualização secundária
-        }
+        await updateSectorStatusAndMetadata(sectorResult, data);
       }
 
-      // Recarregar os dados para atualizar a interface
+      // Reload data to update the interface
       await refreshData();
 
       toast.success(isEditing ? "Peritagem atualizada" : "Peritagem registrada", {
