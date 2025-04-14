@@ -559,7 +559,7 @@ export const sectorService = {
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
           updated_by: user.id,
-          updated_at: new Date().toISOString(), // Usar updated_at em vez de modified_at
+          updated_at: new Date().toISOString(), // Usar updated_at sempre
           // Mapear novos campos
           nf_entrada: sectorData.nf_entrada || sectorData.entryInvoice,
           nf_saida: sectorData.nf_saida || sectorData.exitInvoice,
@@ -594,7 +594,7 @@ export const sectorService = {
           status: sectorData.status,
           outcome: sectorData.outcome || 'EmAndamento',
           updated_by: user.id,
-          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
+          updated_at: new Date().toISOString() // Usar updated_at sempre
         })
         .eq('id', cycleData.id);
         

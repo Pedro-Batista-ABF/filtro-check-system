@@ -155,10 +155,10 @@ export function usePeritagemSubmit() {
             console.warn(`Attempt ${attempt} failed with error other than duplication:`, error);
             console.error("Complete error:", error);
             
-            // If the error is related to the updated_at field
-            if (error?.message?.includes('modified_at') || error?.message?.includes('updated_at')) {
+            // Se o erro estiver relacionado ao campo updated_at
+            if (error?.message?.includes('updated_at')) {
               console.log("Detected timestamp field error, adjusting fields...");
-              continue; // Try again with updated_at field added
+              continue; // Tentar novamente com o campo updated_at adicionado
             }
             
             // If the error is not duplication or timestamp related, give up immediately

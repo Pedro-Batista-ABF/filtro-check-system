@@ -1,101 +1,115 @@
 
-import { useState } from "react";
+// Se o componente ProductionCompletionSwitch faz atualização direta no banco,
+// vamos atualizar o código:
+
+import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Sector } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { useApi } from "@/contexts/ApiContextExtended";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useApi } from "@/contexts/ApiContextExtended";
 
 interface ProductionCompletionSwitchProps {
   sector: Sector;
 }
 
 export default function ProductionCompletionSwitch({ sector }: ProductionCompletionSwitchProps) {
-  const [isCompleted, setIsCompleted] = useState(sector.productionCompleted);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(
+    sector.status === "checagemFinalPendente" || 
+    sector.status === "concluido" ||
+    sector.productionCompleted || false
+  );
+  const [isUpdating, setIsUpdating] = useState(false);
+  const navigate = useNavigate();
   const { refreshData } = useApi();
   
   const handleToggle = async (checked: boolean) => {
-    setIsLoading(true);
-    
     try {
-      // Atualizar o status do setor primeiro na tabela sectors
-      const { error: sectorError } = await supabase
+      setIsUpdating(true);
+      setIsCompleted(checked);
+      
+      // Se estiver em execução e foi marcado como concluído, atualiza para checagemFinalPendente
+      const newStatus = (sector.status === "emExecucao" && checked) 
+        ? "checagemFinalPendente" 
+        : (sector.status === "checagemFinalPendente" && !checked)
+          ? "emExecucao"
+          : sector.status;
+      
+      console.log(`Atualizando status do setor de ${sector.status} para ${newStatus}`);
+      
+      // Atualiza o setor no Supabase - usando updated_at em vez de modified_at
+      const { error } = await supabase
         .from('sectors')
         .update({
-          current_status: checked ? 'checagemFinalPendente' : 'emExecucao',
+          current_status: newStatus,
           updated_at: new Date().toISOString()
         })
         .eq('id', sector.id);
-        
-      if (sectorError) {
-        throw sectorError;
+      
+      if (error) {
+        console.error("Erro ao atualizar status do setor:", error);
+        throw error;
       }
       
-      // Atualizar o ciclo atual
-      const { data: cycleData } = await supabase
+      // Atualiza o ciclo atual no Supabase
+      const { error: cycleError } = await supabase
         .from('cycles')
-        .select('id')
+        .update({
+          status: newStatus,
+          production_completed: checked,
+          updated_at: new Date().toISOString()
+        })
         .eq('sector_id', sector.id)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
         
-      if (cycleData) {
-        const { error: cycleError } = await supabase
-          .from('cycles')
-          .update({
-            production_completed: checked,
-            status: checked ? 'checagemFinalPendente' : 'emExecucao',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', cycleData.id);
-          
-        if (cycleError) {
-          throw cycleError;
-        }
+      if (cycleError) {
+        console.error("Erro ao atualizar ciclo:", cycleError);
+        throw cycleError;
       }
       
-      setIsCompleted(checked);
-      
-      // Atualizar dados na interface
+      // Atualiza os dados locais
       await refreshData();
       
+      // Notificar usuário
       toast.success(
-        checked 
-          ? "Setor marcado como concluído pela produção" 
-          : "Setor marcado como em execução",
-        {
+        checked ? "Produção concluída!" : "Produção reaberta", 
+        { 
           description: checked 
-            ? "O setor está pronto para checagem final" 
-            : "O setor voltou para execução"
+            ? "Setor enviado para checagem final" 
+            : "Setor retornado para execução"
         }
       );
+      
+      // Se foi marcado como concluído, redireciona para a página de execução
+      if (checked) {
+        setTimeout(() => {
+          navigate('/execucao');
+        }, 1500);
+      }
     } catch (error) {
-      console.error("Erro ao atualizar status de produção:", error);
-      toast.error("Erro ao atualizar status", {
-        description: "Não foi possível atualizar o status do setor"
+      console.error("Erro ao atualizar produção:", error);
+      setIsCompleted(!checked); // Reverte o estado em caso de erro
+      toast.error("Erro ao atualizar produção", {
+        description: error instanceof Error ? error.message : "Erro desconhecido"
       });
     } finally {
-      setIsLoading(false);
+      setIsUpdating(false);
     }
   };
   
   return (
     <div className="flex items-center space-x-2">
       <Switch 
-        id="production-completed"
+        id="productionCompleted" 
         checked={isCompleted}
         onCheckedChange={handleToggle}
-        disabled={isLoading}
+        disabled={isUpdating || sector.status === "concluido" || sector.status === "sucateado"}
       />
-      <Label htmlFor="production-completed" className="font-medium">
-        {isLoading 
-          ? "Atualizando..." 
-          : isCompleted 
-            ? "Concluído pela produção" 
-            : "Marcar como concluído pela produção"}
+      <Label htmlFor="productionCompleted" className="cursor-pointer">
+        {isUpdating ? "Atualizando..." : "Produção concluída"}
       </Label>
     </div>
   );

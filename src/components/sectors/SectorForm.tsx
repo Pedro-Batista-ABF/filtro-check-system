@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
@@ -209,16 +208,17 @@ export default function SectorForm({
         description: "Atualizando status do setor para execução"
       });
       
-      // Update sector status - using updated_at instead of modified_at
+      // Update sector status - garantir que usamos updated_at em vez de modified_at
       const { error } = await supabase
         .from('sectors')
         .update({ 
           current_status: 'emExecucao',
-          updated_at: new Date().toISOString()  // Usando updated_at em vez de modified_at
+          updated_at: new Date().toISOString()
         })
         .eq('id', sector.id);
         
       if (error) {
+        console.error("Erro na atualização do status:", error);
         throw new Error(`Erro ao finalizar peritagem: ${error.message}`);
       }
       

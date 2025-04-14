@@ -64,9 +64,9 @@ export const useSectorService = () => {
         cycleCount: sectorData.cycleCount || 1,
         tagPhotoUrl: sectorData.tagPhotoUrl,
         entryObservations: sectorData.entryObservations,
-        updated_at: new Date().toISOString(), // Adicionar campo updated_at
-        nf_entrada: sectorData.entryInvoice, // Adicionar NF entrada 
-        data_entrada: sectorData.entryDate ? new Date(sectorData.entryDate).toISOString() : new Date().toISOString() // Adicionar data entrada
+        updated_at: new Date().toISOString(), 
+        nf_entrada: sectorData.entryInvoice, 
+        data_entrada: sectorData.entryDate ? new Date(sectorData.entryDate).toISOString() : new Date().toISOString()
       };
 
       try {
@@ -166,7 +166,7 @@ export const useSectorService = () => {
         outcome: outcome,
         cycleCount: updates.cycleCount || currentSector.cycleCount || 1,
         tagPhotoUrl: updates.tagPhotoUrl || currentSector.tagPhotoUrl,
-        updated_at: new Date().toISOString(), // Usar updated_at em vez de modified_at
+        updated_at: new Date().toISOString(),
         // Mapear os novos campos
         nf_entrada: updates.entryInvoice || currentSector.entryInvoice || currentSector.nf_entrada,
         nf_saida: updates.exitInvoice || currentSector.exitInvoice || currentSector.nf_saida,

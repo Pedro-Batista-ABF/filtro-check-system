@@ -1,4 +1,3 @@
-
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -101,6 +100,7 @@ export default function ExecucaoDetails() {
                   productionCompleted: cycleData.production_completed || false,
                   status: sectorRaw.current_status as any,
                   cycleCount: sectorRaw.cycle_count || 1,
+                  updated_at: sectorRaw.updated_at,
                   // Mapear novos campos
                   nf_entrada: sectorRaw.nf_entrada,
                   nf_saida: sectorRaw.nf_saida,
