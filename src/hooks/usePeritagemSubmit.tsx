@@ -37,6 +37,8 @@ export function usePeritagemSubmit() {
         isEditing,
         sectorId,
         tagNumber: data.tagNumber,
+        entryInvoice: data.entryInvoice,
+        nf_entrada: data.entryInvoice, // Explicitly log nf_entrada
         services: data.services?.filter(s => s.selected).length
       });
       
@@ -100,6 +102,11 @@ export function usePeritagemSubmit() {
       let result;
       let lastError;
       let sectorResult: string | boolean = "";
+      
+      // Make sure both entryInvoice and nf_entrada are set to the same value
+      if (data.entryInvoice) {
+        data.nf_entrada = data.entryInvoice;
+      }
       
       while (attempt < maxRetries) {
         try {

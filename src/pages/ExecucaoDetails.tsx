@@ -1,3 +1,4 @@
+
 import PageLayout from "@/components/layout/PageLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -86,13 +87,13 @@ export default function ExecucaoDetails() {
                   };
                 });
                 
-                // Construir um objeto Sector completo
+                // Construir um objeto Sector completo, priorizando os campos nf_entrada e data_entrada
                 const minimalSector: Sector = {
                   id: sectorRaw.id,
                   tagNumber: sectorRaw.tag_number,
                   tagPhotoUrl: sectorRaw.tag_photo_url,
-                  entryInvoice: cycleData.entry_invoice || "Pendente",
-                  entryDate: cycleData.entry_date || new Date().toISOString(),
+                  entryInvoice: sectorRaw.nf_entrada || cycleData.entry_invoice || "Pendente",
+                  entryDate: sectorRaw.data_entrada || cycleData.entry_date || new Date().toISOString(),
                   peritagemDate: cycleData.peritagem_date || "",
                   services: services,
                   beforePhotos: [],
@@ -101,13 +102,14 @@ export default function ExecucaoDetails() {
                   status: sectorRaw.current_status as any,
                   cycleCount: sectorRaw.cycle_count || 1,
                   updated_at: sectorRaw.updated_at,
-                  // Mapear novos campos
+                  // Mapear novos campos explicitamente
                   nf_entrada: sectorRaw.nf_entrada,
                   nf_saida: sectorRaw.nf_saida,
                   data_entrada: sectorRaw.data_entrada,
                   data_saida: sectorRaw.data_saida
                 };
                 
+                console.log("Setor construído com NF:", minimalSector.nf_entrada || minimalSector.entryInvoice);
                 setSector(minimalSector);
               }
             }

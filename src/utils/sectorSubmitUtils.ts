@@ -54,7 +54,7 @@ export const updateSectorStatusAndMetadata = async (sectorId: string, data: Part
         updated_by: session.user.id,
         updated_at: new Date().toISOString(),
         // Adicionar campos extras se existirem
-        nf_entrada: data.entryInvoice,
+        nf_entrada: data.entryInvoice || data.nf_entrada, // Usar ambas as fontes
         data_entrada: data.entryDate ? new Date(data.entryDate).toISOString() : new Date().toISOString()
       })
       .eq('id', sectorId);
@@ -91,9 +91,12 @@ export const prepareSectorData = (
 ): Partial<Sector> => {
   const now = new Date().toISOString();
 
+  // Ensure the invoice fields are set correctly
+  const invoiceNumber = data.entryInvoice || '';
+
   const sectorData: Partial<Sector> = {
     tagNumber: data.tagNumber || '',
-    entryInvoice: data.entryInvoice || '',
+    entryInvoice: invoiceNumber,
     entryDate: data.entryDate || now,
     peritagemDate: data.peritagemDate || now,
     services: data.services || [],
@@ -106,7 +109,7 @@ export const prepareSectorData = (
     tagPhotoUrl: data.tagPhotoUrl,
     entryObservations: data.entryObservations,
     updated_at: now,
-    nf_entrada: data.entryInvoice,
+    nf_entrada: invoiceNumber, // Explicitly set nf_entrada to match entryInvoice
     data_entrada: data.entryDate ? new Date(data.entryDate).toISOString() : new Date().toISOString()
   };
 

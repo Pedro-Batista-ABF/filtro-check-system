@@ -42,12 +42,12 @@ export default function SectorDetails({ sector }: SectorDetailsProps) {
     );
   };
   
-  // Obter a nota fiscal da entrada - considerar tanto entryInvoice quanto nf_entrada
+  // Obter a nota fiscal da entrada - priorizar nf_entrada sobre entryInvoice
   const getEntryInvoice = () => {
     return sector.nf_entrada || sector.entryInvoice || "N/A";
   };
   
-  // Obter a data de entrada - considerar tanto entryDate quanto data_entrada
+  // Obter a data de entrada - priorizar data_entrada sobre entryDate
   const getEntryDate = () => {
     return formatDate(sector.data_entrada || sector.entryDate);
   };
