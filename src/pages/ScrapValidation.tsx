@@ -9,7 +9,7 @@ import SectorGrid from "@/components/sectors/SectorGrid";
 import { Sector } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { format, parse, isAfter, isBefore, isWithinInterval } from "date-fns";
+import { format, parse, isAfter, isBefore, isWithinInterval, isValid } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 
@@ -45,19 +45,69 @@ export default function ScrapValidation() {
     // Aplica filtro de data se fornecido
     let dateMatch = true;
     if (startDate && endDate) {
-      const sectorDate = new Date(sector.peritagemDate);
-      const start = parse(startDate, "yyyy-MM-dd", new Date());
-      const end = parse(endDate, "yyyy-MM-dd", new Date());
-      
-      dateMatch = isWithinInterval(sectorDate, { start, end });
+      // Verificar se peritagemDate é uma string válida antes de tentar criar uma data
+      if (!sector.peritagemDate) {
+        return false;
+      }
+
+      try {
+        const sectorDate = new Date(sector.peritagemDate);
+        
+        // Verificar se a data é válida
+        if (!isValid(sectorDate)) {
+          return false;
+        }
+        
+        const start = parse(startDate, "yyyy-MM-dd", new Date());
+        const end = parse(endDate, "yyyy-MM-dd", new Date());
+        
+        dateMatch = isWithinInterval(sectorDate, { start, end });
+      } catch (error) {
+        console.error("Erro ao processar data:", error, sector.peritagemDate);
+        return false;
+      }
     } else if (startDate) {
-      const sectorDate = new Date(sector.peritagemDate);
-      const start = parse(startDate, "yyyy-MM-dd", new Date());
-      dateMatch = isAfter(sectorDate, start) || format(sectorDate, "yyyy-MM-dd") === startDate;
+      if (!sector.peritagemDate) {
+        return false;
+      }
+
+      try {
+        const sectorDate = new Date(sector.peritagemDate);
+        
+        // Verificar se a data é válida
+        if (!isValid(sectorDate)) {
+          return false;
+        }
+        
+        const start = parse(startDate, "yyyy-MM-dd", new Date());
+        const formattedSectorDate = format(sectorDate, "yyyy-MM-dd");
+        
+        dateMatch = isAfter(sectorDate, start) || formattedSectorDate === startDate;
+      } catch (error) {
+        console.error("Erro ao processar data de início:", error, sector.peritagemDate);
+        return false;
+      }
     } else if (endDate) {
-      const sectorDate = new Date(sector.peritagemDate);
-      const end = parse(endDate, "yyyy-MM-dd", new Date());
-      dateMatch = isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
+      if (!sector.peritagemDate) {
+        return false;
+      }
+
+      try {
+        const sectorDate = new Date(sector.peritagemDate);
+        
+        // Verificar se a data é válida
+        if (!isValid(sectorDate)) {
+          return false;
+        }
+        
+        const end = parse(endDate, "yyyy-MM-dd", new Date());
+        const formattedSectorDate = format(sectorDate, "yyyy-MM-dd");
+        
+        dateMatch = isBefore(sectorDate, end) || formattedSectorDate === endDate;
+      } catch (error) {
+        console.error("Erro ao processar data final:", error, sector.peritagemDate);
+        return false;
+      }
     }
 
     const matchesSearch = 
@@ -69,7 +119,24 @@ export default function ScrapValidation() {
   
   // Ordena setores pelo mais recente primeiro
   const sortedSectors = [...filteredSectors].sort((a, b) => {
-    return new Date(b.peritagemDate).getTime() - new Date(a.peritagemDate).getTime();
+    try {
+      // Verificar se ambas as datas são válidas
+      if (!a.peritagemDate || !b.peritagemDate) {
+        return 0;
+      }
+      
+      const dateA = new Date(a.peritagemDate);
+      const dateB = new Date(b.peritagemDate);
+      
+      if (!isValid(dateA) || !isValid(dateB)) {
+        return 0;
+      }
+      
+      return dateB.getTime() - dateA.getTime();
+    } catch (error) {
+      console.error("Erro ao ordenar datas:", error);
+      return 0;
+    }
   });
 
   const handleSelectSector = (sector: Sector) => {
