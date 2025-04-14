@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -156,7 +155,7 @@ export function usePeritagemSubmit() {
             console.error("Complete error:", error);
             
             // Se o erro estiver relacionado ao campo updated_at
-            if (error?.message?.includes('updated_at')) {
+            if (error?.message?.includes('updated_at') || error?.message?.includes('modified_at')) {
               console.log("Detected timestamp field error, adjusting fields...");
               continue; // Tentar novamente com o campo updated_at adicionado
             }
