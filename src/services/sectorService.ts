@@ -1,9 +1,9 @@
-
 import { Sector, Photo, PhotoWithFile, ServiceType, SectorStatus, CycleOutcome } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
 import { useApiOriginal } from '@/contexts/ApiContext';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseService } from './supabaseService';
 
 /**
  * Service for sector operations
@@ -77,13 +77,10 @@ export const useSectorService = () => {
         // Tentar direto pelo supabaseService
         try {
           console.log("Tentando criar setor diretamente pelo supabaseService");
-          const result = await api.addSector(completeData);
+          const result = await supabaseService.addSector(completeData);
           console.log("Resultado da criação direta:", result);
           
-          if (typeof result === 'string') {
-            toast.success("Setor cadastrado com sucesso!");
-            return result;
-          } else if (result && 'id' in result) {
+          if (result && 'id' in result) {
             toast.success("Setor cadastrado com sucesso!");
             return result.id;
           }
@@ -182,7 +179,7 @@ export const useSectorService = () => {
         // Tentar diretamente pelo supabaseService
         try {
           console.log("Tentando atualizar setor diretamente");
-          const result = await api.updateSector(safeUpdateData);
+          const result = await supabaseService.updateSector(safeUpdateData);
           console.log("Resultado da atualização direta:", result);
           toast.success("Setor atualizado com sucesso!");
           return true;

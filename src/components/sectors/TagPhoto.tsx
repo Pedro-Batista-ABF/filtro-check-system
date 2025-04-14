@@ -30,7 +30,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
               .from('photos')
               .select('*')
               .eq('cycle_id', cycleData.id)
-              .or('type.eq.tag,and(metadata->>type.eq.tag)')
+              .or('type.eq.tag,metadata->>type.eq.tag') // Corrigido para buscar no metadata
               .limit(1)
               .maybeSingle();
               

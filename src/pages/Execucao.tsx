@@ -44,7 +44,7 @@ export default function Execucao() {
   
   // Filtra apenas setores em execução
   const sectorsInExecution = sectors.filter(sector => 
-    sector.status === 'emExecucao' || sector.current_status === 'emExecucao'
+    sector.status === 'emExecucao'
   );
   
   console.log("Total de setores carregados:", sectors.length);
