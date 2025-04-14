@@ -1,40 +1,74 @@
 
-import { ChangeEvent } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Minus, Plus } from 'lucide-react';
 
 interface QuantityInputProps {
-  id: string;
-  label: string;
-  value: number | undefined;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  unit?: string;
-  min?: string;
-  className?: string;
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  id?: string;
 }
 
-export default function QuantityInput({ 
-  id, 
-  label, 
-  value, 
-  onChange, 
-  unit = "",
-  min = "1",
-  className = ""
+export default function QuantityInput({
+  value,
+  onChange,
+  min = 0,
+  max = Infinity,
+  id = 'quantity'
 }: QuantityInputProps) {
+  const increment = () => {
+    if (value < max) {
+      onChange(value + 1);
+    }
+  };
+
+  const decrement = () => {
+    if (value > min) {
+      onChange(value - 1);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(e.target.value);
+    if (!isNaN(newValue) && newValue >= min && newValue <= max) {
+      onChange(newValue);
+    }
+  };
+
   return (
-    <div className={`mt-2 ${className}`}>
-      <Label htmlFor={id} className="text-xs">
-        {label}{unit ? ` (${unit})` : ""}:
-      </Label>
+    <div className="flex items-center">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={decrement}
+      >
+        <Minus className="h-3 w-3" />
+      </Button>
+      
       <Input
         id={id}
         type="number"
+        className="h-8 w-20 mx-2 text-center"
+        value={value}
         min={min}
-        value={value || ''}
-        onChange={onChange}
-        className="h-8 text-sm"
+        max={max}
+        onChange={handleChange}
       />
+      
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={increment}
+      >
+        <Plus className="h-3 w-3" />
+      </Button>
     </div>
   );
 }

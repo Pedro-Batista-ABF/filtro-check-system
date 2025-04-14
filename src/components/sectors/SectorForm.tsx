@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Import our new component files
 import ReviewForm from "./forms/ReviewForm";
 import ProductionForm from "./forms/ProductionForm";
 import QualityForm from "./forms/QualityForm";
 import ScrapForm from "./forms/ScrapForm";
-import FormActions from "./forms/FormActions";
 
 interface SectorFormProps {
   sector: Sector;
@@ -61,7 +62,7 @@ export default function SectorForm({
   );
   const [scrapInvoice, setScrapInvoice] = useState(sector.scrapReturnInvoice || "");
 
-  const { toast } = useToast();
+  const { toast: shadcnToast } = useToast();
 
   // Form validation
   const [formErrors, setFormErrors] = useState({
@@ -198,6 +199,107 @@ export default function SectorForm({
     }
   };
 
+  // New function to handle complete peritagem action
+  const handleCompletePeritagem = async () => {
+    try {
+      shadcnToast({
+        title: "Finalizando peritagem...",
+        description: "Atualizando status do setor para execução"
+      });
+      
+      // Update sector status
+      const { error } = await supabase
+        .from('sectors')
+        .update({ 
+          current_status: 'emExecucao',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sector.id);
+        
+      if (error) {
+        throw new Error(`Erro ao finalizar peritagem: ${error.message}`);
+      }
+      
+      // Update local state
+      setSector(prev => ({
+        ...prev,
+        status: "emExecucao"
+      }));
+      
+      shadcnToast({
+        title: "Peritagem finalizada!",
+        description: "Setor enviado para execução",
+        variant: "success"
+      });
+      
+      // Navigate to execution page after a short delay
+      setTimeout(() => {
+        window.location.href = '/execucao';
+      }, 1500);
+    } catch (error) {
+      console.error("Erro ao finalizar peritagem:", error);
+      shadcnToast({
+        title: "Erro ao finalizar peritagem",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Function to handle scrap sector action
+  const handleScrapSector = async () => {
+    try {
+      const scrapReason = prompt("Informe o motivo do sucateamento:");
+      
+      if (!scrapReason) {
+        shadcnToast({
+          title: "Operação cancelada",
+          description: "É necessário informar o motivo do sucateamento",
+          variant: "warning"
+        });
+        return;
+      }
+      
+      shadcnToast({
+        title: "Processando sucateamento...",
+        description: "Atualizando status do setor"
+      });
+      
+      // Update sector status
+      const { error } = await supabase
+        .from('sectors')
+        .update({ 
+          current_status: 'sucateado',
+          current_outcome: 'scrapped',
+          scrap_observations: scrapReason,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sector.id);
+        
+      if (error) {
+        throw new Error(`Erro ao sucatear setor: ${error.message}`);
+      }
+      
+      shadcnToast({
+        title: "Setor sucateado!",
+        description: "Enviado para validação na qualidade",
+        variant: "success"
+      });
+      
+      // Navigate to quality page after a short delay
+      setTimeout(() => {
+        window.location.href = '/qualidade';
+      }, 1500);
+    } catch (error) {
+      console.error("Erro ao sucatear setor:", error);
+      shadcnToast({
+        title: "Erro ao sucatear setor",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    }
+  };
+
   const createCycle = (type: "recovered" | "scrapped", comments: string): Cycle => {
     return {
       id: Date.now().toString(),
@@ -233,7 +335,7 @@ export default function SectorForm({
     setFormErrors(errors);
     
     if (Object.values(errors).some(Boolean)) {
-      toast({
+      shadcnToast({
         title: "Formulário Incompleto",
         description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive"
@@ -399,12 +501,60 @@ export default function SectorForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {renderFormContent()}
       
-      <FormActions 
-        loading={loading} 
-        mode={mode} 
-        isScrap={isScrap} 
-        qualityCompleted={qualityCompleted} 
-      />
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row sm:space-x-2">
+          {/* Botão de Sucatear para modo peritagem */}
+          {mode === 'review' && initialSector.id && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleScrapSector}
+              className="mb-2 sm:mb-0"
+            >
+              Sucatear setor
+            </Button>
+          )}
+        </div>
+        
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          {/* Botão de finalizar peritagem para modo peritagem */}
+          {mode === 'review' && initialSector.id && (
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleCompletePeritagem}
+              className="mb-2 sm:mb-0 sm:mr-2"
+            >
+              Completar peritagem
+            </Button>
+          )}
+          
+          {/* Botão de submissão padrão */}
+          <Button 
+            type="submit" 
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                Processando...
+              </span>
+            ) : (
+              <>
+                {mode === 'review' && !initialSector.id && "Cadastrar Peritagem"}
+                {mode === 'review' && initialSector.id && "Atualizar Peritagem"}
+                {mode === 'production' && "Salvar Produção"}
+                {mode === 'quality' && "Finalizar Checagem"}
+                {mode === 'scrap' && isScrap && "Confirmar Sucateamento"}
+                {mode === 'scrap' && !isScrap && "Salvar"}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }

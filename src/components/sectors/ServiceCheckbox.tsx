@@ -13,7 +13,7 @@ interface ServiceCheckboxProps {
   service: Service;
   checked?: boolean;
   onChecked?: (id: string, checked: boolean) => void;
-  onServiceChange?: (id: string, checked: boolean) => void; // Added this prop
+  onServiceChange?: (id: string, checked: boolean) => void; 
   onQuantityChange?: (id: string, quantity: number) => void;
   onObservationChange?: (id: string, observations: string) => void;
   onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
@@ -124,6 +124,7 @@ export default function ServiceCheckbox({
                     onChange={handleQuantityChange}
                     min={1}
                     max={100}
+                    id={`quantity-${service.id}`}
                   />
                 </div>
               )}

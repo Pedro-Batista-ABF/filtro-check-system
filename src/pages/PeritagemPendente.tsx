@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PeritagemPendente() {
   const { sectors, loading, refreshData } = useApi();
@@ -28,13 +29,54 @@ export default function PeritagemPendente() {
     }
   };
 
+  // Função para buscar setores com peritagem pendente diretamente do Supabase
+  const fetchPendingSectors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sectors')
+        .select('*')
+        .eq('current_status', 'peritagemPendente')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      console.log(`Busca direta: Encontrados ${data.length} setores com status peritagemPendente`);
+      
+      // Mapear setores do banco para o formato da aplicação
+      const mappedSectors: Sector[] = data.map(sector => ({
+        id: sector.id,
+        tagNumber: sector.tag_number,
+        tagPhotoUrl: sector.tag_photo_url,
+        status: sector.current_status as any,
+        outcome: sector.current_outcome as any || 'EmAndamento',
+        cycleCount: sector.cycle_count || 1,
+        services: [],
+        beforePhotos: [],
+        afterPhotos: [],
+        entryInvoice: '',
+        entryDate: '',
+        peritagemDate: '',
+        productionCompleted: false,
+        updated_at: sector.updated_at
+      }));
+      
+      setPendingSectors(mappedSectors);
+      
+    } catch (error) {
+      console.error("Erro ao buscar setores pendentes:", error);
+      toast.error("Erro ao carregar setores pendentes");
+    }
+  };
+
   useEffect(() => {
     document.title = "Peritagem Pendente - Gestão de Recuperação";
     
-    // Filtrar apenas os setores com status 'peritagemPendente'
+    // Primeira abordagem: Filtrar a partir dos setores carregados pelo contexto
     if (sectors && sectors.length > 0) {
-      console.log("Total de setores carregados:", sectors.length);
-      console.log("Status dos setores:", sectors.map(s => ({ 
+      console.log("Total de setores carregados pelo contexto:", sectors.length);
+      console.log("Status dos setores carregados:", sectors.map(s => ({ 
         id: s.id, 
         tag: s.tagNumber, 
         status: s.status,
@@ -47,14 +89,17 @@ export default function PeritagemPendente() {
         return isPending;
       });
       
+      console.log("Setores com peritagem pendente (via contexto):", filtered.length);
       setPendingSectors(filtered);
-      console.log("Setores com peritagem pendente:", filtered.length);
       
-      if (filtered.length === 0 && sectors.length > 0) {
-        console.log("Nenhum setor com status 'peritagemPendente' encontrado entre os setores carregados");
+      // Se não encontrou nenhum setor pendente via contexto, buscar diretamente do banco
+      if (filtered.length === 0) {
+        console.log("Nenhum setor com status 'peritagemPendente' encontrado no contexto, tentando busca direta");
+        fetchPendingSectors();
       }
     } else {
-      console.log("Nenhum setor carregado ou array vazio");
+      console.log("Nenhum setor carregado no contexto, tentando busca direta");
+      fetchPendingSectors();
     }
   }, [sectors, refreshKey]);
 

@@ -168,6 +168,7 @@ export function usePeritagemSubmit() {
       let attempt = 0;
       let result;
       let lastError;
+      let sectorResult: string | Sector | boolean = "";
       
       while (attempt < maxRetries) {
         try {
@@ -199,8 +200,10 @@ export function usePeritagemSubmit() {
 
           if (isEditing && sectorId) {
             result = await updateSector(sectorId, sectorData);
+            sectorResult = result ? sectorId : false;
           } else {
             result = await addSector(sectorData);
+            sectorResult = typeof result === 'string' ? result : false;
           }
           
           // Se chegar aqui, a operação foi bem-sucedida
@@ -247,11 +250,12 @@ export function usePeritagemSubmit() {
       }
 
       // Após salvar com sucesso, atualize diretamente o status do setor no Supabase para emExecucao
-      if (result) {
+      if (sectorResult && typeof sectorResult === 'string') {
         try {
-          const sectorId = typeof result === "string" ? result : result.id;
+          const sectorId = sectorResult;
           console.log("Atualizando status do setor para emExecucao:", sectorId);
           
+          // 1. Atualizar status do setor
           const { error: updateStatusError } = await supabase
             .from('sectors')
             .update({ 
@@ -264,6 +268,62 @@ export function usePeritagemSubmit() {
             console.error("Erro ao atualizar status do setor:", updateStatusError);
           } else {
             console.log("Status do setor atualizado com sucesso para emExecucao");
+          }
+          
+          // 2. Salvar a foto da TAG corretamente
+          if (data.tagPhotoUrl) {
+            const { error: tagPhotoError } = await supabase
+              .from('photos')
+              .insert({
+                sector_id: sectorId,
+                type: 'tag',
+                stage: 'peritagem',
+                url: data.tagPhotoUrl,
+                created_at: new Date().toISOString()
+              });
+              
+            if (tagPhotoError) {
+              console.error("Erro ao salvar foto da TAG:", tagPhotoError);
+            } else {
+              console.log("Foto da TAG salva com sucesso");
+            }
+          }
+          
+          // 3. Salvar os serviços selecionados na tabela intermediária
+          // Primeiro deletar quaisquer serviços existentes para este setor
+          try {
+            const { error: deleteError } = await supabase
+              .from('sector_services')
+              .delete()
+              .eq('sector_id', sectorId);
+              
+            if (deleteError) {
+              console.error("Erro ao deletar serviços antigos:", deleteError);
+            }
+          } catch (deleteError) {
+            console.error("Erro ao tentar deletar serviços existentes:", deleteError);
+          }
+          
+          // Agora inserir os serviços atualizados
+          if (selectedServices.length > 0) {
+            const { error: servicesError } = await supabase
+              .from('sector_services')
+              .insert(
+                selectedServices.map(service => ({
+                  sector_id: sectorId,
+                  service_id: service.id,
+                  quantity: service.quantity || 1,
+                  observations: service.observations || "",
+                  selected: true,
+                  stage: 'peritagem'
+                }))
+              );
+              
+            if (servicesError) {
+              console.error("Erro ao salvar serviços do setor:", servicesError);
+            } else {
+              console.log(`${selectedServices.length} serviços salvos com sucesso`);
+            }
           }
         } catch (statusUpdateError) {
           console.error("Erro ao tentar atualizar status:", statusUpdateError);

@@ -74,13 +74,13 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Tentar recarregar os dados explicitamente
       try {
         // Limpar o cache do Supabase
-        const { data: realtimeData } = supabase.getChannels();
-        for (const channel of realtimeData) {
+        const channels = supabase.getChannels();
+        for (const channel of channels) {
           supabase.removeChannel(channel);
         }
 
         // Recarregar dados através do método original se existir
-        if (typeof api.refreshData === 'function') {
+        if (api && typeof api.refreshData === 'function') {
           await api.refreshData();
         } else {
           // Caso não exista um método de refresh, recarregar a página
