@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -559,3 +559,4 @@ export default function SectorForm({
       </div>
     </form>
   );
+}
