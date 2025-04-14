@@ -42,6 +42,8 @@ export default function ScrapValidation() {
   
   // Filtra setores apenas com status 'sucateadoPendente'
   const filteredSectors = sectors.filter(sector => {
+    if (!sector) return false;
+    
     // Aplica filtro de data se fornecido
     let dateMatch = true;
     if (startDate && endDate) {
@@ -55,11 +57,17 @@ export default function ScrapValidation() {
         
         // Verificar se a data é válida
         if (!isValid(sectorDate)) {
+          console.log("Data inválida:", sector.peritagemDate, "para setor:", sector.tagNumber);
           return false;
         }
         
         const start = parse(startDate, "yyyy-MM-dd", new Date());
         const end = parse(endDate, "yyyy-MM-dd", new Date());
+        
+        // Verificar se as datas de início e fim são válidas
+        if (!isValid(start) || !isValid(end)) {
+          return false;
+        }
         
         dateMatch = isWithinInterval(sectorDate, { start, end });
       } catch (error) {
@@ -76,11 +84,18 @@ export default function ScrapValidation() {
         
         // Verificar se a data é válida
         if (!isValid(sectorDate)) {
+          console.log("Data inválida para filtro de data inicial:", sector.peritagemDate, "para setor:", sector.tagNumber);
           return false;
         }
         
         const start = parse(startDate, "yyyy-MM-dd", new Date());
-        const formattedSectorDate = format(sectorDate, "yyyy-MM-dd");
+        
+        // Verificar se a data de início é válida
+        if (!isValid(start)) {
+          return false;
+        }
+        
+        const formattedSectorDate = isValid(sectorDate) ? format(sectorDate, "yyyy-MM-dd") : "";
         
         dateMatch = isAfter(sectorDate, start) || formattedSectorDate === startDate;
       } catch (error) {
@@ -97,11 +112,18 @@ export default function ScrapValidation() {
         
         // Verificar se a data é válida
         if (!isValid(sectorDate)) {
+          console.log("Data inválida para filtro de data final:", sector.peritagemDate, "para setor:", sector.tagNumber);
           return false;
         }
         
         const end = parse(endDate, "yyyy-MM-dd", new Date());
-        const formattedSectorDate = format(sectorDate, "yyyy-MM-dd");
+        
+        // Verificar se a data de fim é válida
+        if (!isValid(end)) {
+          return false;
+        }
+        
+        const formattedSectorDate = isValid(sectorDate) ? format(sectorDate, "yyyy-MM-dd") : "";
         
         dateMatch = isBefore(sectorDate, end) || formattedSectorDate === endDate;
       } catch (error) {
@@ -125,10 +147,16 @@ export default function ScrapValidation() {
         return 0;
       }
       
+      // Verificar se as strings de data são válidas antes de converter
+      if (!a.peritagemDate.match(/^\d{4}-\d{2}-\d{2}/) || !b.peritagemDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return 0;
+      }
+      
       const dateA = new Date(a.peritagemDate);
       const dateB = new Date(b.peritagemDate);
       
       if (!isValid(dateA) || !isValid(dateB)) {
+        console.log("Datas inválidas durante ordenação:", a.peritagemDate, b.peritagemDate);
         return 0;
       }
       

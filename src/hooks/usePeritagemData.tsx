@@ -108,7 +108,7 @@ export function usePeritagemData(id?: string) {
                   services: processedServices,
                   beforePhotos: [],
                   afterPhotos: [],
-                  scrapPhotos: [],
+                  scrapPhotos: [],  // Garantindo que scrapPhotos está inicializado
                   productionCompleted: false,
                   status: sectorDb.current_status as any || 'peritagemPendente',
                   outcome: sectorDb.current_outcome as any || 'EmAndamento',
@@ -233,6 +233,12 @@ export function usePeritagemData(id?: string) {
             }
           } else {
             console.log("Setor encontrado via getSectorById:", sectorData);
+            
+            // Garantir que scrapPhotos esteja inicializado
+            if (!sectorData.scrapPhotos) {
+              sectorData.scrapPhotos = [];
+            }
+            
             setSector(sectorData);
             
             // Se o setor já tem serviços, atualizar a lista de serviços
@@ -281,7 +287,7 @@ export function usePeritagemData(id?: string) {
     services: services,
     beforePhotos: [],
     afterPhotos: [],
-    scrapPhotos: [],
+    scrapPhotos: [], // Garantindo que a propriedade scrapPhotos está sempre definida
     productionCompleted: false,
     cycleCount: 1,
     status: 'peritagemPendente',
