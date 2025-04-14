@@ -39,7 +39,7 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
       
       console.log(`Atualizando status do setor de ${sector.status} para ${newStatus}`);
       
-      // Atualiza o setor no Supabase - usando updated_at em vez de modified_at
+      // Atualiza o setor no Supabase - usando updated_at
       const { error } = await supabase
         .from('sectors')
         .update({
