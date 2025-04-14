@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button"; // Add Button import
+import { Button } from "@/components/ui/button"; 
 
 // Import our new component files
 import ReviewForm from "./forms/ReviewForm";
@@ -214,7 +214,7 @@ export default function SectorForm({
         .from('sectors')
         .update({ 
           current_status: 'emExecucao',
-          updated_at: new Date().toISOString()  // Changed from modified_at to updated_at
+          updated_at: new Date().toISOString()  // Usando updated_at em vez de modified_at
         })
         .eq('id', sector.id);
         
