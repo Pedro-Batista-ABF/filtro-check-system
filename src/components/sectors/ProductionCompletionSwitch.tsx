@@ -1,8 +1,9 @@
 
 import { useState } from "react";
-import { Sector } from "@/types";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Sector } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { toast } from "sonner";
 
@@ -11,47 +12,90 @@ interface ProductionCompletionSwitchProps {
 }
 
 export default function ProductionCompletionSwitch({ sector }: ProductionCompletionSwitchProps) {
-  const { updateSector } = useApi();
-  const [isCompleted, setIsCompleted] = useState<boolean>(sector.productionCompleted);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
-
+  const [isCompleted, setIsCompleted] = useState(sector.productionCompleted);
+  const [isLoading, setIsLoading] = useState(false);
+  const { refreshData } = useApi();
+  
   const handleToggle = async (checked: boolean) => {
-    setIsUpdating(true);
+    setIsLoading(true);
+    
     try {
-      // Update the status to checagemFinalPendente if switching to completed
-      const newStatus = checked ? 'checagemFinalPendente' : 'emExecucao';
-      
-      const success = await updateSector(sector.id, {
-        productionCompleted: checked,
-        status: newStatus
-      });
-      
-      if (success) {
-        setIsCompleted(checked);
-        toast.success(`Setor ${checked ? 'liberado para checagem' : 'retornado para produção'}`);
+      // Atualizar o status do setor primeiro na tabela sectors
+      const { error: sectorError } = await supabase
+        .from('sectors')
+        .update({
+          current_status: checked ? 'checagemFinalPendente' : 'emExecucao',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sector.id);
+        
+      if (sectorError) {
+        throw sectorError;
       }
+      
+      // Atualizar o ciclo atual
+      const { data: cycleData } = await supabase
+        .from('cycles')
+        .select('id')
+        .eq('sector_id', sector.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (cycleData) {
+        const { error: cycleError } = await supabase
+          .from('cycles')
+          .update({
+            production_completed: checked,
+            status: checked ? 'checagemFinalPendente' : 'emExecucao',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', cycleData.id);
+          
+        if (cycleError) {
+          throw cycleError;
+        }
+      }
+      
+      setIsCompleted(checked);
+      
+      // Atualizar dados na interface
+      await refreshData();
+      
+      toast.success(
+        checked 
+          ? "Setor marcado como concluído pela produção" 
+          : "Setor marcado como em execução",
+        {
+          description: checked 
+            ? "O setor está pronto para checagem final" 
+            : "O setor voltou para execução"
+        }
+      );
     } catch (error) {
-      toast.error('Erro ao atualizar status de conclusão');
-      // Revert UI state on error
-      setIsCompleted(sector.productionCompleted);
+      console.error("Erro ao atualizar status de produção:", error);
+      toast.error("Erro ao atualizar status", {
+        description: "Não foi possível atualizar o status do setor"
+      });
     } finally {
-      setIsUpdating(false);
+      setIsLoading(false);
     }
   };
-
+  
   return (
     <div className="flex items-center space-x-2">
       <Switch 
-        id={`production-complete-${sector.id}`}
+        id="production-completed"
         checked={isCompleted}
         onCheckedChange={handleToggle}
-        disabled={isUpdating || sector.status === 'concluido'}
+        disabled={isLoading}
       />
-      <Label 
-        htmlFor={`production-complete-${sector.id}`}
-        className={isCompleted ? "text-green-600 font-medium" : "text-gray-700"}
-      >
-        {isCompleted ? "Produção Concluída" : "Produção em Andamento"}
+      <Label htmlFor="production-completed" className="font-medium">
+        {isLoading 
+          ? "Atualizando..." 
+          : isCompleted 
+            ? "Concluído pela produção" 
+            : "Marcar como concluído pela produção"}
       </Label>
     </div>
   );

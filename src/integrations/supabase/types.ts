@@ -104,7 +104,7 @@ export type Database = {
           scrap_return_invoice?: string | null
           scrap_validated?: boolean | null
           sector_id: string
-          status: string
+          status?: string
           tag_number: string
           updated_at?: string
           updated_by: string
@@ -163,6 +163,7 @@ export type Database = {
           created_by: string
           cycle_id: string
           id: string
+          metadata: Json | null
           service_id: string | null
           type: string
           url: string
@@ -172,6 +173,7 @@ export type Database = {
           created_by: string
           cycle_id: string
           id?: string
+          metadata?: Json | null
           service_id?: string | null
           type: string
           url: string
@@ -181,6 +183,7 @@ export type Database = {
           created_by?: string
           cycle_id?: string
           id?: string
+          metadata?: Json | null
           service_id?: string | null
           type?: string
           url?: string
@@ -236,6 +239,47 @@ export type Database = {
         }
         Relationships: []
       }
+      sector_services: {
+        Row: {
+          created_at: string | null
+          id: string
+          quantity: number | null
+          sector_id: string
+          selected: boolean | null
+          service_id: string
+          stage: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          quantity?: number | null
+          sector_id: string
+          selected?: boolean | null
+          service_id: string
+          stage: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          quantity?: number | null
+          sector_id?: string
+          selected?: boolean | null
+          service_id?: string
+          stage?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sector_services_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sectors: {
         Row: {
           created_at: string
@@ -244,6 +288,7 @@ export type Database = {
           current_status: string
           cycle_count: number
           id: string
+          scrap_observations: string | null
           tag_number: string
           tag_photo_url: string | null
           updated_at: string
@@ -253,9 +298,10 @@ export type Database = {
           created_at?: string
           created_by: string
           current_outcome?: string | null
-          current_status: string
+          current_status?: string
           cycle_count?: number
           id?: string
+          scrap_observations?: string | null
           tag_number: string
           tag_photo_url?: string | null
           updated_at?: string
@@ -268,6 +314,7 @@ export type Database = {
           current_status?: string
           cycle_count?: number
           id?: string
+          scrap_observations?: string | null
           tag_number?: string
           tag_photo_url?: string | null
           updated_at?: string

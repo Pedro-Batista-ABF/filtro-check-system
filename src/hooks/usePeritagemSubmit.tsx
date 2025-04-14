@@ -202,8 +202,13 @@ export function usePeritagemSubmit() {
             result = await updateSector(sectorId, sectorData);
             sectorResult = result ? sectorId : false;
           } else {
-            result = await addSector(sectorData);
-            sectorResult = typeof result === 'string' ? result : false;
+            try {
+              result = await addSector(sectorData);
+              sectorResult = typeof result === 'string' ? result : false;
+            } catch (addError) {
+              console.error("Erro detalhado ao adicionar setor:", addError);
+              throw addError;
+            }
           }
           
           // Se chegar aqui, a operação foi bem-sucedida
@@ -270,7 +275,7 @@ export function usePeritagemSubmit() {
             console.log("Status do setor atualizado com sucesso para emExecucao");
           }
           
-          // 2. Salvar a foto da TAG corretamente
+          // 2. Salvar a foto da TAG corretamente com metadata
           if (data.tagPhotoUrl) {
             // Use correct schema for photos table - adding cycle_id is required
             const { data: cycleData } = await supabase
@@ -291,24 +296,22 @@ export function usePeritagemSubmit() {
                   service_id: null, // Campo obrigatório na tabela, mas nulo para foto de TAG
                   created_by: session.user.id,
                   created_at: new Date().toISOString(),
-                  // Adicionando os metadados necessários como comentado em JSON
-                  // metadata: {
-                  //   sector_id: sectorId,
-                  //   type: 'tag',
-                  //   stage: 'peritagem'
-                  // }
+                  metadata: {
+                    sector_id: sectorId,
+                    type: 'tag',
+                    stage: 'peritagem'
+                  }
                 });
                 
               if (tagPhotoError) {
                 console.error("Erro ao salvar foto da TAG:", tagPhotoError);
               } else {
-                console.log("Foto da TAG salva com sucesso");
+                console.log("Foto da TAG salva com sucesso com metadata");
               }
             }
           }
           
-          // 3. Salvar os serviços selecionados em cycle_services
-          // Primeiro deletar quaisquer serviços existentes para este ciclo
+          // 3. Salvar os serviços selecionados em cycle_services e também em sector_services
           try {
             const { data: cycleData } = await supabase
               .from('cycles')
@@ -329,7 +332,7 @@ export function usePeritagemSubmit() {
                 console.error("Erro ao deletar serviços antigos:", deleteError);
               }
               
-              // Now insert the updated services
+              // Now insert the updated services in cycle_services
               if (selectedServices.length > 0) {
                 const { error: servicesError } = await supabase
                   .from('cycle_services')
@@ -347,7 +350,26 @@ export function usePeritagemSubmit() {
                 if (servicesError) {
                   console.error("Erro ao salvar serviços do ciclo:", servicesError);
                 } else {
-                  console.log(`${selectedServices.length} serviços salvos com sucesso`);
+                  console.log(`${selectedServices.length} serviços salvos com sucesso em cycle_services`);
+                }
+                
+                // Also insert services in sector_services for better queries
+                const { error: sectorServicesError } = await supabase
+                  .from('sector_services')
+                  .insert(
+                    selectedServices.map(service => ({
+                      sector_id: sectorId,
+                      service_id: service.id,
+                      quantity: service.quantity || 1,
+                      stage: 'peritagem',
+                      selected: true
+                    }))
+                  );
+                  
+                if (sectorServicesError) {
+                  console.error("Erro ao salvar serviços no setor:", sectorServicesError);
+                } else {
+                  console.log(`${selectedServices.length} serviços salvos com sucesso em sector_services`);
                 }
               }
             }

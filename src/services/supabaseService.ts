@@ -165,12 +165,13 @@ export const supabaseService = {
       }
       
       console.log(`Encontrados ${sectorsData?.length || 0} setores no banco de dados`);
+      console.log("Status dos setores encontrados:", sectorsData?.map(s => s.current_status));
       
       // 2. Para cada setor, busca seu ciclo atual
       const sectors: Sector[] = [];
       
       for (const sector of sectorsData || []) {
-        console.log(`Buscando ciclo para o setor ${sector.id} (TAG: ${sector.tag_number})`);
+        console.log(`Buscando ciclo para o setor ${sector.id} (TAG: ${sector.tag_number}, Status: ${sector.current_status})`);
         
         try {
           // Verifica o status atual do setor
@@ -197,10 +198,10 @@ export const supabaseService = {
             console.log(`Ciclos encontrados para o setor ${sector.id}:`, allCycles?.length || 0);
             
             // Tentar criar um setor mínimo com base nos dados da tabela sectors
-            if (sector.current_status === 'peritagemPendente') {
-              console.log(`Criando setor mínimo para ${sector.tag_number} com status peritagemPendente`);
+            if (sector.current_status === 'peritagemPendente' || sector.current_status === 'emExecucao') {
+              console.log(`Criando setor mínimo para ${sector.tag_number} com status ${sector.current_status}`);
               
-              // Cria um setor básico com status pendente
+              // Cria um setor básico com status do banco
               const minimalSector: Sector = {
                 id: sector.id,
                 tagNumber: sector.tag_number,
@@ -212,13 +213,13 @@ export const supabaseService = {
                 beforePhotos: [],
                 afterPhotos: [],
                 productionCompleted: false,
-                status: 'peritagemPendente',
+                status: sector.current_status as SectorStatus,
                 outcome: sector.current_outcome as CycleOutcome || 'EmAndamento',
                 cycleCount: sector.cycle_count,
-                updated_at: new Date().toISOString()
+                updated_at: sector.updated_at
               };
               
-              console.log(`Adicionando setor mínimo à lista: ${sector.tag_number}`);
+              console.log(`Adicionando setor mínimo à lista: ${sector.tag_number} com status ${minimalSector.status}`);
               sectors.push(minimalSector);
             }
             
@@ -256,6 +257,11 @@ export const supabaseService = {
           const scrapPhotos = (photosData || [])
             .filter(photo => photo.type === 'scrap')
             .map(mapPhotoFromDB);
+            
+          // Busca foto da TAG com metadata
+          const tagPhoto = (photosData || [])
+            .find(photo => photo.type === 'tag' || 
+                  (photo.metadata && photo.metadata.type === 'tag'));
           
           // 5. Monta os serviços com suas fotos
           const services = (serviceTypesData || []).map(serviceType => {
@@ -279,6 +285,11 @@ export const supabaseService = {
             afterPhotos, 
             scrapPhotos
           );
+          
+          // Adiciona a foto da TAG se encontrada
+          if (tagPhoto) {
+            mappedSector.tagPhotoUrl = tagPhoto.url;
+          }
           
           console.log(`Setor ${sector.id} adicionado à lista com status: ${mappedSector.status}`);
           sectors.push(mappedSector);
@@ -480,6 +491,8 @@ export const supabaseService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
       
+      console.log("Adicionando novo setor:", sectorData.tagNumber);
+      
       // 1. Insere o setor
       const { data: newSector, error: sectorError } = await supabase
         .from('sectors')
@@ -489,12 +502,18 @@ export const supabaseService = {
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
           created_by: user.id,
-          updated_by: user.id
+          updated_by: user.id,
+          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
         })
         .select()
         .single();
         
-      if (sectorError) throw sectorError;
+      if (sectorError) {
+        console.error("Erro ao inserir setor:", sectorError);
+        throw sectorError;
+      }
+      
+      console.log("Setor inserido com sucesso:", newSector.id);
       
       // 2. Insere o ciclo
       const { data: newCycle, error: cycleError } = await supabase
@@ -518,54 +537,128 @@ export const supabaseService = {
           status: sectorData.status,
           outcome: sectorData.outcome || 'EmAndamento',
           created_by: user.id,
-          updated_by: user.id
+          updated_by: user.id,
+          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
         })
         .select()
         .single();
         
-      if (cycleError) throw cycleError;
+      if (cycleError) {
+        console.error("Erro ao inserir ciclo:", cycleError);
+        
+        // Remover o setor criado para não deixar órfão
+        await supabase.from('sectors').delete().eq('id', newSector.id);
+        
+        throw cycleError;
+      }
+      
+      console.log("Ciclo inserido com sucesso:", newCycle.id);
       
       // 3. Insere os serviços selecionados
       const selectedServices = sectorData.services.filter(service => service.selected);
+      console.log("Serviços selecionados:", selectedServices.length);
       
-      for (const service of selectedServices) {
-        const { error: serviceError } = await supabase
-          .from('cycle_services')
-          .insert({
-            cycle_id: newCycle.id,
-            service_id: service.id,
-            selected: true,
-            quantity: service.quantity || null,
-            observations: service.observations || null,
-            completed: false
-          });
+      // Inserir em cycle_services e sector_services
+      try {
+        for (const service of selectedServices) {
+          // Inserir em cycle_services
+          const { error: serviceError } = await supabase
+            .from('cycle_services')
+            .insert({
+              cycle_id: newCycle.id,
+              service_id: service.id,
+              selected: true,
+              quantity: service.quantity || 1,
+              observations: service.observations || null,
+              completed: false
+            });
+            
+          if (serviceError) {
+            console.error(`Erro ao inserir serviço ${service.id} em cycle_services:`, serviceError);
+          }
           
-        if (serviceError) {
-          console.error(`Erro ao inserir serviço ${service.id}:`, serviceError);
+          // Inserir em sector_services
+          const { error: sectorServiceError } = await supabase
+            .from('sector_services')
+            .insert({
+              sector_id: newSector.id,
+              service_id: service.id,
+              quantity: service.quantity || 1,
+              stage: 'peritagem',
+              selected: true
+            });
+            
+          if (sectorServiceError) {
+            console.error(`Erro ao inserir serviço ${service.id} em sector_services:`, sectorServiceError);
+          }
         }
+      } catch (servicesError) {
+        console.error("Erro ao inserir serviços:", servicesError);
       }
       
       // 4. Insere as fotos (se houver)
       if (sectorData.beforePhotos && sectorData.beforePhotos.length > 0) {
-        for (const photo of sectorData.beforePhotos) {
-          const { error: photoError } = await supabase
-            .from('photos')
-            .insert({
-              cycle_id: newCycle.id,
-              service_id: photo.serviceId || null,
-              url: photo.url,
-              type: 'before',
-              created_by: user.id
-            });
-            
-          if (photoError) {
-            console.error('Erro ao inserir foto:', photoError);
+        try {
+          for (const photo of sectorData.beforePhotos) {
+            const { error: photoError } = await supabase
+              .from('photos')
+              .insert({
+                cycle_id: newCycle.id,
+                service_id: photo.serviceId || null,
+                url: photo.url,
+                type: 'before',
+                created_by: user.id,
+                metadata: {
+                  sector_id: newSector.id,
+                  type: 'before',
+                  stage: 'peritagem',
+                  service_id: photo.serviceId
+                }
+              });
+              
+            if (photoError) {
+              console.error('Erro ao inserir foto:', photoError);
+            }
           }
+        } catch (photosError) {
+          console.error("Erro ao inserir fotos:", photosError);
         }
       }
       
-      // 5. Retorna o setor criado (buscando novamente para ter todos os dados)
-      return await supabaseService.getSectorById(newSector.id) as Sector;
+      // 5. Insere a foto do TAG com metadados
+      if (sectorData.tagPhotoUrl) {
+        try {
+          const { error: tagPhotoError } = await supabase
+            .from('photos')
+            .insert({
+              cycle_id: newCycle.id,
+              service_id: null,
+              url: sectorData.tagPhotoUrl,
+              type: 'tag',
+              created_by: user.id,
+              metadata: {
+                sector_id: newSector.id,
+                type: 'tag',
+                stage: 'peritagem'
+              }
+            });
+            
+          if (tagPhotoError) {
+            console.error('Erro ao inserir foto da TAG:', tagPhotoError);
+          } else {
+            console.log("Foto da TAG inserida com sucesso");
+          }
+        } catch (tagPhotoError) {
+          console.error("Erro ao inserir foto da TAG:", tagPhotoError);
+        }
+      }
+      
+      // 6. Retorna o setor criado
+      return {
+        ...sectorData,
+        id: newSector.id,
+        cycleCount: 1
+      } as Sector;
     } catch (error) {
       console.error("Erro ao adicionar setor:", error);
       throw error;
@@ -599,11 +692,15 @@ export const supabaseService = {
           tag_photo_url: sectorData.tagPhotoUrl,
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
-          updated_by: user.id
+          updated_by: user.id,
+          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
         })
         .eq('id', sectorData.id);
         
-      if (sectorError) throw sectorError;
+      if (sectorError) {
+        console.error("Erro ao atualizar setor:", sectorError);
+        throw sectorError;
+      }
       
       // 3. Atualiza o ciclo
       const { error: updateCycleError } = await supabase
@@ -625,11 +722,15 @@ export const supabaseService = {
           scrap_return_invoice: sectorData.scrapReturnInvoice || null,
           status: sectorData.status,
           outcome: sectorData.outcome || 'EmAndamento',
-          updated_by: user.id
+          updated_by: user.id,
+          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
         })
         .eq('id', cycleData.id);
         
-      if (updateCycleError) throw updateCycleError;
+      if (updateCycleError) {
+        console.error("Erro ao atualizar ciclo:", updateCycleError);
+        throw updateCycleError;
+      }
       
       // 4. Atualiza os serviços do ciclo
       // 4.1 Limpa os serviços existentes
@@ -638,23 +739,49 @@ export const supabaseService = {
         .delete()
         .eq('cycle_id', cycleData.id);
         
+      // Também limpa os serviços do setor
+      await supabase
+        .from('sector_services')
+        .delete()
+        .eq('sector_id', sectorData.id);
+        
       // 4.2 Insere os serviços atualizados
       const selectedServices = sectorData.services.filter(service => service.selected);
       
       for (const service of selectedServices) {
-        const { error: serviceError } = await supabase
-          .from('cycle_services')
-          .insert({
-            cycle_id: cycleData.id,
-            service_id: service.id,
-            selected: true,
-            quantity: service.quantity || null,
-            observations: service.observations || null,
-            completed: false
-          });
+        try {
+          // Adiciona em cycle_services
+          const { error: serviceError } = await supabase
+            .from('cycle_services')
+            .insert({
+              cycle_id: cycleData.id,
+              service_id: service.id,
+              selected: true,
+              quantity: service.quantity || 1,
+              observations: service.observations || null,
+              completed: false
+            });
+            
+          if (serviceError) {
+            console.error(`Erro ao atualizar serviço ${service.id} em cycle_services:`, serviceError);
+          }
           
-        if (serviceError) {
-          console.error(`Erro ao atualizar serviço ${service.id}:`, serviceError);
+          // Adiciona em sector_services
+          const { error: sectorServiceError } = await supabase
+            .from('sector_services')
+            .insert({
+              sector_id: sectorData.id,
+              service_id: service.id,
+              quantity: service.quantity || 1,
+              stage: 'peritagem',
+              selected: true
+            });
+            
+          if (sectorServiceError) {
+            console.error(`Erro ao atualizar serviço ${service.id} em sector_services:`, sectorServiceError);
+          }
+        } catch (serviceError) {
+          console.error(`Erro ao processar serviço ${service.id}:`, serviceError);
         }
       }
       
@@ -679,7 +806,12 @@ export const supabaseService = {
                 service_id: photo.serviceId || null,
                 url: photo.url,
                 type: 'after',
-                created_by: user.id
+                created_by: user.id,
+                metadata: {
+                  sector_id: sectorData.id,
+                  type: 'after',
+                  stage: 'checagem'
+                }
               });
               
             if (photoError) {
@@ -709,7 +841,12 @@ export const supabaseService = {
                 service_id: photo.serviceId || null,
                 url: photo.url,
                 type: 'scrap',
-                created_by: user.id
+                created_by: user.id,
+                metadata: {
+                  sector_id: sectorData.id,
+                  type: 'scrap',
+                  stage: 'sucateamento'
+                }
               });
               
             if (photoError) {
