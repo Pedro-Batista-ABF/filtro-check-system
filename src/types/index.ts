@@ -42,14 +42,7 @@ export interface Photo {
 }
 
 export interface PhotoWithFile extends Photo {
-  id: string;
   file: File | null;
-  url: string;
-  type: 'before' | 'after' | 'service' | 'tag' | 'scrap';
-  serviceId?: string;
-  metadata?: any;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface Cycle {
@@ -77,7 +70,6 @@ export interface Cycle {
   technician_id?: string;
 }
 
-// Make sure SectorStatus includes the sucateadoPendente and sucateado options
 export type SectorStatus = 
   | 'peritagemPendente' 
   | 'emExecucao' 

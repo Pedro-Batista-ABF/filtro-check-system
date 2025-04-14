@@ -59,7 +59,8 @@ export async function updateSectorStatusAndMetadata(
     const { error } = await supabase
       .from('sectors')
       .update({
-        current_status: 'emExecucao', // Directly setting to emExecucao
+        current_status: data.status || 'emExecucao',
+        current_outcome: data.outcome || 'EmAndamento',
         updated_at: new Date().toISOString()
       })
       .eq('id', sectorId);
@@ -72,7 +73,8 @@ export async function updateSectorStatusAndMetadata(
     const { error: cycleError } = await supabase
       .from('cycles')
       .update({
-        status: 'emExecucao', // Directly setting to emExecucao
+        status: data.status || 'emExecucao',
+        outcome: data.outcome || 'EmAndamento',
         updated_at: new Date().toISOString(),
         // Additional metadata
         entry_invoice: data.entryInvoice,

@@ -1,5 +1,7 @@
+
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
+import PageLayout from "@/components/layout/PageLayout";
 import SectorForm from "@/components/sectors/SectorForm";
 import { Sector, Service } from "@/types";
 import { ArrowLeft } from "lucide-react";
@@ -41,43 +43,49 @@ export default function ScrapValidationForm() {
   
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-xl font-semibold">Carregando...</h1>
-      </div>
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-semibold">Carregando...</h1>
+        </div>
+      </PageLayout>
     );
   }
   
   if (!sector) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-xl font-bold text-red-500">
-          Setor não encontrado
-        </h1>
-        <Button 
-          onClick={() => navigate('/sucateamento')} 
-          className="mt-4"
-          variant="outline"
-        >
-          Voltar para Validação de Sucateamento
-        </Button>
-      </div>
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-bold text-red-500">
+            Setor não encontrado
+          </h1>
+          <Button 
+            onClick={() => navigate('/sucateamento')} 
+            className="mt-4"
+            variant="outline"
+          >
+            Voltar para Validação de Sucateamento
+          </Button>
+        </div>
+      </PageLayout>
     );
   }
   
   if (sector.status !== 'sucateadoPendente') {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-xl font-bold text-red-500">
-          Este setor não está pendente de validação de sucateamento
-        </h1>
-        <Button 
-          onClick={() => navigate('/sucateamento')} 
-          className="mt-4"
-          variant="outline"
-        >
-          Voltar para Validação de Sucateamento
-        </Button>
-      </div>
+      <PageLayout>
+        <div className="text-center py-12">
+          <h1 className="text-xl font-bold text-red-500">
+            Este setor não está pendente de validação de sucateamento
+          </h1>
+          <Button 
+            onClick={() => navigate('/sucateamento')} 
+            className="mt-4"
+            variant="outline"
+          >
+            Voltar para Validação de Sucateamento
+          </Button>
+        </div>
+      </PageLayout>
     );
   }
 
@@ -98,36 +106,38 @@ export default function ScrapValidationForm() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-2">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={() => navigate('/sucateamento')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="page-title">
-          Validação de Sucateamento
-        </h1>
+    <PageLayout>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => navigate('/sucateamento')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="page-title">
+            Validação de Sucateamento
+          </h1>
+        </div>
+        
+        <Alert variant="destructive" className="bg-red-50 border-red-200">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>TAG: {sector.tagNumber}</AlertTitle>
+          <AlertDescription>
+            Este setor foi marcado como sucateado durante a peritagem. 
+            Por favor, valide o sucateamento e registre a devolução.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="form-container">
+          <SectorForm 
+            sector={sector}
+            onSubmit={handleSubmit}
+            mode="scrap"
+          />
+        </div>
       </div>
-      
-      <Alert variant="destructive" className="bg-red-50 border-red-200">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>TAG: {sector.tagNumber}</AlertTitle>
-        <AlertDescription>
-          Este setor foi marcado como sucateado durante a peritagem. 
-          Por favor, valide o sucateamento e registre a devolução.
-        </AlertDescription>
-      </Alert>
-      
-      <div className="form-container">
-        <SectorForm 
-          sector={sector}
-          onSubmit={handleSubmit}
-          mode="scrap"
-        />
-      </div>
-    </div>
+    </PageLayout>
   );
 }

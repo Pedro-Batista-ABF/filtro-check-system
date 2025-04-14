@@ -11,9 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { format, parse, isAfter, isBefore, isWithinInterval } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 export default function ScrapValidation() {
-  const { sectors, loading, refreshData } = useApi();
+  const { sectors, isLoading, refreshData } = useApi();
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -22,20 +23,26 @@ export default function ScrapValidation() {
   
   // Force refresh on first load
   useEffect(() => {
+    document.title = "Validação de Sucateamento - Gestão de Recuperação";
+    
     if (!hasRefreshed) {
       refreshData().then(() => setHasRefreshed(true));
     }
     
-    // Diagnostic logs
-    console.log("Total sectors:", sectors.length);
-    console.log("Sectors with sucateadoPendente status:", 
+    // Diagnóstico
+    console.log("Total de setores:", sectors.length);
+    console.log("Setores com status sucateadoPendente:", 
       sectors.filter(s => s.status === 'sucateadoPendente').length);
-    console.log("All sector statuses:", sectors.map(s => s.status));
+    console.log("Status de todos os setores:", sectors.map(s => ({ 
+      id: s.id, 
+      tag: s.tagNumber, 
+      status: s.status 
+    })));
   }, [sectors, refreshData, hasRefreshed]);
   
-  // Filter sectors by status (only show sucateadoPendente), search term and date
+  // Filtra setores apenas com status 'sucateadoPendente'
   const filteredSectors = sectors.filter(sector => {
-    // Apply date filter if dates are provided
+    // Aplica filtro de data se fornecido
     let dateMatch = true;
     if (startDate && endDate) {
       const sectorDate = new Date(sector.peritagemDate);
@@ -55,12 +62,12 @@ export default function ScrapValidation() {
 
     const matchesSearch = 
       sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sector.entryInvoice.toLowerCase().includes(searchTerm.toLowerCase());
+      (sector.entryInvoice && sector.entryInvoice.toLowerCase().includes(searchTerm.toLowerCase()));
       
     return sector.status === 'sucateadoPendente' && matchesSearch && dateMatch;
   });
   
-  // Sort sectors by most recent first
+  // Ordena setores pelo mais recente primeiro
   const sortedSectors = [...filteredSectors].sort((a, b) => {
     return new Date(b.peritagemDate).getTime() - new Date(a.peritagemDate).getTime();
   });
@@ -69,13 +76,7 @@ export default function ScrapValidation() {
     navigate(`/sucateamento/${sector.id}`);
   };
 
-  console.log('Setores encontrados (sucateadoPendente):', filteredSectors.length);
-  console.log('Status dos setores carregados:', sectors.map(s => ({ 
-    id: s.id, 
-    tag: s.tagNumber, 
-    status: s.status, 
-    outcome: s.outcome 
-  })));
+  console.log('Setores filtrados para sucateamento pendente:', filteredSectors.length);
 
   return (
     <PageLayout>
@@ -140,7 +141,7 @@ export default function ScrapValidation() {
           </CardContent>
         </Card>
         
-        {loading ? (
+        {isLoading ? (
           <div className="py-20 text-center">
             <p className="text-gray-500">Carregando setores...</p>
           </div>
@@ -156,6 +157,25 @@ export default function ScrapValidation() {
                 ? "Nenhum setor encontrado com os critérios de busca" 
                 : "Nenhum setor aguardando validação de sucateamento"}
             </p>
+            {sectors.some(s => s.status === 'sucateadoPendente') === false && (
+              <button 
+                onClick={() => {
+                  toast.info("Diagnóstico", {
+                    description: `Total: ${sectors.length} setores. Estados encontrados: ${
+                      Object.entries(
+                        sectors.reduce((acc, s) => {
+                          acc[s.status] = (acc[s.status] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>)
+                      ).map(([k, v]) => `${k}:${v}`).join(', ')
+                    }`
+                  });
+                }}
+                className="text-xs text-blue-500 mt-2 underline"
+              >
+                Mostrar diagnóstico
+              </button>
+            )}
           </div>
         )}
       </div>

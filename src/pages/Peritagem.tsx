@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function Peritagem() {
   const navigate = useNavigate();
@@ -27,23 +28,46 @@ export default function Peritagem() {
     
     // Force data refresh on first load
     if (!hasRefreshed) {
-      refreshData().then(() => setHasRefreshed(true));
+      refreshData().then(() => {
+        setHasRefreshed(true);
+        
+        // Mostrar diagnóstico de dados
+        console.log("Dados de setores na tela Peritagem:", sectors);
+        console.log("Contagem de setores por status:", statusCounts);
+        
+        // Verificar se há setores com status sucateadoPendente
+        const pendingScraps = sectors.filter(s => s.status === 'sucateadoPendente');
+        if (pendingScraps.length > 0) {
+          console.log("Setores aguardando validação de sucateamento:", pendingScraps);
+        }
+      });
     }
-    
-    // Add diagnostic log to see sector data
-    console.log("Dados de setores na tela Peritagem:", sectors);
-    console.log("Contagem de setores por status:", statusCounts);
   }, [sectors, refreshData, hasRefreshed, statusCounts]);
+
+  const handleDiagnostic = () => {
+    const statusBreakdown = Object.entries(statusCounts)
+      .map(([status, count]) => `${status}: ${count}`)
+      .join(', ');
+      
+    toast.info("Diagnóstico de Setores", {
+      description: `Total: ${sectors.length} setores. ${statusBreakdown}`
+    });
+  };
 
   return (
     <PageLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="page-title">Peritagem</h1>
-          <Button onClick={() => navigate('/peritagem/novo')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Peritagem
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleDiagnostic}>
+              Diagnóstico
+            </Button>
+            <Button onClick={() => navigate('/peritagem/novo')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Peritagem
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
