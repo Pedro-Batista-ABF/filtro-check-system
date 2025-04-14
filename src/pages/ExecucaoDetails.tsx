@@ -9,6 +9,7 @@ import ProductionCompletionSwitch from "@/components/sectors/ProductionCompletio
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Sector } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ExecucaoDetails() {
   const { id } = useParams<{ id: string }>();
@@ -21,8 +22,61 @@ export default function ExecucaoDetails() {
   useEffect(() => {
     const fetchSector = async () => {
       if (id) {
-        const sectorData = await getSectorById(id);
-        setSector(sectorData);
+        try {
+          console.log("Buscando setor por ID:", id);
+          
+          // Primeiro tenta buscar via API
+          const sectorData = await getSectorById(id);
+          
+          if (sectorData) {
+            console.log("Setor encontrado via API:", sectorData);
+            setSector(sectorData);
+          } else {
+            console.log("Setor não encontrado via API, tentando diretamente no Supabase");
+            
+            // Se não encontrar, tenta buscar diretamente no Supabase
+            const { data: sectorRaw } = await supabase
+              .from('sectors')
+              .select('*')
+              .eq('id', id)
+              .maybeSingle();
+              
+            if (sectorRaw) {
+              console.log("Setor encontrado diretamente:", sectorRaw);
+              
+              // Buscar ciclo mais recente
+              const { data: cycleData } = await supabase
+                .from('cycles')
+                .select('*')
+                .eq('sector_id', id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+                
+              if (cycleData) {
+                // Construir um objeto Sector mínimo
+                const minimalSector: Sector = {
+                  id: sectorRaw.id,
+                  tagNumber: sectorRaw.tag_number,
+                  tagPhotoUrl: sectorRaw.tag_photo_url,
+                  entryInvoice: cycleData.entry_invoice || "Pendente",
+                  entryDate: cycleData.entry_date || new Date().toISOString(),
+                  peritagemDate: cycleData.peritagem_date || "",
+                  services: [],
+                  beforePhotos: [],
+                  afterPhotos: [],
+                  productionCompleted: cycleData.production_completed || false,
+                  status: sectorRaw.current_status as any,
+                  cycleCount: sectorRaw.cycle_count || 1
+                };
+                
+                setSector(minimalSector);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao buscar setor:", error);
+        }
       }
       setLoading(false);
     };

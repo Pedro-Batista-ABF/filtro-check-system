@@ -932,3 +932,19 @@ export const supabaseService = {
     }
   }
 };
+
+const mapPhotosFromDB = (photosData: any[]): Photo[] => {
+  return (photosData || []).map(photo => {
+    let photoType = photo.type;
+    
+    // Verifica se há metadata e se tem o campo type
+    if (photo.metadata && typeof photo.metadata === 'object' && 'type' in photo.metadata) {
+      // Se o type estiver no metadata, usa ele
+      photoType = photo.metadata.type;
+    }
+    
+    return {
+      id: photo.id,
+      url: photo.url,
+      type: photoType as 'before' | 'after' | 'tag' | 'scrap',
+      service

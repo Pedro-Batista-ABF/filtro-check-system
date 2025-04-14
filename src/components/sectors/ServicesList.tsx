@@ -9,7 +9,7 @@ interface ServicesListProps {
 
 export default function ServicesList({ services }: ServicesListProps) {
   // Filtramos apenas os serviços selecionados
-  const selectedServices = services.filter(service => service.selected);
+  const selectedServices = services?.filter(service => service.selected) || [];
 
   if (selectedServices.length === 0) {
     return <p className="text-gray-500">Nenhum serviço selecionado</p>;

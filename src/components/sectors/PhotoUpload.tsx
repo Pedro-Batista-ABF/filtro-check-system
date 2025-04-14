@@ -28,18 +28,38 @@ export default function PhotoUpload({
     fileInputRef.current?.click();
   };
 
+  // Função para obter URL segura da foto, seja arquivo ou URL
+  const getPhotoUrl = (photo: PhotoWithFile): string => {
+    if (photo.url) {
+      return photo.url;
+    } else if (photo.file instanceof File) {
+      return URL.createObjectURL(photo.file);
+    }
+    return ''; // URL vazia caso não seja possível obter
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {photos && photos.map((photo, index) => (
-          <div key={photo.id || `temp-${index}`} className="relative group">
-            <img
-              src={photo.url || URL.createObjectURL(photo.file as File)}
-              alt={`Foto ${index + 1}`}
-              className="w-20 h-20 rounded-md object-cover border"
-            />
-          </div>
-        ))}
+        {photos && photos.map((photo, index) => {
+          const photoUrl = getPhotoUrl(photo);
+          if (!photoUrl) return null;
+          
+          return (
+            <div key={photo.id || `temp-${index}`} className="relative group">
+              <img
+                src={photoUrl}
+                alt={`Foto ${index + 1}`}
+                className="w-20 h-20 rounded-md object-cover border"
+                onError={(e) => {
+                  // Tratar erros de carregamento de imagem
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder.svg'; // URL de imagem de fallback
+                }}
+              />
+            </div>
+          );
+        })}
 
         <div className="flex items-center space-x-2">
           <Button

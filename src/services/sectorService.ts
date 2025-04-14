@@ -1,3 +1,4 @@
+
 import { Sector, Photo, PhotoWithFile, ServiceType, SectorStatus, CycleOutcome } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
@@ -9,8 +10,9 @@ import { supabaseService } from './supabaseService';
  * Service for sector operations
  */
 export const useSectorService = () => {
-  const api = useApiOriginal();
-
+  // Usamos diretamente o supabaseService para evitar dependência cíclica
+  // e evitar o erro de useApiOriginal fora de um ApiProvider
+  
   const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
       // Verificar autenticação primeiro
@@ -67,14 +69,8 @@ export const useSectorService = () => {
 
       try {
         console.log("Enviando dados para criação de setor:", completeData);
-        const newSector = await api.createSector(completeData);
-        console.log("Setor criado com sucesso:", newSector);
-        toast.success("Setor cadastrado com sucesso!");
-        return newSector.id;
-      } catch (apiError) {
-        console.error("Erro ao criar setor via API:", apiError);
         
-        // Tentar direto pelo supabaseService
+        // Tentar diretamente pelo supabaseService
         try {
           console.log("Tentando criar setor diretamente pelo supabaseService");
           const result = await supabaseService.addSector(completeData);
@@ -90,6 +86,11 @@ export const useSectorService = () => {
           console.error("Erro na criação direta:", directError);
           throw directError;
         }
+      } catch (error) {
+        console.error("Erro detalhado ao adicionar setor:", error);
+        const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
+        toast.error(processedError.message);
+        throw processedError;
       }
     } catch (error) {
       console.error("Erro detalhado ao adicionar setor:", error);
@@ -111,7 +112,7 @@ export const useSectorService = () => {
       }
 
       // Primeiro, busca o setor atual
-      const currentSector = await api.getSectorById(id);
+      const currentSector = await supabaseService.getSectorById(id);
       if (!currentSector) {
         throw new Error("Setor não encontrado");
       }
@@ -168,13 +169,6 @@ export const useSectorService = () => {
 
       try {
         console.log("Enviando dados para atualização de setor:", safeUpdateData);
-        // Atualiza o setor
-        await api.updateSector(safeUpdateData);
-        console.log("Setor atualizado com sucesso!");
-        toast.success("Setor atualizado com sucesso!");
-        return true;
-      } catch (apiError) {
-        console.error("Erro ao atualizar setor via API:", apiError);
         
         // Tentar diretamente pelo supabaseService
         try {
@@ -187,6 +181,11 @@ export const useSectorService = () => {
           console.error("Erro na atualização direta:", directError);
           throw directError;
         }
+      } catch (error) {
+        console.error("Erro detalhado ao atualizar setor:", error);
+        const processedError = handleDatabaseError(error, "Não foi possível atualizar o setor");
+        toast.error(processedError.message);
+        throw processedError;
       }
     } catch (error) {
       console.error("Erro detalhado ao atualizar setor:", error);

@@ -9,6 +9,7 @@ interface TagPhotoProps {
 
 export default function TagPhoto({ sector }: TagPhotoProps) {
   const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(sector.tagPhotoUrl);
+  const [imageError, setImageError] = useState(false);
   
   useEffect(() => {
     // Se não tiver foto da TAG no setor, tenta buscar no banco
@@ -22,7 +23,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
             .eq('sector_id', sector.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
             
           if (cycleData) {
             // Buscar foto da TAG pelo tipo ou metadados
@@ -30,13 +31,14 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
               .from('photos')
               .select('*')
               .eq('cycle_id', cycleData.id)
-              .or('type.eq.tag,metadata->>type.eq.tag') // Corrigido para buscar no metadata
+              .or('type.eq.tag,metadata->type.eq.tag') // Corrigido para buscar no metadata
               .limit(1)
               .maybeSingle();
               
             if (photoData) {
               console.log("Foto da TAG encontrada:", photoData);
               setTagPhotoUrl(photoData.url);
+              setImageError(false);
             } else {
               console.log("Nenhuma foto de TAG encontrada para o ciclo", cycleData.id);
             }
@@ -50,7 +52,12 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     }
   }, [sector.id, sector.tagPhotoUrl]);
   
-  if (!tagPhotoUrl) {
+  // Reset image error when tag photo URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [tagPhotoUrl]);
+  
+  if (!tagPhotoUrl || imageError) {
     return (
       <div className="flex items-center justify-center h-48 bg-gray-100 rounded-md border">
         <p className="text-gray-500">Nenhuma foto da TAG disponível</p>
@@ -64,6 +71,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
         src={tagPhotoUrl} 
         alt={`TAG ${sector.tagNumber}`} 
         className="w-full h-48 object-cover"
+        onError={() => setImageError(true)}
       />
     </div>
   );

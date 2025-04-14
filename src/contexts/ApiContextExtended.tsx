@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Sector, Service, Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
@@ -72,15 +73,15 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Tentar recarregar os dados explicitamente usando o método original
       try {
-        // Tentar usar o método da API original primeiro
-        if (api.refreshData) {
-          await api.refreshData();
-        } else {
-          // Se não existir, limpar o cache do Supabase e tentar recarregar manualmente
-          const channels = supabase.getChannels();
-          for (const channel of channels) {
-            supabase.removeChannel(channel);
-          }
+        // Limpar o cache do Supabase manualmente
+        const channels = supabase.getChannels();
+        for (const channel of channels) {
+          supabase.removeChannel(channel);
+        }
+        
+        // Tenta buscar os dados novamente usando o método original
+        if (typeof api.fetchSectors === 'function') {
+          await api.fetchSectors();
         }
         
         toast.success("Dados atualizados com sucesso");

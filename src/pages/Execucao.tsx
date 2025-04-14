@@ -13,6 +13,7 @@ export default function Execucao() {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasRefreshed, setHasRefreshed] = useState(false);
+  const [directSectors, setDirectSectors] = useState<any[]>([]);
   
   // Forçar atualização dos dados ao carregar a página apenas uma vez
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function Execucao() {
           // Verificar setores diretamente no Supabase para diagnóstico
           const { data: dbSectors, error } = await supabase
             .from('sectors')
-            .select('id, tag_number, current_status')
+            .select('id, tag_number, current_status, tag_photo_url')
             .eq('current_status', 'emExecucao');
             
           if (error) {
@@ -33,6 +34,7 @@ export default function Execucao() {
           } else {
             console.log("Setores em execução encontrados diretamente no banco:", dbSectors?.length);
             console.log("Dados dos setores:", dbSectors);
+            setDirectSectors(dbSectors || []);
           }
           
           setHasRefreshed(true);
@@ -56,6 +58,9 @@ export default function Execucao() {
   console.log("Setores em execução:", sectorsInExecution.length);
   console.log("Status dos setores:", sectors.map(s => s.status));
   
+  // Utilize os setores do banco se não encontrar na API
+  const displaySectors = sectorsInExecution.length > 0 ? sectorsInExecution : directSectors;
+  
   // Calculate sector counts by status
   const statusCounts: Record<SectorStatus, number> = {
     peritagemPendente: sectors.filter(s => s.status === 'peritagemPendente').length,
@@ -65,6 +70,11 @@ export default function Execucao() {
     sucateado: sectors.filter(s => s.status === 'sucateado').length,
     sucateadoPendente: sectors.filter(s => s.status === 'sucateadoPendente').length
   };
+  
+  // Atualizar contagens com dados diretos do Supabase
+  if (sectorsInExecution.length === 0 && directSectors.length > 0) {
+    statusCounts.emExecucao = directSectors.length;
+  }
 
   return (
     <PageLayout>
@@ -73,7 +83,7 @@ export default function Execucao() {
         
         {loading || isRefreshing ? (
           <p>Carregando setores...</p>
-        ) : sectorsInExecution.length === 0 ? (
+        ) : displaySectors.length === 0 ? (
           <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 mb-6">
             <h3 className="font-medium text-yellow-800">Nenhum setor em execução</h3>
             <p className="text-yellow-700 mt-1">
@@ -83,10 +93,10 @@ export default function Execucao() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sectorsInExecution.map(sector => (
+            {displaySectors.map(sector => (
               <div key={sector.id} className="bg-white rounded-lg shadow-md p-4">
-                <h2 className="text-lg font-semibold mb-2">{sector.tagNumber}</h2>
-                <p className="text-gray-600">Nota Fiscal: {sector.entryInvoice}</p>
+                <h2 className="text-lg font-semibold mb-2">{sector.tagNumber || sector.tag_number}</h2>
+                <p className="text-gray-600">Nota Fiscal: {sector.entryInvoice || "Pendente"}</p>
                 <p className="text-gray-600">Data de Entrada: {
                   sector.entryDate ? new Date(sector.entryDate).toLocaleDateString() : 'N/A'
                 }</p>
