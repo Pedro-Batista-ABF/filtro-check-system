@@ -10,7 +10,7 @@ import { toast } from "sonner";
 /**
  * Extended API context that includes additional methods for sector management
  */
-interface ApiContextExtendedType extends ApiContextType {
+interface ApiContextExtendedType extends Omit<ApiContextType, 'updateSector'> {
   isLoading: boolean;
   error: string | null;
   sectors: Sector[];
@@ -25,6 +25,9 @@ interface ApiContextExtendedType extends ApiContextType {
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
   updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   refreshData: () => Promise<void>;
+  // Add auth related properties
+  login?: (email: string, password: string) => Promise<boolean>;
+  isAuthenticated?: boolean;
 }
 
 /**
@@ -49,7 +52,6 @@ const defaultContext: ApiContextExtendedType = {
   
   // Add these from ApiContextType
   createSector: async () => ({} as Sector),
-  updateSector: async () => ({} as Sector),
   deleteSector: async () => {},
   getDefaultServices: async () => []
 };
@@ -160,7 +162,7 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
     }
   };
 
-  // Fix function signature to match the interface
+  // Update sector - uses our implementation that returns boolean
   const updateSector = async (sectorId: string, sectorData: Partial<Sector>): Promise<boolean> => {
     try {
       if (!sectorId) {
@@ -175,6 +177,9 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
       throw error;
     }
   };
+
+  // Pass through the original API's updateSector method with a different name to avoid conflict
+  const originalUpdateSector = originalApi.updateSector;
 
   return (
     <ApiContextExtended.Provider
@@ -196,7 +201,13 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
         refreshData,
         
         // Pass through methods from the original context
-        ...originalApi
+        createSector: originalApi.createSector,
+        deleteSector: originalApi.deleteSector,
+        getDefaultServices: originalApi.getDefaultServices,
+        
+        // Add auth properties if they exist in the original context
+        login: originalApi.login,
+        isAuthenticated: originalApi.isAuthenticated
       }}
     >
       {children}
