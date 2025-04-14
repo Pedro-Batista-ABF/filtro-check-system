@@ -171,7 +171,12 @@ export default function ScrapValidation() {
     navigate(`/sucateamento/${sector.id}`);
   };
 
-  console.log('Setores filtrados para sucateamento pendente:', filteredSectors.length);
+  // Adicionar diagnóstico para debug
+  useEffect(() => {
+    console.log('Total de setores no estado:', sectors.length);
+    console.log('Setores com status sucateadoPendente:', sectors.filter(s => s.status === 'sucateadoPendente').length);
+    console.log('Setores filtrados para exibição:', filteredSectors.length);
+  }, [sectors, filteredSectors]);
 
   return (
     <PageLayout>

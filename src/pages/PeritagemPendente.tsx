@@ -55,6 +55,7 @@ export default function PeritagemPendente() {
         services: [],
         beforePhotos: [],
         afterPhotos: [],
+        scrapPhotos: [], // Adicionar scrapPhotos
         entryInvoice: '',
         entryDate: '',
         peritagemDate: '',

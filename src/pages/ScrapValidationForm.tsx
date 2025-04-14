@@ -26,6 +26,12 @@ export default function ScrapValidationForm() {
       try {
         if (id) {
           const sectorData = await getSectorById(id);
+          
+          // Garantir que scrapPhotos está inicializado
+          if (sectorData && !sectorData.scrapPhotos) {
+            sectorData.scrapPhotos = [];
+          }
+          
           setSector(sectorData);
           const servicesData = await getDefaultServices();
           setServices(servicesData);
@@ -40,6 +46,18 @@ export default function ScrapValidationForm() {
     
     fetchData();
   }, [id, getSectorById, getDefaultServices]);
+  
+  useEffect(() => {
+    // Log para diagnóstico
+    if (sector) {
+      console.log("Setor carregado:", {
+        id: sector.id,
+        tagNumber: sector.tagNumber,
+        status: sector.status,
+        scrapPhotos: sector.scrapPhotos?.length || 0
+      });
+    }
+  }, [sector]);
   
   if (loading) {
     return (
@@ -94,8 +112,19 @@ export default function ScrapValidationForm() {
       const updates = {
         ...data,
         status: 'sucateado' as const,
-        outcome: 'scrapped' as const // Explicitamente definir outcome como 'scrapped'
+        outcome: 'scrapped' as const,
+        scrapValidated: true
       };
+      
+      // Diagnóstico
+      console.log("Enviando atualização do setor:", {
+        id: sector.id,
+        tagNumber: sector.tagNumber,
+        status: updates.status,
+        outcome: updates.outcome,
+        scrapValidated: updates.scrapValidated
+      });
+      
       await updateSector(sector.id, updates);
       toast.success('Sucateamento validado com sucesso!');
       navigate('/sucateamento');
