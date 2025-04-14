@@ -5,7 +5,8 @@ import { supabaseService } from '@/services/supabaseService';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 
-interface ApiContextType {
+// Make sure to export this type
+export interface ApiContextType {
   sectors: Sector[];
   loading: boolean;
   error: string | null;
@@ -195,7 +196,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-// Renamed from useApi to useApiOriginal to avoid name conflict
+// Rename to useApiOriginal and export properly
 export const useApiOriginal = (): ApiContextType => {
   const context = useContext(ApiContext);
   if (context === undefined) {
@@ -203,3 +204,6 @@ export const useApiOriginal = (): ApiContextType => {
   }
   return context;
 };
+
+// Add a standard useApi export to maintain compatibility
+export const useApi = useApiOriginal;

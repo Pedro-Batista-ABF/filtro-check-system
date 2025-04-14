@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function PeritagemPendente() {
-  const { sectors, loading, refreshData } = useApi();
+  const { sectors, isLoading, refreshData } = useApi();
   const [pendingSectors, setPendingSectors] = useState<Sector[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
@@ -133,7 +133,7 @@ export default function PeritagemPendente() {
               variant="outline" 
               onClick={handleRefresh} 
               className="mr-2"
-              disabled={loading}
+              disabled={isLoading}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
@@ -145,7 +145,7 @@ export default function PeritagemPendente() {
           </div>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="flex justify-center items-center min-h-[200px]">
             <p className="text-gray-500">Carregando setores...</p>
           </div>

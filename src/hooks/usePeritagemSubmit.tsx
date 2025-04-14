@@ -100,7 +100,7 @@ export function usePeritagemSubmit() {
       let attempt = 0;
       let result;
       let lastError;
-      let sectorResult: string | Sector | boolean = "";
+      let sectorResult: string | boolean = "";
       
       while (attempt < maxRetries) {
         try {
@@ -116,11 +116,13 @@ export function usePeritagemSubmit() {
           const sectorData = prepareSectorData(data, isEditing, sectorId, status, processedPhotos, cycleCount);
 
           if (isEditing && sectorId) {
+            // Fixed updateSector call - now passing sectorId separately
             result = await updateSector(sectorId, sectorData);
             sectorResult = result ? sectorId : false;
           } else {
             try {
-              result = await addSector(sectorData);
+              // For addSector we need a full sector, not partial
+              result = await addSector(sectorData as Omit<Sector, 'id'>);
               sectorResult = typeof result === 'string' ? result : false;
             } catch (addError) {
               console.error("Detailed error adding sector:", addError);

@@ -9,7 +9,7 @@ import { useEffect } from "react";
 
 export default function Peritagem() {
   const navigate = useNavigate();
-  const { sectors, loading } = useApi();
+  const { sectors, isLoading } = useApi();
   
   // Calculate sector counts by status
   const statusCounts = {
@@ -38,7 +38,7 @@ export default function Peritagem() {
           </Button>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <p>Carregando setores...</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

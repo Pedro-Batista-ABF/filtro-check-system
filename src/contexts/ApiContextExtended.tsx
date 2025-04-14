@@ -1,7 +1,7 @@
 
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
 import { Sector, Photo, PhotoWithFile } from "@/types";
-import { useApi as useOriginalApi, ApiContextType } from "./ApiContext";
+import { useApiOriginal, ApiContextType } from "./ApiContext";
 import { supabaseService } from "@/services/supabaseService";
 import { useSectorService } from "@/services/sectorService";
 import { usePhotoService } from "@/services/photoService";
@@ -19,7 +19,7 @@ interface ApiContextExtendedType extends ApiContextType {
   qualityCheckSectors: Sector[];
   completedSectors: Sector[];
   addSector: (sectorData: Omit<Sector, 'id'>) => Promise<string>;
-  updateSector: (sector: Partial<Sector>) => Promise<boolean>;
+  updateSector: (sectorId: string, sectorData: Partial<Sector>) => Promise<boolean>;
   getSectorById: (id: string) => Promise<Sector | undefined>;
   getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
@@ -33,6 +33,7 @@ interface ApiContextExtendedType extends ApiContextType {
 const defaultContext: ApiContextExtendedType = {
   isLoading: false,
   error: null,
+  loading: false, // Add this from ApiContextType
   sectors: [],
   pendingSectors: [],
   inProgressSectors: [],
@@ -46,11 +47,11 @@ const defaultContext: ApiContextExtendedType = {
   updateServicePhotos: async () => false,
   refreshData: async () => {},
   
-  // From original ApiContext
-  createSector: async () => "",
-  updateProductionStatus: async () => false,
-  submitQualityCheck: async () => false,
-  validateScrapping: async () => false
+  // Add these from ApiContextType
+  createSector: async () => ({} as Sector),
+  updateSector: async () => ({} as Sector),
+  deleteSector: async () => {},
+  getDefaultServices: async () => []
 };
 
 /**
@@ -62,7 +63,7 @@ const ApiContextExtended = createContext<ApiContextExtendedType>(defaultContext)
  * Provider component for the extended API context
  */
 export function ApiContextExtendedProvider({ children }: { children: ReactNode }) {
-  const originalApi = useOriginalApi();
+  const originalApi = useApiOriginal();
   const sectorService = useSectorService();
   const photoService = usePhotoService();
   
@@ -159,14 +160,14 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
     }
   };
 
-  // Update an existing sector
-  const updateSector = async (sectorData: Partial<Sector>): Promise<boolean> => {
+  // Fix function signature to match the interface
+  const updateSector = async (sectorId: string, sectorData: Partial<Sector>): Promise<boolean> => {
     try {
-      if (!sectorData.id) {
+      if (!sectorId) {
         throw new Error("Sector ID is required for updates");
       }
       
-      const result = await sectorService.updateSector(sectorData.id, sectorData);
+      const result = await sectorService.updateSector(sectorId, sectorData);
       await refreshData();
       return result;
     } catch (error) {
@@ -180,6 +181,7 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
       value={{
         isLoading,
         error,
+        loading: originalApi.loading, // Pass through original loading
         sectors,
         pendingSectors,
         inProgressSectors,
@@ -208,3 +210,6 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
 export function useApi() {
   return useContext(ApiContextExtended);
 }
+
+// Export the provider component properly
+export { ApiContextExtended, ApiContextExtendedProvider as ApiProvider };
