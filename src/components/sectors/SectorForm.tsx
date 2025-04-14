@@ -15,13 +15,15 @@ interface SectorFormProps {
   onSubmit?: (data: Partial<Sector>) => void;
   mode?: 'create' | 'edit' | 'view' | 'checagem' | 'scrap';
   isLoading?: boolean;
+  photoRequired?: boolean;
 }
 
 export default function SectorForm({ 
   sector,
   onSubmit,
   mode = 'create',
-  isLoading = false
+  isLoading = false,
+  photoRequired = false
 }: SectorFormProps) {
   const [tagNumber, setTagNumber] = useState(sector.tagNumber || '');
   const [entryInvoice, setEntryInvoice] = useState(sector.entryInvoice || '');
@@ -118,9 +120,9 @@ export default function SectorForm({
         entryInvoice: false,
         entryDate: false,
         peritagemDate: false,
-        scrapObservations: false,  // Removed ? from property name
-        scrapDate: false,          // Removed ? from property name
-        scrapInvoice: false        // Removed ? from property name
+        scrapObservations: false,  
+        scrapDate: false,         
+        scrapInvoice: false        
       };
       
       if (!tagNumber.trim()) {
@@ -168,7 +170,8 @@ export default function SectorForm({
           peritagemDate,
           services: selectedServices,
           beforePhotos,
-          afterPhotos
+          afterPhotos,
+          scrapPhotos: sector.scrapPhotos || [] // Garantir que scrapPhotos seja incluído
         };
         
         // Adicionar informações específicas para cada modo
@@ -182,6 +185,7 @@ export default function SectorForm({
           formData.scrapReturnInvoice = scrapInvoice;
           formData.scrapReturnDate = scrapDate ? format(scrapDate, "yyyy-MM-dd") : undefined;
           formData.scrapValidated = true;
+          formData.outcome = 'scrapped'; // Garantir que o outcome seja atualizado corretamente
         }
         
         // Enviar dados para o componente pai
@@ -310,6 +314,7 @@ export default function SectorForm({
             onChange={handleBeforePhotoChange}
             disabled={isLoading || mode === 'view'}
             title="Adicionar fotos da entrada"
+            required={photoRequired}
           />
         </CardContent>
       </Card>

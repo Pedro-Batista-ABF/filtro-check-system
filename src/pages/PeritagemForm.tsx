@@ -43,9 +43,9 @@ export default function PeritagemForm() {
             <SectorForm 
               sector={sector || defaultSector}
               onSubmit={(data) => handleSubmit(data, isEditing, sector?.id)}
-              mode="review"
+              mode="create"
               photoRequired={true}
-              loading={isSaving}
+              isLoading={isSaving}
             />
           </div>
         </Card>

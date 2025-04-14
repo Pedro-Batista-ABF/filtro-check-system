@@ -110,6 +110,9 @@ export default function ScrapValidationForm() {
 
   const handleSubmit = async (data: Partial<Sector>) => {
     try {
+      setLoading(true);
+      
+      // Dados para atualização
       const updates = {
         ...data,
         status: 'sucateado' as const,
@@ -123,7 +126,10 @@ export default function ScrapValidationForm() {
         tagNumber: sector.tagNumber,
         status: updates.status,
         outcome: updates.outcome,
-        scrapValidated: updates.scrapValidated
+        scrapValidated: updates.scrapValidated,
+        scrapObservations: updates.scrapObservations,
+        scrapReturnInvoice: updates.scrapReturnInvoice,
+        scrapReturnDate: updates.scrapReturnDate
       });
       
       // Atualizar na API
@@ -136,17 +142,49 @@ export default function ScrapValidationForm() {
           .update({
             current_status: 'sucateado',
             current_outcome: 'scrapped',
+            scrap_observations: data.scrapObservations || sector.scrapObservations,
             updated_at: new Date().toISOString()
           })
           .eq('id', sector.id);
           
         if (error) {
           console.error("Erro ao atualizar status no Supabase:", error);
+          throw error;
         } else {
           console.log("Status atualizado com sucesso no Supabase");
         }
+        
+        // Atualizar também o ciclo atual
+        const { data: cycleData } = await supabase
+          .from('cycles')
+          .select('id')
+          .eq('sector_id', sector.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (cycleData) {
+          const { error: cycleError } = await supabase
+            .from('cycles')
+            .update({
+              status: 'sucateado',
+              outcome: 'scrapped',
+              scrap_validated: true,
+              scrap_observations: data.scrapObservations || sector.scrapObservations,
+              scrap_return_invoice: data.scrapReturnInvoice || sector.scrapReturnInvoice,
+              scrap_return_date: data.scrapReturnDate ? new Date(data.scrapReturnDate).toISOString() : null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', cycleData.id);
+            
+          if (cycleError) {
+            console.error("Erro ao atualizar ciclo:", cycleError);
+          }
+        }
       } catch (dbError) {
         console.error("Erro na atualização direta:", dbError);
+        toast.error("Erro ao atualizar status do setor");
+        return;
       }
       
       toast.success('Sucateamento validado com sucesso!');
@@ -154,6 +192,8 @@ export default function ScrapValidationForm() {
     } catch (error) {
       console.error('Error saving sector:', error);
       toast.error('Erro ao validar sucateamento');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -187,6 +227,7 @@ export default function ScrapValidationForm() {
             sector={sector}
             onSubmit={handleSubmit}
             mode="scrap"
+            isLoading={loading}
           />
         </div>
       </div>

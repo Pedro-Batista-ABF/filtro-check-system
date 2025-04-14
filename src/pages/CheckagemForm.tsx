@@ -1,114 +1,168 @@
 
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
-import SectorForm from "@/components/sectors/SectorForm";
+import PageLayout from "@/components/layout/PageLayout";
 import { Sector } from "@/types";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import CheckagemFormContent from "@/components/checagem/CheckagemFormContent";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SectorSummary from "@/components/sectors/SectorSummary";
+import SectorForm from "@/components/sectors/SectorForm";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSectorById, updateSector } = useApi();
-  const [sector, setSector] = useState<Sector | undefined>(undefined);
+  const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Buscar dados ao carregar o componente
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("checagem");
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (id) {
-        const sectorData = await getSectorById(id);
-        setSector(sectorData);
+    document.title = "Checagem Final - Gestão de Recuperação";
+    
+    const fetchSector = async () => {
+      if (!id) {
+        navigate('/checagem');
+        return;
       }
-      setLoading(false);
+      
+      try {
+        const sectorData = await getSectorById(id);
+        
+        if (!sectorData) {
+          toast.error("Setor não encontrado");
+          navigate('/checagem');
+          return;
+        }
+        
+        // Verifica se o setor está pronto para checagem
+        if (sectorData.status !== 'checagemFinalPendente') {
+          toast.error(
+            "Status inválido para checagem", 
+            { description: `Este setor está com status "${sectorData.status}" e não pode ser checado.` }
+          );
+          navigate('/checagem');
+          return;
+        }
+        
+        setSector(sectorData);
+      } catch (error) {
+        console.error("Erro ao carregar setor:", error);
+        toast.error("Erro ao carregar dados do setor");
+        navigate('/checagem');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    fetchData();
-  }, [id, getSectorById]);
+    fetchSector();
+  }, [id, getSectorById, navigate]);
+
+  const handleSubmit = async (data: Partial<Sector>) => {
+    if (!sector || !id) return;
+    
+    try {
+      setSaving(true);
+      
+      // Preparar dados para atualização
+      const updateData = {
+        ...data,
+        id: sector.id,
+        status: 'concluido' as const,
+        // Manter os dados originais que não foram alterados
+        tagNumber: sector.tagNumber,
+        entryInvoice: sector.entryInvoice,
+        entryDate: sector.entryDate,
+        peritagemDate: sector.peritagemDate,
+        services: sector.services,
+        beforePhotos: sector.beforePhotos,
+        scrapPhotos: sector.scrapPhotos
+      };
+      
+      // Atualizar o setor
+      await updateSector(sector.id, updateData);
+      
+      toast.success("Checagem concluída com sucesso!");
+      navigate('/checagem');
+    } catch (error) {
+      console.error("Erro ao salvar checagem:", error);
+      toast.error("Erro ao salvar checagem");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
-      <PageLayoutWrapper>
-        <div className="text-center py-12">
-          <h1 className="text-xl font-semibold">Carregando...</h1>
+      <PageLayout>
+        <div className="p-6 text-center">
+          <h2>Carregando dados do setor...</h2>
         </div>
-      </PageLayoutWrapper>
+      </PageLayout>
     );
   }
 
   if (!sector) {
     return (
-      <PageLayoutWrapper>
-        <div className="text-center py-12">
-          <h1 className="text-xl font-bold text-red-500">Setor não encontrado</h1>
+      <PageLayout>
+        <div className="p-6 text-center">
+          <h2 className="text-red-500">Setor não encontrado</h2>
           <Button 
             onClick={() => navigate('/checagem')} 
             className="mt-4"
             variant="outline"
           >
-            Voltar para Checagem
+            Voltar para lista de checagem
           </Button>
         </div>
-      </PageLayoutWrapper>
+      </PageLayout>
     );
   }
-
-  if (sector.status !== 'checagemFinalPendente') {
-    return (
-      <PageLayoutWrapper>
-        <div className="text-center py-12">
-          <h1 className="text-xl font-bold text-red-500">
-            Este setor não está pendente de checagem
-          </h1>
-          <Button 
-            onClick={() => navigate('/checagem')} 
-            className="mt-4"
-            variant="outline"
-          >
-            Voltar para Checagem
-          </Button>
-        </div>
-      </PageLayoutWrapper>
-    );
-  }
-
-  const handleSubmit = async (data: Partial<Sector>) => {
-    try {
-      await updateSector(sector.id, data);
-      navigate('/checagem');
-    } catch (error) {
-      console.error('Error updating sector:', error);
-    }
-  };
 
   return (
-    <PageLayoutWrapper>
+    <PageLayout>
       <div className="space-y-6">
-        <div className="flex items-center space-x-3 pb-2 border-b">
+        <div className="flex items-center gap-2">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="icon" 
             onClick={() => navigate('/checagem')}
-            className="hover:bg-primary/10"
           >
-            <ArrowLeft className="h-5 w-5 text-primary" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold text-primary">Checagem Final</h1>
+          <h1 className="page-title">Checagem Final</h1>
         </div>
         
-        <Card className="border-none shadow-lg">
-          <div className="p-6">
-            <SectorForm 
-              sector={sector}
-              onSubmit={handleSubmit}
-              mode="quality"
-            />
-          </div>
-        </Card>
+        <Tabs defaultValue="checagem" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="checagem">Checagem</TabsTrigger>
+            <TabsTrigger value="detalhes">Detalhes do Setor</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="checagem" className="space-y-6 mt-4">
+            <Card className="border-none shadow-lg">
+              <div className="p-6">
+                <SectorForm 
+                  sector={sector}
+                  onSubmit={handleSubmit}
+                  mode="checagem"
+                  isLoading={saving}
+                  photoRequired={true}
+                />
+              </div>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="detalhes" className="space-y-6 mt-4">
+            <SectorSummary sector={sector} />
+          </TabsContent>
+        </Tabs>
       </div>
-    </PageLayoutWrapper>
+    </PageLayout>
   );
 }

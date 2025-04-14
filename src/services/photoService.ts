@@ -106,7 +106,15 @@ export const usePhotoService = () => {
               
             if (error) {
               console.error("Erro ao adicionar foto na tabela photos:", error);
+            } else {
+              console.log("Foto adicionada com sucesso na tabela photos:", {
+                service_id: serviceId,
+                type,
+                stage: type === 'before' ? 'peritagem' : 'checagem'
+              });
             }
+          } else {
+            console.warn("Ciclo não encontrado para o setor:", sectorId);
           }
         }
       } catch (directError) {

@@ -29,6 +29,7 @@ export interface Service {
   type?: ServiceType | string;
   created_at?: string;
   updated_at?: string;
+  completed?: boolean;
 }
 
 export interface Photo {
