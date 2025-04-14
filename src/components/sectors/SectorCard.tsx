@@ -2,7 +2,7 @@
 import { Sector } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckSquare, ClipboardCheck, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { CheckSquare, ClipboardCheck, AlertTriangle, CheckCircle2, Clock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -36,6 +36,18 @@ export default function SectorCard({ sector }: SectorCardProps) {
           label: 'Concluído',
           color: 'bg-green-100 text-green-800 border-green-200',
           icon: <CheckSquare className="h-4 w-4 mr-1" />
+        };
+      case 'sucateadoPendente':
+        return {
+          label: 'Sucateamento Pendente',
+          color: 'bg-orange-100 text-orange-800 border-orange-200',
+          icon: <Trash2 className="h-4 w-4 mr-1" />
+        };
+      case 'sucateado':
+        return {
+          label: 'Sucateado',
+          color: 'bg-red-100 text-red-800 border-red-200',
+          icon: <Trash2 className="h-4 w-4 mr-1" />
         };
       default:
         return {
@@ -122,6 +134,16 @@ export default function SectorCard({ sector }: SectorCardProps) {
           </Button>
         )}
         {sector.status === 'concluido' && (
+          <Button asChild className="w-full" variant="outline">
+            <Link to={`/setor/${sector.id}`}>Ver Relatório</Link>
+          </Button>
+        )}
+        {sector.status === 'sucateadoPendente' && (
+          <Button asChild className="w-full" variant="outline">
+            <Link to={`/sucateamento/${sector.id}`}>Validar Sucateamento</Link>
+          </Button>
+        )}
+        {sector.status === 'sucateado' && (
           <Button asChild className="w-full" variant="outline">
             <Link to={`/setor/${sector.id}`}>Ver Relatório</Link>
           </Button>

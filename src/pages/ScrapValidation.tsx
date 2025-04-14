@@ -55,6 +55,14 @@ export default function ScrapValidation() {
     navigate(`/sucateamento/${sector.id}`);
   };
 
+  console.log('Setores encontrados (sucateadoPendente):', filteredSectors.length);
+  console.log('Status dos setores carregados:', sectors.map(s => ({ 
+    id: s.id, 
+    tag: s.tagNumber, 
+    status: s.status, 
+    outcome: s.outcome 
+  })));
+
   return (
     <PageLayout>
       <div className="space-y-6">
