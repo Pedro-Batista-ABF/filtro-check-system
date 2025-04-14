@@ -111,6 +111,7 @@ export default function ScrapValidationForm() {
   const handleSubmit = async (data: Partial<Sector>) => {
     try {
       setLoading(true);
+      console.log("Iniciando validação de sucateamento para o setor:", sector.id);
       
       // Dados para atualização
       const updates = {
