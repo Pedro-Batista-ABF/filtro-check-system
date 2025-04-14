@@ -84,7 +84,7 @@ export const usePhotoService = () => {
             .eq('sector_id', sectorId)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
             
           if (cycleData) {
             // Adicionar a foto na tabela photos

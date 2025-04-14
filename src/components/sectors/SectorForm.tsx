@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -28,8 +29,15 @@ export default function SectorForm({
   const [peritagemDate, setPeritagemDate] = useState(sector.peritagemDate || '');
   const [entryObservations, setEntryObservations] = useState(sector.entryObservations || '');
   const [selectedServices, setSelectedServices] = useState<Service[]>(sector.services || []);
-  const [beforePhotos, setBeforePhotos] = useState<PhotoWithFile[]>(sector.beforePhotos || []);
-  const [afterPhotos, setAfterPhotos] = useState<PhotoWithFile[]>(sector.afterPhotos || []);
+  
+  // Convert Photo[] to PhotoWithFile[] by adding file: null to each photo
+  const [beforePhotos, setBeforePhotos] = useState<PhotoWithFile[]>(
+    (sector.beforePhotos || []).map(photo => ({ ...photo, file: null }))
+  );
+  const [afterPhotos, setAfterPhotos] = useState<PhotoWithFile[]>(
+    (sector.afterPhotos || []).map(photo => ({ ...photo, file: null }))
+  );
+  
   const [formErrors, setFormErrors] = useState<{
     tagNumber?: boolean;
     entryInvoice?: boolean;
@@ -39,9 +47,10 @@ export default function SectorForm({
     scrapDate?: boolean;
     scrapInvoice?: boolean;
   }>({});
+  
   const [isScrap, setIsScrap] = useState(false);
   const [scrapObservations, setScrapObservations] = useState('');
-  const [scrapDate, setScrapDate] = useState<Date>();
+  const [scrapDate, setScrapDate] = useState<Date | undefined>();
   const [scrapInvoice, setScrapInvoice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,8 +62,8 @@ export default function SectorForm({
     setPeritagemDate(sector.peritagemDate || '');
     setEntryObservations(sector.entryObservations || '');
     setSelectedServices(sector.services || []);
-    setBeforePhotos(sector.beforePhotos ? sector.beforePhotos.map(photo => ({ ...photo, file: null })) : []);
-    setAfterPhotos(sector.afterPhotos ? sector.afterPhotos.map(photo => ({ ...photo, file: null })) : []);
+    setBeforePhotos((sector.beforePhotos || []).map(photo => ({ ...photo, file: null })));
+    setAfterPhotos((sector.afterPhotos || []).map(photo => ({ ...photo, file: null })));
 
     // Quando estamos em modo de sucateamento, inicializar scrapValidated
     if (mode === 'scrap') {
@@ -109,9 +118,9 @@ export default function SectorForm({
         entryInvoice: false,
         entryDate: false,
         peritagemDate: false,
-        scrapObservations?: false,
-        scrapDate?: false,
-        scrapInvoice?: false
+        scrapObservations: false,  // Removed ? from property name
+        scrapDate: false,          // Removed ? from property name
+        scrapInvoice: false        // Removed ? from property name
       };
       
       if (!tagNumber.trim()) {
