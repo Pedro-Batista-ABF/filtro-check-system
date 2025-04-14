@@ -1,4 +1,3 @@
-
 import { Sector, Service, Photo, CycleOutcome, SectorStatus } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -560,7 +559,12 @@ export const sectorService = {
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
           updated_by: user.id,
-          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
+          updated_at: new Date().toISOString(), // Usar updated_at em vez de modified_at
+          // Mapear novos campos
+          nf_entrada: sectorData.nf_entrada || sectorData.entryInvoice,
+          nf_saida: sectorData.nf_saida || sectorData.exitInvoice,
+          data_entrada: sectorData.data_entrada || (sectorData.entryDate ? new Date(sectorData.entryDate).toISOString() : null),
+          data_saida: sectorData.data_saida || (sectorData.exitDate ? new Date(sectorData.exitDate).toISOString() : null)
         })
         .eq('id', sectorData.id);
         

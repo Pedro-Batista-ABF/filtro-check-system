@@ -10,11 +10,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Sector } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function ExecucaoDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSectorById } = useApi();
+  const { getSectorById, refreshData } = useApi();
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   
@@ -35,11 +36,19 @@ export default function ExecucaoDetails() {
             console.log("Setor não encontrado via API, tentando diretamente no Supabase");
             
             // Se não encontrar, tenta buscar diretamente no Supabase
-            const { data: sectorRaw } = await supabase
+            const { data: sectorRaw, error } = await supabase
               .from('sectors')
               .select('*')
               .eq('id', id)
               .maybeSingle();
+              
+            if (error) {
+              console.error("Erro ao buscar setor:", error);
+              toast.error("Erro ao buscar setor", {
+                description: error.message
+              });
+              return;
+            }
               
             if (sectorRaw) {
               console.log("Setor encontrado diretamente:", sectorRaw);
@@ -54,7 +63,31 @@ export default function ExecucaoDetails() {
                 .maybeSingle();
                 
               if (cycleData) {
-                // Construir um objeto Sector mínimo
+                // Buscar serviços do setor
+                const { data: sectorServices } = await supabase
+                  .from('sector_services')
+                  .select('*')
+                  .eq('sector_id', id);
+                  
+                // Buscar tipos de serviço para mapear nomes
+                const { data: serviceTypes } = await supabase
+                  .from('service_types')
+                  .select('*');
+                  
+                // Mapear serviços
+                const services = (serviceTypes || []).map(type => {
+                  const sectorService = (sectorServices || []).find(s => s.service_id === type.id);
+                  return {
+                    id: type.id,
+                    name: type.name,
+                    description: type.description,
+                    selected: sectorService ? true : false,
+                    quantity: sectorService ? sectorService.quantity : 1,
+                    photos: []
+                  };
+                });
+                
+                // Construir um objeto Sector completo
                 const minimalSector: Sector = {
                   id: sectorRaw.id,
                   tagNumber: sectorRaw.tag_number,
@@ -62,12 +95,17 @@ export default function ExecucaoDetails() {
                   entryInvoice: cycleData.entry_invoice || "Pendente",
                   entryDate: cycleData.entry_date || new Date().toISOString(),
                   peritagemDate: cycleData.peritagem_date || "",
-                  services: [],
+                  services: services,
                   beforePhotos: [],
                   afterPhotos: [],
                   productionCompleted: cycleData.production_completed || false,
                   status: sectorRaw.current_status as any,
-                  cycleCount: sectorRaw.cycle_count || 1
+                  cycleCount: sectorRaw.cycle_count || 1,
+                  // Mapear novos campos
+                  nf_entrada: sectorRaw.nf_entrada,
+                  nf_saida: sectorRaw.nf_saida,
+                  data_entrada: sectorRaw.data_entrada,
+                  data_saida: sectorRaw.data_saida
                 };
                 
                 setSector(minimalSector);
@@ -76,6 +114,9 @@ export default function ExecucaoDetails() {
           }
         } catch (error) {
           console.error("Erro ao buscar setor:", error);
+          toast.error("Erro ao buscar setor", {
+            description: error instanceof Error ? error.message : "Erro desconhecido"
+          });
         }
       }
       setLoading(false);

@@ -42,6 +42,16 @@ export default function SectorDetails({ sector }: SectorDetailsProps) {
     );
   };
   
+  // Obter a nota fiscal da entrada - considerar tanto entryInvoice quanto nf_entrada
+  const getEntryInvoice = () => {
+    return sector.nf_entrada || sector.entryInvoice || "N/A";
+  };
+  
+  // Obter a data de entrada - considerar tanto entryDate quanto data_entrada
+  const getEntryDate = () => {
+    return formatDate(sector.data_entrada || sector.entryDate);
+  };
+  
   return (
     <div className="space-y-6">
       <Card className="shadow-sm">
@@ -58,11 +68,11 @@ export default function SectorDetails({ sector }: SectorDetailsProps) {
               <div className="space-y-2">
                 <div className="grid grid-cols-2">
                   <span className="text-gray-500">Nota Fiscal Entrada:</span>
-                  <span>{sector.entryInvoice}</span>
+                  <span>{getEntryInvoice()}</span>
                 </div>
                 <div className="grid grid-cols-2">
                   <span className="text-gray-500">Data de Entrada:</span>
-                  <span>{formatDate(sector.entryDate)}</span>
+                  <span>{getEntryDate()}</span>
                 </div>
                 <div className="grid grid-cols-2">
                   <span className="text-gray-500">Data de Peritagem:</span>
@@ -116,6 +126,11 @@ export default function SectorDetails({ sector }: SectorDetailsProps) {
                         src={photo.url} 
                         alt="Foto antes do serviço" 
                         className="w-full h-48 object-cover"
+                        onError={(e) => {
+                          // Tratar erros de carregamento de imagem
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg'; // URL de imagem de fallback
+                        }}
                       />
                       <div className="p-2 bg-gray-50">
                         <Badge variant="outline">Antes</Badge>

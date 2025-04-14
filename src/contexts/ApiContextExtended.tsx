@@ -25,9 +25,6 @@ interface ApiContextExtendedType extends Omit<ApiContextType, 'updateSector'> {
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
   updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   refreshData: () => Promise<void>;
-  // Add auth related properties
-  login?: (email: string, password: string) => Promise<boolean>;
-  isAuthenticated?: boolean;
 }
 
 /**
@@ -178,9 +175,6 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
     }
   };
 
-  // Pass through the original API's updateSector method with a different name to avoid conflict
-  const originalUpdateSector = originalApi.updateSector;
-
   return (
     <ApiContextExtended.Provider
       value={{
@@ -203,11 +197,7 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
         // Pass through methods from the original context
         createSector: originalApi.createSector,
         deleteSector: originalApi.deleteSector,
-        getDefaultServices: originalApi.getDefaultServices,
-        
-        // Add auth properties if they exist in the original context
-        login: originalApi.login,
-        isAuthenticated: originalApi.isAuthenticated
+        getDefaultServices: originalApi.getDefaultServices
       }}
     >
       {children}

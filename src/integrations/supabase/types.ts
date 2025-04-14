@@ -287,7 +287,11 @@ export type Database = {
           current_outcome: string | null
           current_status: string
           cycle_count: number
+          data_entrada: string | null
+          data_saida: string | null
           id: string
+          nf_entrada: string | null
+          nf_saida: string | null
           scrap_observations: string | null
           tag_number: string
           tag_photo_url: string | null
@@ -300,7 +304,11 @@ export type Database = {
           current_outcome?: string | null
           current_status?: string
           cycle_count?: number
+          data_entrada?: string | null
+          data_saida?: string | null
           id?: string
+          nf_entrada?: string | null
+          nf_saida?: string | null
           scrap_observations?: string | null
           tag_number: string
           tag_photo_url?: string | null
@@ -313,7 +321,11 @@ export type Database = {
           current_outcome?: string | null
           current_status?: string
           cycle_count?: number
+          data_entrada?: string | null
+          data_saida?: string | null
           id?: string
+          nf_entrada?: string | null
+          nf_saida?: string | null
           scrap_observations?: string | null
           tag_number?: string
           tag_photo_url?: string | null
