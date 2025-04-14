@@ -1,11 +1,12 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Sector, Service, Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 import { useApiOriginal } from './ApiContext';
 import { useSectorService } from '@/services/sectorService';
 import { usePhotoService } from '@/services/photoService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ApiContextValue {
   sectors: Sector[];
@@ -17,6 +18,7 @@ interface ApiContextValue {
   getDefaultServices: () => Promise<Service[]>;
   updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
+  refreshData: () => Promise<void>;
   
   // Auth properties and methods from AuthContext
   user: { id: string; email: string; } | null;
@@ -47,6 +49,24 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     email: auth.user.email || ''
   } : null;
 
+  // Adiciona função para recarregar dados
+  const refreshData = async () => {
+    try {
+      // Forçar recarregamento dos setores
+      console.log("Forçando recarregamento dos setores...");
+      
+      // Este é um workaround para forçar o recarregamento
+      // Primeiro limpa os dados da sessão
+      await supabase.auth.refreshSession();
+      
+      // Recarrega a página atual para obter dados frescos
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao recarregar dados:", error);
+      toast.error("Erro ao recarregar dados");
+    }
+  };
+
   // Combine the original API context with authentication context and our new services
   const value: ApiContextValue = {
     sectors: api.sectors,
@@ -58,6 +78,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getDefaultServices: api.getDefaultServices,
     updateServicePhotos: photoService.updateServicePhotos,
     uploadPhoto: api.uploadPhoto,
+    refreshData,
     
     // Include auth properties and methods
     user: userInfo,

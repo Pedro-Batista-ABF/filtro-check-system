@@ -1,152 +1,128 @@
 
-import React from "react";
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Service, PhotoWithFile } from '@/types';
 import { Label } from "@/components/ui/label";
+import QuantityInput from './QuantityInput';
 import { Textarea } from "@/components/ui/textarea";
-import QuantityInput from "./QuantityInput";
-import PhotoUpload from "./PhotoUpload";
-import { Button } from "@/components/ui/button";
-import { Camera } from "lucide-react";
-import { Service, Photo } from "@/types";
+import PhotoUpload from './PhotoUpload';
 
 interface ServiceCheckboxProps {
   service: Service;
-  checked?: boolean;
-  onChecked?: (id: string, checked: boolean) => void;
-  onServiceChange?: (id: string, checked: boolean) => void; // Alias para compatibilidade
-  onQuantityChange?: (id: string, quantity: number) => void;
-  onObservationChange?: (id: string, observations: string) => void;
-  onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
-  photoType?: "before" | "after";
-  required?: boolean;
-  onCameraCapture?: (e: React.MouseEvent) => void;
-  // Adicionando suporte para as props usadas em ExitForm
-  isCompleted?: boolean;
-  completedCheckboxId?: string;
+  onChange: (service: Service) => void;
+  readOnly?: boolean;
+  hidePhotos?: boolean;
+  showObservations?: boolean;
 }
 
 const ServiceCheckbox: React.FC<ServiceCheckboxProps> = ({
   service,
-  checked = false,
-  onChecked,
-  onServiceChange, // Alias para compatibilidade
-  onQuantityChange,
-  onObservationChange,
-  onPhotoUpload,
-  photoType = "before",
-  required = false,
-  onCameraCapture,
-  isCompleted,
-  completedCheckboxId
+  onChange,
+  readOnly = false,
+  hidePhotos = false,
+  showObservations = false
 }) => {
-  const handleCheckedChange = (checked: boolean) => {
-    if (onChecked) {
-      onChecked(service.id, checked);
-    } else if (onServiceChange) {
-      onServiceChange(service.id, checked);
-    }
+  const [isSelected, setIsSelected] = useState(service.selected);
+  const [photos, setPhotos] = useState<PhotoWithFile[]>(service.photos || []);
+  const [quantity, setQuantity] = useState<number | undefined>(service.quantity);
+  const [observations, setObservations] = useState<string | undefined>(service.observations);
+
+  // Sincroniza o estado local com as props
+  useEffect(() => {
+    setIsSelected(service.selected);
+    setPhotos(service.photos || []);
+    setQuantity(service.quantity);
+    setObservations(service.observations);
+  }, [service]);
+
+  // Função para atualizar o serviço quando houver alterações
+  const updateService = (updates: Partial<Service>) => {
+    onChange({
+      ...service,
+      ...updates
+    });
   };
 
-  const handleQuantityChange = (quantity: number) => {
-    if (onQuantityChange) {
-      onQuantityChange(service.id, quantity);
-    }
+  // Handler para alteração do checkbox
+  const handleCheckboxChange = (checked: boolean) => {
+    setIsSelected(checked);
+    updateService({ selected: checked });
   };
 
-  const handleObservationChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (onObservationChange) {
-      onObservationChange(service.id, e.target.value);
-    }
+  // Handler para alteração da quantidade
+  const handleQuantityChange = (value: string) => {
+    const numValue = parseInt(value, 10);
+    const newQuantity = isNaN(numValue) ? undefined : numValue;
+    setQuantity(newQuantity);
+    updateService({ quantity: newQuantity });
   };
 
-  const handlePhotoUpload = (files: FileList) => {
-    if (onPhotoUpload) {
-      onPhotoUpload(service.id, files, photoType || "before");
-    }
+  // Handler para alteração das observações
+  const handleObservationsChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    const newObservations = e.target.value;
+    setObservations(newObservations);
+    updateService({ observations: newObservations });
   };
 
-  // Filtrar apenas as fotos do tipo atual (before/after)
-  const filteredPhotos = service.photos?.filter(
-    (photo) => typeof photo === "object" && photo.type === photoType
-  ) as Photo[];
-
-  // Verificar se este serviço tem fotos
-  const hasPhotos = filteredPhotos && filteredPhotos.length > 0;
+  // Handler para alteração das fotos
+  const handlePhotosChange = (newPhotos: PhotoWithFile[]) => {
+    setPhotos(newPhotos);
+    updateService({ photos: newPhotos });
+  };
 
   return (
-    <div className="border rounded-md p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-2">
+    <Card className={`border ${isSelected ? 'border-primary' : 'border-muted'}`}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center space-x-2">
           <Checkbox
-            id={completedCheckboxId || `service-${service.id}`}
-            checked={isCompleted !== undefined ? isCompleted : checked}
-            onCheckedChange={handleCheckedChange}
+            id={`service-${service.id}`}
+            checked={isSelected}
+            onCheckedChange={handleCheckboxChange}
+            disabled={readOnly}
           />
-          <div>
-            <Label
-              htmlFor={completedCheckboxId || `service-${service.id}`}
-              className="font-medium cursor-pointer"
-            >
-              {service.name} {required && checked && <span className="text-red-500">*</span>}
-            </Label>
-            {checked && onQuantityChange && (
-              <div className="mt-2">
-                <QuantityInput
-                  value={service.quantity || 1}
-                  onChange={handleQuantityChange}
-                  min={1}
-                  max={100}
-                />
-              </div>
-            )}
-          </div>
+          <Label
+            htmlFor={`service-${service.id}`}
+            className="text-base font-medium cursor-pointer"
+          >
+            {service.name}
+          </Label>
         </div>
-      </div>
-
-      {checked && (
-        <div className="mt-4 space-y-4">
-          <div>
-            <Label htmlFor={`observation-${service.id}`}>Observações</Label>
-            <Textarea
-              id={`observation-${service.id}`}
-              value={service.observations || ""}
-              onChange={handleObservationChange}
-              placeholder="Observações sobre este serviço..."
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label className="block mb-2">
-              Fotos {required && <span className="text-red-500">*</span>}
-            </Label>
-            <div className="flex items-center space-x-2">
-              <PhotoUpload
-                onUpload={handlePhotoUpload}
-                photos={filteredPhotos}
-                required={required}
-                className="flex-1"
+      </CardHeader>
+      {isSelected && (
+        <CardContent className="space-y-4 pt-0">
+          <QuantityInput
+            value={quantity?.toString() || ''}
+            onChange={handleQuantityChange}
+            disabled={readOnly}
+          />
+          
+          {showObservations && (
+            <div className="space-y-2">
+              <Label htmlFor={`observations-${service.id}`}>Observações</Label>
+              <Textarea
+                id={`observations-${service.id}`}
+                value={observations || ''}
+                onChange={handleObservationsChange}
+                placeholder="Adicione observações sobre o serviço..."
+                disabled={readOnly}
               />
-              {onCameraCapture && (
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={onCameraCapture}
-                  title="Usar câmera"
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
-              )}
             </div>
-            {required && !hasPhotos && (
-              <p className="text-xs text-red-500 mt-1">
-                Foto obrigatória para este serviço
-              </p>
-            )}
-          </div>
-        </div>
+          )}
+          
+          {!hidePhotos && (
+            <div className="mt-4">
+              <PhotoUpload
+                photos={photos}
+                onChange={handlePhotosChange}
+                disabled={readOnly}
+                title={`Fotos - ${service.name}`}
+              />
+            </div>
+          )}
+        </CardContent>
       )}
-    </div>
+    </Card>
   );
 };
 

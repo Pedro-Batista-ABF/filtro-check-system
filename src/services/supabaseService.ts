@@ -138,7 +138,8 @@ const mapSectorFromDB = (
     status: cycle.status as SectorStatus,
     outcome: cycle.outcome as CycleOutcome || undefined,
     cycleCount: sector.cycle_count,
-    previousCycles: undefined // A ser implementado quando necessário
+    previousCycles: undefined, // A ser implementado quando necessário
+    updated_at: new Date().toISOString() // Adicionado para compatibilidade
   };
 };
 
@@ -173,6 +174,9 @@ export const supabaseService = {
         console.log(`Buscando ciclo para o setor ${sector.id} (TAG: ${sector.tag_number})`);
         
         try {
+          // Verifica o status atual do setor
+          console.log(`Status atual do setor ${sector.tag_number}: ${sector.current_status}`);
+          
           const { data: cyclesData, error: cyclesError } = await supabase
             .from('cycles')
             .select('*')
@@ -193,11 +197,38 @@ export const supabaseService = {
               
             console.log(`Ciclos encontrados para o setor ${sector.id}:`, allCycles?.length || 0);
             
+            // Tentar criar um setor mínimo com base nos dados da tabela sectors
+            if (sector.current_status === 'peritagemPendente') {
+              console.log(`Criando setor mínimo para ${sector.tag_number} com status peritagemPendente`);
+              
+              // Cria um setor básico com status pendente
+              const minimalSector: Sector = {
+                id: sector.id,
+                tagNumber: sector.tag_number,
+                tagPhotoUrl: sector.tag_photo_url || undefined,
+                entryInvoice: "Pendente",
+                entryDate: new Date().toISOString().split('T')[0],
+                peritagemDate: "",
+                services: [],
+                beforePhotos: [],
+                afterPhotos: [],
+                productionCompleted: false,
+                status: 'peritagemPendente',
+                outcome: sector.current_outcome as CycleOutcome || 'EmAndamento',
+                cycleCount: sector.cycle_count,
+                updated_at: new Date().toISOString()
+              };
+              
+              console.log(`Adicionando setor mínimo à lista: ${sector.tag_number}`);
+              sectors.push(minimalSector);
+            }
+            
             // Continua para o próximo setor
             continue;
           }
           
           console.log(`Ciclo encontrado para o setor ${sector.id}:`, cyclesData.id);
+          console.log(`Status do ciclo: ${cyclesData.status}`);
           
           // 3. Busca os serviços associados ao ciclo
           const { data: serviceTypesData } = await supabase
@@ -241,24 +272,28 @@ export const supabaseService = {
           });
           
           // 6. Adiciona o setor completo à lista
-          sectors.push(
-            mapSectorFromDB(
-              sector, 
-              cyclesData, 
-              services, 
-              beforePhotos, 
-              afterPhotos, 
-              scrapPhotos
-            )
+          const mappedSector = mapSectorFromDB(
+            sector, 
+            cyclesData, 
+            services, 
+            beforePhotos, 
+            afterPhotos, 
+            scrapPhotos
           );
           
-          console.log(`Setor ${sector.id} adicionado à lista com status: ${cyclesData.status}`);
+          console.log(`Setor ${sector.id} adicionado à lista com status: ${mappedSector.status}`);
+          sectors.push(mappedSector);
         } catch (error) {
           console.error(`Erro ao processar o setor ${sector.id}:`, error);
         }
       }
       
       console.log(`Retornando ${sectors.length} setores processados`);
+      console.log("Setores por status:", sectors.reduce((acc, sector) => {
+        acc[sector.status] = (acc[sector.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>));
+      
       return sectors;
     } catch (error) {
       console.error("Erro ao buscar setores:", error);
