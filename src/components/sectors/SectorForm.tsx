@@ -209,12 +209,12 @@ export default function SectorForm({
         description: "Atualizando status do setor para execução"
       });
       
-      // Update sector status
+      // Update sector status - using updated_at instead of modified_at
       const { error } = await supabase
         .from('sectors')
         .update({ 
           current_status: 'emExecucao',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString()  // Changed from modified_at to updated_at
         })
         .eq('id', sector.id);
         
@@ -231,7 +231,7 @@ export default function SectorForm({
       shadcnToast({
         title: "Peritagem finalizada!",
         description: "Setor enviado para execução",
-        variant: "default" // Changed from "success" to "default" for compatibility
+        variant: "default"
       });
       
       // Navigate to execution page after a short delay
@@ -257,7 +257,7 @@ export default function SectorForm({
         shadcnToast({
           title: "Operação cancelada",
           description: "É necessário informar o motivo do sucateamento",
-          variant: "default" // Changed from "warning" to "default" for compatibility
+          variant: "default"
         });
         return;
       }
@@ -267,14 +267,14 @@ export default function SectorForm({
         description: "Atualizando status do setor"
       });
       
-      // Update sector status
+      // Update sector status - using updated_at instead of modified_at
       const { error } = await supabase
         .from('sectors')
         .update({ 
           current_status: 'sucateado',
           current_outcome: 'scrapped',
           scrap_observations: scrapReason,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString() // Changed from modified_at to updated_at
         })
         .eq('id', sector.id);
         
@@ -285,7 +285,7 @@ export default function SectorForm({
       shadcnToast({
         title: "Setor sucateado!",
         description: "Enviado para validação na qualidade",
-        variant: "default" // Changed from "success" to "default" for compatibility
+        variant: "default"
       });
       
       // Navigate to quality page after a short delay

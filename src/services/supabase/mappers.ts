@@ -1,4 +1,3 @@
-
 import { Photo, Service, Sector, SectorStatus, CycleOutcome } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -146,7 +145,7 @@ export const mapSectorFromDB = (
     status: cycle.status as SectorStatus,
     outcome: cycle.outcome as CycleOutcome || undefined,
     cycleCount: sector.cycle_count,
-    previousCycles: undefined, // A ser implementado quando necessário
+    cycles: undefined, // Add this instead if needed
     updated_at: new Date().toISOString() // Adicionado para compatibilidade
   };
 };

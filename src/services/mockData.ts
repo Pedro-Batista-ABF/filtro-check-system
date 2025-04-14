@@ -1,120 +1,131 @@
+import { Sector, Service, Photo, SectorStatus, CycleOutcome } from "@/types";
 
-import { Sector, Service, ServiceType } from "@/types";
+// Mock data for services
+export const createMockServices = (): Service[] => {
+  return [
+    {
+      id: "limpeza",
+      name: "Limpeza",
+      description: "Limpeza geral do equipamento",
+      selected: false,
+      quantity: 1,
+      photos: [],
+      observations: "",
+      completed: false,
+      type: "Limpeza"
+    },
+    {
+      id: "teste",
+      name: "Teste",
+      description: "Teste de funcionamento",
+      selected: false,
+      quantity: 1,
+      photos: [],
+      observations: "",
+      completed: false,
+      type: "Teste"
+    },
+    {
+      id: "reparo",
+      name: "Reparo",
+      description: "Reparo de componentes",
+      selected: false,
+      quantity: 1,
+      photos: [],
+      observations: "",
+      completed: false,
+      type: "Reparo"
+    },
+    {
+      id: "substituicao",
+      name: "Substituição",
+      description: "Substituição de peças",
+      selected: false,
+      quantity: 1,
+      photos: [],
+      observations: "",
+      completed: false,
+      type: "Substituição"
+    },
+    {
+      id: "pintura",
+      name: "Pintura",
+      description: "Pintura e acabamento",
+      selected: false,
+      quantity: 1,
+      photos: [],
+      observations: "",
+      completed: false,
+      type: "Pintura"
+    }
+  ];
+};
 
-// Mock service options
-export const serviceOptions: Service[] = [
-  { id: 'substituicao_parafusos', name: 'Substituição de Parafusos', selected: false, quantity: 0, type: 'substituicao_parafusos' },
-  { id: 'troca_trecho', name: 'Troca de trecho até 90.000mm²', selected: false, type: 'troca_trecho' },
-  { id: 'desempeno', name: 'Desempeno', selected: false, type: 'desempeno' },
-  { id: 'troca_tela_lado_a', name: 'Troca de tela lado A', selected: false, type: 'troca_tela_lado_a' },
-  { id: 'troca_tela_lado_b', name: 'Troca de tela lado B', selected: false, type: 'troca_tela_lado_b' },
-  { id: 'troca_ambos_lados', name: 'Troca de ambos os lados', selected: false, type: 'troca_ambos_lados' },
-  { id: 'fabricacao_canaleta', name: 'Fabricação canaleta', selected: false, type: 'fabricacao_canaleta' },
-  { id: 'fabricacao_setor_completo', name: 'Fabricação setor completo', selected: false, type: 'fabricacao_setor_completo' },
-];
-
-// Function to generate a mock sector with random services
-const generateMockSector = (id: number): Sector => {
-  const randomServices = serviceOptions.map(service => ({
-    ...service,
-    selected: Math.random() > 0.6,
-    quantity: service.id === 'substituicao_parafusos' ? Math.floor(Math.random() * 20) : undefined
+// Mock data for photos
+export const createMockPhotos = (count: number, type: 'before' | 'after' | 'tag' | 'scrap'): Photo[] => {
+  return Array(count).fill(0).map((_, index) => ({
+    id: `photo-${type}-${index}`,
+    url: `https://placehold.co/400x300/png?text=${type}+${index}`,
+    type,
+    serviceId: index % 2 === 0 ? 'limpeza' : 'reparo'
   }));
+};
 
-  const status = Math.random() > 0.7 
-    ? 'concluido' 
-    : Math.random() > 0.5 
-      ? 'checagemFinalPendente' 
-      : Math.random() > 0.3 
-        ? 'emExecucao' 
-        : 'peritagemPendente';
-
-  const entryDate = new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const peritagemDate = new Date(Date.now() - Math.floor(Math.random() * 20) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  
-  // Set productionCompleted based on status
-  const productionCompleted = status === 'checagemFinalPendente' || status === 'concluido';
-  
+// Create a mock sector
+export const createMockSector = (id: number): Sector => {
+  // Replace completedServices with appropriate properties from the Sector interface
   return {
-    id: `sector-${id}`,
-    tagNumber: `TAG-${1000 + id}`,
-    tagPhotoUrl: 'https://placehold.co/300x200?text=TAG+Photo',
+    id: `mock-sector-${id}`,
+    tagNumber: `S-${1000 + id}`,
+    tagPhotoUrl: 'https://placehold.co/100x100/png',
     entryInvoice: `NF-${5000 + id}`,
-    entryDate,
-    peritagemDate,
-    services: randomServices,
-    beforePhotos: [
-      { id: `photo-before-1-${id}`, url: 'https://placehold.co/600x400?text=Before+Photo+1', type: 'before' },
-      { id: `photo-before-2-${id}`, url: 'https://placehold.co/600x400?text=Before+Photo+2', type: 'before' },
-    ],
-    entryObservations: 'Observações sobre o estado inicial do setor.',
-    productionCompleted,
-    status,
-    exitDate: status === 'concluido' ? new Date().toISOString().split('T')[0] : undefined,
-    exitInvoice: status === 'concluido' ? `NF-S-${6000 + id}` : undefined,
-    checagemDate: status === 'concluido' || status === 'checagemFinalPendente' 
-      ? new Date(Date.now() - Math.floor(Math.random() * 5) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
-      : undefined,
-    afterPhotos: status === 'concluido' || status === 'checagemFinalPendente' ? [
-      { id: `photo-after-1-${id}`, url: 'https://placehold.co/600x400?text=After+Photo+1', type: 'after' },
-      { id: `photo-after-2-${id}`, url: 'https://placehold.co/600x400?text=After+Photo+2', type: 'after' },
-    ] : undefined,
-    completedServices: status === 'concluido' ? 
-      randomServices
-        .filter(service => service.selected)
-        .map(service => service.id as ServiceType) 
-      : undefined,
-    exitObservations: status === 'concluido' ? 'Observações sobre o estado final do setor.' : undefined,
+    entryDate: new Date().toISOString().substring(0, 10),
+    peritagemDate: new Date().toISOString().substring(0, 10),
+    services: createMockServices(),
+    beforePhotos: [],
+    afterPhotos: [],
+    status: 'peritagemPendente' as SectorStatus,
+    outcome: 'EmAndamento' as CycleOutcome,
+    productionCompleted: false,
+    // Remove completedServices property - not in the Sector interface
+    // completedServices: [],
     cycleCount: 1,
-    outcome: status === 'concluido' ? 'recovered' : 'EmAndamento'
+    updated_at: new Date().toISOString()
   };
 };
 
-// Generate 15 mock sectors
-export const mockSectors: Sector[] = Array.from({ length: 15 }, (_, index) => 
-  generateMockSector(index + 1)
-);
-
-// Mock data service
-class MockDataService {
-  private sectors: Sector[] = [...mockSectors];
-
-  getAllSectors(): Sector[] {
-    return this.sectors;
-  }
-
-  getSectorById(id: string): Sector | undefined {
-    return this.sectors.find(sector => sector.id === id);
-  }
-
-  getSectorsByTag(tagNumber: string): Sector[] {
-    return this.sectors.filter(sector => sector.tagNumber === tagNumber);
-  }
-
-  addSector(sector: Omit<Sector, 'id'>): Sector {
-    const newSector: Sector = {
-      ...sector,
-      id: `sector-${Date.now()}`,
-    };
-    this.sectors.push(newSector);
-    return newSector;
-  }
-
-  updateSector(updatedSector: Sector): Sector {
-    const index = this.sectors.findIndex(sector => sector.id === updatedSector.id);
-    if (index !== -1) {
-      this.sectors[index] = updatedSector;
-      return updatedSector;
+// Create mock sectors
+export const createMockSectors = (count: number): Sector[] => {
+  return Array(count).fill(0).map((_, index) => {
+    const sector = createMockSector(index);
+    
+    // Add some variety to the sectors
+    if (index % 3 === 0) {
+      sector.status = 'emExecucao';
+      sector.services[0].selected = true;
+      sector.services[1].selected = true;
+      sector.beforePhotos = createMockPhotos(2, 'before');
+    } else if (index % 3 === 1) {
+      sector.status = 'checagemFinalPendente';
+      sector.services[0].selected = true;
+      sector.services[2].selected = true;
+      sector.beforePhotos = createMockPhotos(2, 'before');
+      sector.productionCompleted = true;
+    } else {
+      sector.status = 'concluido';
+      sector.services[1].selected = true;
+      sector.services[3].selected = true;
+      sector.beforePhotos = createMockPhotos(2, 'before');
+      sector.afterPhotos = createMockPhotos(2, 'after');
+      sector.productionCompleted = true;
+      sector.exitDate = new Date().toISOString().substring(0, 10);
+      sector.exitInvoice = `NF-S-${6000 + index}`;
     }
-    throw new Error(`Sector with id ${updatedSector.id} not found`);
-  }
+    
+    return sector;
+  });
+};
 
-  deleteSector(id: string): void {
-    const index = this.sectors.findIndex(sector => sector.id === id);
-    if (index !== -1) {
-      this.sectors.splice(index, 1);
-    }
-  }
-}
-
-export const mockDataService = new MockDataService();
+// Default mock data
+export const mockSectors = createMockSectors(10);
+export const mockServices = createMockServices();
