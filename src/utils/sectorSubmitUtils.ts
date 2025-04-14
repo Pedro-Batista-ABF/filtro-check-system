@@ -1,4 +1,5 @@
-import { Sector, Photo, Service, SectorStatus } from "@/types";
+
+import { Sector, Photo, Service, SectorStatus, CycleOutcome } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -51,6 +52,7 @@ export const updateSectorStatusAndMetadata = async (sectorId: string, data: Part
       .from('sectors')
       .update({
         current_status: 'emExecucao' as SectorStatus,
+        current_outcome: data.outcome || 'EmAndamento', // Garantir que outcome seja atualizado
         updated_by: session.user.id,
         updated_at: new Date().toISOString(),
         // Adicionar campos extras se existirem

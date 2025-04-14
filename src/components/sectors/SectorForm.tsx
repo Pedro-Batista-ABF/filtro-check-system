@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Sector, Service, Cycle, Photo, CycleOutcome } from "@/types";
 import { format } from "date-fns";
@@ -269,29 +268,31 @@ export default function SectorForm({
       });
       
       // Update sector status - using updated_at instead of modified_at
+      // Importante: definir current_outcome como 'scrapped' (em minúsculas)
       const { error } = await supabase
         .from('sectors')
         .update({ 
-          current_status: 'sucateado',
-          current_outcome: 'scrapped',
+          current_status: 'sucateadoPendente',
+          current_outcome: 'scrapped', // Valor correto conforme a restrição
           scrap_observations: scrapReason,
-          updated_at: new Date().toISOString() // Changed from modified_at to updated_at
+          updated_at: new Date().toISOString() 
         })
         .eq('id', sector.id);
         
       if (error) {
+        console.error("Erro ao sucatear setor:", error);
         throw new Error(`Erro ao sucatear setor: ${error.message}`);
       }
       
       shadcnToast({
-        title: "Setor sucateado!",
-        description: "Enviado para validação na qualidade",
+        title: "Setor marcado para sucateamento!",
+        description: "Enviado para validação final",
         variant: "default"
       });
       
-      // Navigate to quality page after a short delay
+      // Navigate to sectors page after a short delay
       setTimeout(() => {
-        window.location.href = '/qualidade';
+        window.location.href = '/sucateamento';
       }, 1500);
     } catch (error) {
       console.error("Erro ao sucatear setor:", error);

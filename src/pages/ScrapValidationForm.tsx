@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorForm from "@/components/sectors/SectorForm";
@@ -86,7 +85,8 @@ export default function ScrapValidationForm() {
     try {
       const updates = {
         ...data,
-        status: 'sucateado' as const
+        status: 'sucateado' as const,
+        outcome: 'scrapped' as const // Explicitamente definir outcome como 'scrapped'
       };
       await updateSector(sector.id, updates);
       toast.success('Sucateamento validado com sucesso!');
