@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Sector, Service } from '@/types';
 import { supabaseService } from '@/services/supabase';
@@ -198,9 +199,9 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     error,
     getSectorById,
     getSectorsByTag,
-    createSector: supabaseService.addSector,
-    updateSector: supabaseService.updateSector,
-    deleteSector: supabaseService.deleteSector,
+    createSector,
+    updateSector,
+    deleteSector,
     getDefaultServices,
     uploadPhoto
   };
@@ -221,5 +222,5 @@ export const useApiOriginal = (): ApiContextType => {
   return context;
 };
 
-// Add a standard useApi export to maintain compatibility
-export const useApi = useApiOriginal;
+// Export other items for compatibility
+export { ApiContext };

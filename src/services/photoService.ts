@@ -1,137 +1,97 @@
 
-import { Photo, PhotoWithFile } from '@/types';
-import { toast } from 'sonner';
-import { handleDatabaseError } from '@/utils/errorHandlers';
-import { useApiOriginal } from '@/contexts/ApiContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
+import { Photo } from "@/types";
+import { toast } from "sonner";
 
 /**
- * Service for photo operations
+ * Service to manage photos for sectors
  */
-export const usePhotoService = () => {
-  const api = useApiOriginal();
-
-  const updateServicePhotos = async (
+export const photoService = {
+  /**
+   * Updates photos for a specific service
+   */
+  updateServicePhotos: async (
     sectorId: string,
     serviceId: string,
     photoUrl: string,
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      // Verificar autenticação
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado");
-      }
-
-      // Primeiro, busca o setor atual
-      const sector = await api.getSectorById(sectorId);
-      if (!sector) {
-        throw new Error("Setor não encontrado");
-      }
-      
-      // Criar um novo objeto Photo sem propriedades que possam causar recursão
-      const newPhoto: Photo = {
-        id: `${serviceId}-${Date.now()}`,
-        url: photoUrl,
-        type,
-        serviceId
-      };
-      
-      // Preparar arrays para as fotos
-      const updatedBeforePhotos = type === 'before' 
-        ? [...(sector.beforePhotos || []), newPhoto]
-        : [...(sector.beforePhotos || [])];
+      // First find the current cycle for this sector
+      const { data: cycleData, error: cycleError } = await supabase
+        .from('cycles')
+        .select('id')
+        .eq('sector_id', sectorId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
         
-      const updatedAfterPhotos = type === 'after'
-        ? [...(sector.afterPhotos || []), newPhoto]
-        : [...(sector.afterPhotos || [])];
-      
-      // Garantir que scrapPhotos existe
-      const scrapPhotos = sector.scrapPhotos || [];
-      
-      // Preparar objeto simplificado para atualização com tipos corretos
-      const updateData = {
-        id: sector.id,
-        tagNumber: sector.tagNumber,
-        entryInvoice: sector.entryInvoice,
-        entryDate: sector.entryDate,
-        beforePhotos: updatedBeforePhotos,
-        afterPhotos: updatedAfterPhotos,
-        scrapPhotos: scrapPhotos,
-        services: sector.services || [],
-        status: sector.status,
-        productionCompleted: sector.productionCompleted || false,
-        outcome: sector.outcome || 'EmAndamento',
-        cycleCount: sector.cycleCount || 1,
-        peritagemDate: sector.peritagemDate
-      };
-      
-      // Tenta atualizar o setor
-      await api.updateSector(updateData);
-      
-      // Adicionar a foto diretamente na tabela photos com metadados
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Buscar o ciclo atual
-          const { data: cycleData } = await supabase
-            .from('cycles')
-            .select('id')
-            .eq('sector_id', sectorId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-            
-          if (cycleData) {
-            // Adicionar a foto na tabela photos
-            const { error } = await supabase
-              .from('photos')
-              .insert({
-                cycle_id: cycleData.id,
-                service_id: serviceId,
-                url: photoUrl,
-                type,
-                created_by: user.id,
-                metadata: {
-                  sector_id: sectorId,
-                  service_id: serviceId,
-                  stage: type === 'before' ? 'peritagem' : 'checagem',
-                  type: 'servico'
-                }
-              });
-              
-            if (error) {
-              console.error("Erro ao adicionar foto na tabela photos:", error);
-            } else {
-              console.log("Foto adicionada com sucesso na tabela photos:", {
-                service_id: serviceId,
-                type,
-                stage: type === 'before' ? 'peritagem' : 'checagem'
-              });
-            }
-          } else {
-            console.warn("Ciclo não encontrado para o setor:", sectorId);
-          }
-        }
-      } catch (directError) {
-        console.error("Erro ao adicionar foto diretamente:", directError);
+      if (cycleError) {
+        console.error("Error finding cycle for photo:", cycleError);
+        return false;
       }
       
-      toast.success("Foto adicionada");
+      // Then insert the photo with service association
+      const { data: photoData, error: photoError } = await supabase
+        .from('photos')
+        .insert({
+          cycle_id: cycleData.id,
+          service_id: serviceId,
+          url: photoUrl,
+          type,
+          metadata: {
+            sector_id: sectorId,
+            service_id: serviceId,
+            type
+          }
+        });
+        
+      if (photoError) {
+        console.error("Error inserting service photo:", photoError);
+        return false;
+      }
+      
       return true;
     } catch (error) {
-      console.error("Erro ao adicionar foto:", error);
-      const processedError = handleDatabaseError(error, "Não foi possível adicionar a foto");
-      toast.error(processedError.message);
-      throw processedError;
+      console.error("Error in updateServicePhotos:", error);
+      return false;
     }
-  };
-
-  return {
-    updateServicePhotos
-  };
+  },
+  
+  /**
+   * Upload a photo to storage
+   */
+  uploadPhoto: async (file: File, folder: string = 'general'): Promise<string> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${folder}/${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from('photos')
+        .upload(filePath, file);
+        
+      if (error) throw error;
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('photos')
+        .getPublicUrl(filePath);
+        
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast.error("Erro ao fazer upload da foto", {
+        description: "Verifique se o arquivo é uma imagem válida."
+      });
+      throw error;
+    }
+  }
 };
+
+/**
+ * Hook to use the photo service
+ */
+export function usePhotoService() {
+  return photoService;
+}

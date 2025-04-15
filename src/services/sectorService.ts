@@ -1,222 +1,77 @@
 
-import { Sector, Photo, PhotoWithFile, ServiceType, SectorStatus, CycleOutcome } from '@/types';
+import { supabaseService } from '@/services/supabase';
+import { Sector } from '@/types';
 import { toast } from 'sonner';
-import { handleDatabaseError } from '@/utils/errorHandlers';
-import { useApiOriginal } from '@/contexts/ApiContext';
-import { supabase } from '@/integrations/supabase/client';
-import { supabaseService } from './supabaseService';
 
 /**
- * Service for sector operations
+ * Helper service for sector data operations
  */
-export const useSectorService = () => {
-  // Usamos diretamente o supabaseService para evitar dependência cíclica
-  // e evitar o erro de useApiOriginal fora de um ApiProvider
-  
-  const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
+export const sectorService = {
+  /**
+   * Add a new sector
+   */
+  addSector: async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
-      // Verificar autenticação primeiro
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado");
-      }
-
-      // Garantir que os tipos estejam corretos
-      const status: SectorStatus = sectorData.status || 'peritagemPendente';
-      const outcome: CycleOutcome = sectorData.outcome || 'EmAndamento';
-
-      // Certifique-se de que todos os serviços tenham o campo 'type' definido corretamente
-      const processedServices = sectorData.services?.map(service => ({
-        ...service,
-        type: service.id as unknown as ServiceType,
-        // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
-        photos: service.photos?.map(photo => ({
-          id: photo.id,
-          url: photo.url,
-          type: photo.type,
-          serviceId: photo.serviceId
-        })) || []
-      })) || [];
-
-      // Garantir que as fotos estejam no formato correto sem propriedades extras
-      const processedBeforePhotos = (sectorData.beforePhotos || []).map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.serviceId
-      }));
-
-      // Adicionar novos campos nf_entrada e data_entrada
-      const completeData = {
-        tagNumber: sectorData.tagNumber,
-        entryInvoice: sectorData.entryInvoice,
-        entryDate: sectorData.entryDate,
-        peritagemDate: sectorData.peritagemDate || '',
-        services: processedServices,
-        beforePhotos: processedBeforePhotos,
-        afterPhotos: sectorData.afterPhotos || [],
-        scrapPhotos: sectorData.scrapPhotos || [],
-        productionCompleted: sectorData.productionCompleted || false,
-        status,
-        outcome,
-        cycleCount: sectorData.cycleCount || 1,
-        tagPhotoUrl: sectorData.tagPhotoUrl,
-        entryObservations: sectorData.entryObservations,
-        updated_at: new Date().toISOString(), 
-        nf_entrada: sectorData.entryInvoice, 
-        data_entrada: sectorData.entryDate ? new Date(sectorData.entryDate).toISOString() : new Date().toISOString()
-      };
-
-      try {
-        console.log("Enviando dados para criação de setor:", completeData);
-        
-        // Tentar diretamente pelo supabaseService
-        try {
-          console.log("Tentando criar setor diretamente pelo supabaseService");
-          const result = await supabaseService.addSector(completeData);
-          console.log("Resultado da criação direta:", result);
-          
-          if (result && 'id' in result) {
-            toast.success("Setor cadastrado com sucesso!");
-            return result.id;
-          }
-          
-          throw new Error("Falha ao obter ID do setor criado");
-        } catch (directError) {
-          console.error("Erro na criação direta:", directError);
-          throw directError;
-        }
-      } catch (error) {
-        console.error("Erro detalhado ao adicionar setor:", error);
-        const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
-        toast.error(processedError.message);
-        throw processedError;
-      }
-    } catch (error) {
-      console.error("Erro detalhado ao adicionar setor:", error);
-      const processedError = handleDatabaseError(error, "Não foi possível adicionar o setor");
-      toast.error(processedError.message);
-      throw processedError;
-    }
-  };
-
-  const updateSector = async (id: string, updates: Partial<Sector>): Promise<boolean> => {
-    try {
-      // Verificar autenticação primeiro
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error("Não autenticado", {
-          description: "Você precisa estar logado para realizar esta operação"
-        });
-        throw new Error("Não autenticado");
-      }
-
-      // Primeiro, busca o setor atual
-      const currentSector = await supabaseService.getSectorById(id);
-      if (!currentSector) {
-        throw new Error("Setor não encontrado");
-      }
-
-      // Garantir tipagem correta
-      const status: SectorStatus = (updates.status as SectorStatus) || currentSector.status;
-      const outcome: CycleOutcome = (updates.outcome as CycleOutcome) || currentSector.outcome || 'EmAndamento';
-
-      // Certifique-se de que todos os serviços atualizados tenham o campo 'type' definido corretamente
-      const processedServices = updates.services?.map(service => ({
-        ...service,
-        type: service.id as unknown as ServiceType,
-        // Remover a propriedade 'file' dos photos dentro dos serviços para evitar recursão
-        photos: service.photos?.map(photo => ({
-          id: photo.id,
-          url: photo.url,
-          type: photo.type,
-          serviceId: photo.serviceId
-        })) || []
-      })) || currentSector.services;
-
-      // Garantir que as fotos estejam no formato correto sem propriedades extras
-      const processedBeforePhotos = (updates.beforePhotos || currentSector.beforePhotos || []).map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.serviceId
-      }));
-
-      const processedAfterPhotos = (updates.afterPhotos || currentSector.afterPhotos || []).map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.serviceId
-      }));
+      // Map sector data to the format expected by supabaseService
+      const result = await supabaseService.addSector(sectorData);
       
-      const processedScrapPhotos = (updates.scrapPhotos || currentSector.scrapPhotos || []).map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.serviceId
-      }));
-
-      // Garantir que apenas os campos necessários sejam modificados (para reduzir problemas com RLS)
-      const safeUpdateData: Sector = {
-        id: currentSector.id,
-        tagNumber: updates.tagNumber || currentSector.tagNumber,
-        entryInvoice: updates.entryInvoice || currentSector.entryInvoice,
-        entryDate: updates.entryDate || currentSector.entryDate,
-        peritagemDate: updates.peritagemDate || currentSector.peritagemDate,
-        services: processedServices,
-        status: status,
-        beforePhotos: processedBeforePhotos,
-        afterPhotos: processedAfterPhotos,
-        scrapPhotos: processedScrapPhotos,
-        productionCompleted: updates.productionCompleted !== undefined ? updates.productionCompleted : currentSector.productionCompleted || false,
-        outcome: outcome,
-        cycleCount: updates.cycleCount || currentSector.cycleCount || 1,
-        tagPhotoUrl: updates.tagPhotoUrl || currentSector.tagPhotoUrl,
-        updated_at: new Date().toISOString(),
-        // Mapear os novos campos
-        nf_entrada: updates.entryInvoice || currentSector.entryInvoice || currentSector.nf_entrada,
-        nf_saida: updates.exitInvoice || currentSector.exitInvoice || currentSector.nf_saida,
-        data_entrada: updates.entryDate ? new Date(updates.entryDate).toISOString() : 
-                       currentSector.entryDate ? new Date(currentSector.entryDate).toISOString() : 
-                       currentSector.data_entrada || new Date().toISOString(),
-        data_saida: updates.exitDate ? new Date(updates.exitDate).toISOString() : 
-                     currentSector.exitDate ? new Date(currentSector.exitDate).toISOString() : 
-                     currentSector.data_saida
-      };
-
-      try {
-        console.log("Enviando dados para atualização de setor:", safeUpdateData);
-        
-        // Tentar diretamente pelo supabaseService
-        try {
-          console.log("Tentando atualizar setor diretamente");
-          const result = await supabaseService.updateSector(safeUpdateData);
-          console.log("Resultado da atualização direta:", result);
-          toast.success("Setor atualizado com sucesso!");
-          return true;
-        } catch (directError) {
-          console.error("Erro na atualização direta:", directError);
-          throw directError;
-        }
-      } catch (error) {
-        console.error("Erro detalhado ao atualizar setor:", error);
-        const processedError = handleDatabaseError(error, "Não foi possível atualizar o setor");
-        toast.error(processedError.message);
-        throw processedError;
+      // Return the ID of the new sector
+      if (typeof result === 'string') {
+        // Handle case where we just got an ID back
+        return result;
+      } else if (result && 'id' in result) {
+        // Handle case where we got a full sector object back
+        return result.id;
+      } else {
+        throw new Error('Failed to add sector');
       }
     } catch (error) {
-      console.error("Erro detalhado ao atualizar setor:", error);
-      const processedError = handleDatabaseError(error, "Não foi possível atualizar o setor");
-      toast.error(processedError.message);
-      throw processedError;
+      console.error('Error in sectorService.addSector:', error);
+      toast.error('Erro ao adicionar setor', {
+        description: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+      throw error;
     }
-  };
-
-  return {
-    addSector,
-    updateSector
-  };
+  },
+  
+  /**
+   * Update an existing sector - returns a boolean
+   */
+  updateSector: async (sectorId: string, sectorData: Partial<Sector>): Promise<boolean> => {
+    try {
+      // First, get the complete sector information
+      const existingSector = await supabaseService.getSectorById(sectorId);
+      
+      if (!existingSector) {
+        toast.error('Setor não encontrado');
+        return false;
+      }
+      
+      // Merge existing data with updates
+      const updatedSector: Sector = {
+        ...existingSector,
+        ...sectorData,
+        id: sectorId // Ensure ID doesn't change
+      };
+      
+      // Update the sector
+      await supabaseService.updateSector(updatedSector);
+      
+      toast.success('Setor atualizado com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Error in sectorService.updateSector:', error);
+      toast.error('Erro ao atualizar setor', {
+        description: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+      return false;
+    }
+  }
 };
+
+/**
+ * Hook to use the sector service
+ */
+export function useSectorService() {
+  return sectorService;
+}
