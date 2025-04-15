@@ -1,23 +1,29 @@
 
 import { createContext, useContext } from 'react';
 import { useApi as useApiBase } from './ApiContext';
-import { supabaseServices } from '@/services/supabase';
 import { usePhotoService } from '@/services/photoService';
+import { ApiServiceType } from './ApiContext';
 
 // Define the extended API context type
-export type ApiContextExtendedType = ReturnType<typeof useApiExtendedOriginal>;
+export type ApiContextExtendedType = ApiServiceType & {
+  updateServicePhotos: (
+    sectorId: string,
+    serviceId: string,
+    photoUrl: string,
+    type: 'before' | 'after'
+  ) => Promise<boolean>;
+};
 
 // Create the extended context
 export const ApiContextExtended = createContext<ApiContextExtendedType | null>(null);
 
 // This hook combines the base API with extended functionality
-export const useApiExtendedOriginal = () => {
+const useApiExtendedOriginal = () => {
   const baseApi = useApiBase();
   const photoService = usePhotoService();
   
   return {
     ...baseApi,
-    ...supabaseServices,
     updateServicePhotos: photoService.updateServicePhotos
   };
 };

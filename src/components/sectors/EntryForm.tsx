@@ -20,19 +20,19 @@ export default function EntryForm({ cycle }: EntryFormProps) {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="tagNumber">TAG do Setor</Label>
-            <Input id="tagNumber" value={cycle.tagNumber} readOnly />
+            <Input id="tagNumber" value={cycle.tagNumber || ''} readOnly />
           </div>
           <div className="space-y-2">
             <Label htmlFor="entryInvoice">Nota Fiscal de Entrada</Label>
-            <Input id="entryInvoice" value={cycle.entryInvoice} readOnly />
+            <Input id="entryInvoice" value={cycle.entryInvoice || ''} readOnly />
           </div>
           <div className="space-y-2">
             <Label htmlFor="entryDate">Data de Entrada</Label>
-            <Input id="entryDate" value={cycle.entryDate} readOnly />
+            <Input id="entryDate" value={cycle.entryDate || ''} readOnly />
           </div>
           <div className="space-y-2">
             <Label htmlFor="peritagemDate">Data da Peritagem</Label>
-            <Input id="peritagemDate" value={cycle.peritagemDate} readOnly />
+            <Input id="peritagemDate" value={cycle.peritagemDate || ''} readOnly />
           </div>
         </div>
         <div className="space-y-2">

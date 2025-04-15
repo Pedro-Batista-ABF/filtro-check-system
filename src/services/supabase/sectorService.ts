@@ -3,10 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   mapSectorFromDB, 
   mapServiceFromDB, 
-  mapPhotoFromDB, 
-  PhotoDB 
+  mapPhotoFromDB
 } from "./mappers";
-import { toast } from "sonner";
 
 /**
  * Serviço para operações com setores
@@ -292,7 +290,9 @@ export const sectorService = {
           current_outcome: sectorData.outcome || 'EmAndamento',
           created_by: user.id,
           updated_by: user.id,
-          updated_at: new Date().toISOString() // Adicionar updated_at explicitamente
+          updated_at: new Date().toISOString(), // Adicionar updated_at explicitamente
+          nf_entrada: sectorData.entryInvoice,
+          data_entrada: sectorData.entryDate ? new Date(sectorData.entryDate).toISOString() : null
         })
         .select()
         .single();
@@ -459,7 +459,7 @@ export const sectorService = {
   /**
    * Atualiza um setor existente
    */
-  updateSector: async (sectorData: Sector): Promise<Sector> => {
+  updateSector: async (sectorId: string, sectorData: Partial<Sector>): Promise<Sector> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -468,7 +468,7 @@ export const sectorService = {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('*')
-        .eq('sector_id', sectorData.id)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -484,14 +484,9 @@ export const sectorService = {
           current_status: sectorData.status,
           current_outcome: sectorData.outcome || 'EmAndamento',
           updated_by: user.id,
-          updated_at: new Date().toISOString(), // Usar updated_at sempre
-          // Mapear novos campos
-          nf_entrada: sectorData.nf_entrada || sectorData.entryInvoice,
-          nf_saida: sectorData.nf_saida || sectorData.exitInvoice,
-          data_entrada: sectorData.data_entrada || (sectorData.entryDate ? new Date(sectorData.entryDate).toISOString() : null),
-          data_saida: sectorData.data_saida || (sectorData.exitDate ? new Date(sectorData.exitDate).toISOString() : null)
+          updated_at: new Date().toISOString() // Usar updated_at sempre
         })
-        .eq('id', sectorData.id);
+        .eq('id', sectorId);
         
       if (sectorError) {
         console.error("Erro ao atualizar setor:", sectorError);
@@ -539,7 +534,7 @@ export const sectorService = {
       await supabase
         .from('sector_services')
         .delete()
-        .eq('sector_id', sectorData.id);
+        .eq('sector_id', sectorId);
         
       // 4.2 Insere os serviços atualizados
       const selectedServices = sectorData.services.filter(service => service.selected);
@@ -566,7 +561,7 @@ export const sectorService = {
           const { error: sectorServiceError } = await supabase
             .from('sector_services')
             .insert({
-              sector_id: sectorData.id,
+              sector_id: sectorId,
               service_id: service.id,
               quantity: service.quantity || 1,
               stage: 'peritagem',
@@ -604,7 +599,7 @@ export const sectorService = {
                 type: 'after',
                 created_by: user.id,
                 metadata: {
-                  sector_id: sectorData.id,
+                  sector_id: sectorId,
                   type: 'after',
                   stage: 'checagem'
                 }
@@ -639,7 +634,7 @@ export const sectorService = {
                 type: 'scrap',
                 created_by: user.id,
                 metadata: {
-                  sector_id: sectorData.id,
+                  sector_id: sectorId,
                   type: 'scrap',
                   stage: 'sucateamento'
                 }
@@ -653,9 +648,9 @@ export const sectorService = {
       }
       
       // 6. Retorna o setor atualizado
-      return await sectorService.getSectorById(sectorData.id) as Sector;
+      return await sectorService.getSectorById(sectorId) as Sector;
     } catch (error) {
-      console.error(`Erro ao atualizar setor ${sectorData.id}:`, error);
+      console.error(`Erro ao atualizar setor ${sectorId}:`, error);
       throw error;
     }
   },
