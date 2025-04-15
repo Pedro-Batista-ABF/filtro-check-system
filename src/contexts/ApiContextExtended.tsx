@@ -225,5 +225,5 @@ export function useApi() {
   return useContext(ApiContextExtended);
 }
 
-// Export the provider component properly
-export { ApiContextExtended, ApiContextExtendedProvider };
+// Export the context only once
+export { ApiContextExtended };
