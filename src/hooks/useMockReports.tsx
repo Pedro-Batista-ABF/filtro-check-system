@@ -67,44 +67,48 @@ export const useMockReports = () => {
       title: 'Relatório Janeiro - Completo',
       date: '2024-01-31T15:45:00',
       sectorCount: 10,
-    },
-    {
-      id: '109',
-      title: 'Relatório Set. X123',
-      date: '2023-12-15T09:30:00',
-      sectorCount: 1,
-    },
-    {
-      id: '110',
-      title: 'Relatório Anual 2023',
-      date: '2023-12-01T14:00:00',
-      sectorCount: 25,
-    },
+    }
   ], []);
 
-  // Validate reports to ensure they have all required fields
+  // Validar relatórios para garantir que tenham todos os campos obrigatórios
   const validatedReports = useMemo(() => {
     return mockReports.filter(report => 
-      report && report.id && report.title && report.date && typeof report.sectorCount === 'number'
+      report && 
+      report.id && 
+      report.title && 
+      report.date && 
+      typeof report.sectorCount === 'number' &&
+      report.sectorCount > 0
     );
   }, [mockReports]);
 
   // Organizar relatórios por ano e mês
   const reportsByDate: ReportsByDate = useMemo(() => {
     return validatedReports.reduce((acc: ReportsByDate, report) => {
-      const date = new Date(report.date);
-      const year = date.getFullYear().toString();
-      const month = format(date, 'MMMM'); // Nome do mês
-      
-      if (!acc[year]) {
-        acc[year] = {};
+      try {
+        const date = new Date(report.date);
+        
+        // Validar se a data é válida
+        if (isNaN(date.getTime())) {
+          console.error(`Data inválida para relatório: ${report.id}`);
+          return acc;
+        }
+        
+        const year = date.getFullYear().toString();
+        const month = format(date, 'MMMM'); // Nome do mês
+        
+        if (!acc[year]) {
+          acc[year] = {};
+        }
+        
+        if (!acc[year][month]) {
+          acc[year][month] = [];
+        }
+        
+        acc[year][month].push(report);
+      } catch (error) {
+        console.error(`Erro ao processar relatório: ${report.id}`, error);
       }
-      
-      if (!acc[year][month]) {
-        acc[year][month] = [];
-      }
-      
-      acc[year][month].push(report);
       
       return acc;
     }, {});
@@ -112,9 +116,14 @@ export const useMockReports = () => {
 
   // Ordenar relatórios por data (mais recentes primeiro)
   const sortedReports = useMemo(() => {
-    return [...validatedReports].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    return [...validatedReports].sort((a, b) => {
+      try {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      } catch (error) {
+        console.error("Erro ao ordenar relatórios:", error);
+        return 0;
+      }
+    });
   }, [validatedReports]);
 
   return {

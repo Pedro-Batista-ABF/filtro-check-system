@@ -16,11 +16,13 @@ export function usePeritagemData(id?: string) {
     const loadData = async () => {
       try {
         setLoading(true);
-        // First load the default services
+        setErrorMessage(null);
+        
+        // Primeiro carregamos os serviços padrão
         const defaultServices = await fetchDefaultServices();
         
         if (isEditing && id) {
-          // If editing, fetch the sector data
+          // Se estiver editando, busca os dados do setor
           await fetchSector();
         }
         
@@ -31,6 +33,8 @@ export function usePeritagemData(id?: string) {
         toast.error("Erro ao carregar dados", {
           description: "Ocorreu um erro ao carregar os dados. Tente novamente."
         });
+      } finally {
+        // Garantir que o loading seja desativado mesmo em caso de erro
         setLoading(false);
       }
     };
@@ -38,7 +42,7 @@ export function usePeritagemData(id?: string) {
     loadData();
   }, [id, isEditing, fetchSector, fetchDefaultServices]);
 
-  // Get the default sector with default services
+  // Obter o setor padrão com serviços padrão
   const defaultSector = getDefaultSector(services || []);
 
   return {

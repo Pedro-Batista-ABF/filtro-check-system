@@ -31,21 +31,26 @@ const ReportList = () => {
   const { reports, reportsByDate } = useMockReports();
   
   const handleViewReport = (reportId: string) => {
-    navigate(`/setor/${reportId}`);
+    navigate(`/relatorio/${reportId}`);
   };
   
   const handleResendReport = (reportId: string) => {
     toast.success('Relatório reenviado com sucesso!');
   };
 
-  // Paginate reports
+  // Paginar relatórios
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedReports = reports.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
 
-  // Check if a report has required data
+  // Verificar se um relatório tem os dados necessários
   const isValidReport = (report: any) => {
-    return report && report.id && report.title && report.date;
+    return report && 
+           report.id && 
+           report.title && 
+           report.date && 
+           typeof report.sectorCount === 'number' && 
+           report.sectorCount > 0;
   };
 
   return (
@@ -65,12 +70,12 @@ const ReportList = () => {
                 <div key={year} className="space-y-2">
                   <h3 className="text-lg font-semibold">{year}</h3>
                   <div className="pl-4 space-y-2">
-                    {Object.entries(months).map(([month, reports]) => {
-                      // Filter out invalid reports
-                      const validReports = reports.filter(isValidReport);
+                    {Object.entries(months).map(([month, monthReports]) => {
+                      // Filtrar relatórios inválidos
+                      const validReports = monthReports.filter(isValidReport);
                       
                       if (validReports.length === 0) {
-                        return null; // Skip empty months
+                        return null; // Pular meses vazios
                       }
                       
                       return (
@@ -143,7 +148,7 @@ const ReportList = () => {
             </TableHeader>
             <TableBody>
               {paginatedReports.length > 0 ? (
-                paginatedReports.filter(isValidReport).map((report) => (
+                paginatedReports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell>{format(new Date(report.date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="font-medium">{report.title}</TableCell>
