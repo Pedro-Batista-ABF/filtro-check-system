@@ -10,6 +10,12 @@ import { Search } from 'lucide-react';
 import { Sector } from '@/types';
 import SectorGrid from '@/components/sectors/SectorGrid';
 
+// Let's define the props that SectorGrid expects
+interface SectorGridProps {
+  sectors: Sector[];
+  onSectorClick?: (sector: Sector) => void;
+}
+
 export default function Sucateamento() {
   const navigate = useNavigate();
   const { sectors, isLoading, refreshData } = useApi();

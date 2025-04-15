@@ -18,10 +18,8 @@ export function useSectorFetch(id?: string) {
     try {
       const sectorData = await getSectorById(id);
       if (!sectorData) {
-        toast({
-          title: "Setor não encontrado",
-          description: `O setor com ID ${id} não foi encontrado.`,
-          variant: "destructive"
+        toast.error("Setor não encontrado", {
+          description: `O setor com ID ${id} não foi encontrado.`
         });
         navigate('/peritagem/novo', { replace: true });
         return;

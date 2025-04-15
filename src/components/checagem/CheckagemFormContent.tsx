@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sector, Service, Photo } from '@/types';
+import { Sector, Service, Photo, PhotoWithFile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,9 @@ export default function CheckagemFormContent({
   const [exitDate, setExitDate] = useState(sector.exitDate || '');
   const [checagemDate, setChecagemDate] = useState(sector.checagemDate || new Date().toISOString().split('T')[0]);
   const [exitObservations, setExitObservations] = useState(sector.exitObservations || '');
-  const [afterPhotos, setAfterPhotos] = useState<Photo[]>(sector.afterPhotos || []);
+  const [afterPhotos, setAfterPhotos] = useState<PhotoWithFile[]>(
+    (sector.afterPhotos || []).map(photo => ({...photo, file: null}))
+  );
   const [formErrors, setFormErrors] = useState({
     exitInvoice: false,
     exitDate: false
@@ -31,11 +33,12 @@ export default function CheckagemFormContent({
 
   const handlePhotoChange = (files: FileList) => {
     // Processar novas fotos
-    const newPhotos = Array.from(files).map((file) => ({
+    const newPhotos: PhotoWithFile[] = Array.from(files).map((file) => ({
       id: `temp-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       url: URL.createObjectURL(file),
       type: 'after' as const,
-      file
+      file,
+      serviceId: undefined
     }));
     
     setAfterPhotos((prev) => [...prev, ...newPhotos]);
@@ -62,7 +65,7 @@ export default function CheckagemFormContent({
       exitDate,
       checagemDate,
       exitObservations,
-      afterPhotos,
+      afterPhotos: afterPhotos.map(({ id, url, type, serviceId }) => ({ id, url, type, serviceId })),
       status: 'concluido'
     };
     

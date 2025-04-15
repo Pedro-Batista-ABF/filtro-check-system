@@ -19,18 +19,23 @@ export function useServicesManagement() {
         return [];
       }
 
-      // Process services to ensure correct typing
-      return serviceTypes.map(service => ({
+      // Process services with proper type casting
+      const processedServices = serviceTypes.map(service => ({
         id: service.id,
         name: service.name,
         selected: false,
-        type: service.id as ServiceType,
+        type: service.id as unknown as ServiceType,
         photos: []
       }));
+      
+      setServices(processedServices);
+      return processedServices;
     } catch (error) {
       console.error("Error fetching default services:", error);
       toast.error("Erro ao carregar serviços");
       return [];
+    } finally {
+      setLoading(false);
     }
   };
 

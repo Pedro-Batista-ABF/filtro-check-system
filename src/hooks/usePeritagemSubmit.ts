@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector } from "@/types";
+import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
 import { generateUniqueCycleCount } from "@/utils/cycleUtils";
 import { validatePeritagemData, findServicesWithoutPhotos } from "@/utils/peritagemValidation";
@@ -64,12 +64,13 @@ export function usePeritagemSubmit() {
 
           const sectorData = prepareSectorData(data, isEditing, sectorId, status, processedPhotos, cycleCount);
 
+          let apiResult;
           if (isEditing && sectorId) {
-            result = await updateSector(sectorId, sectorData);
-            sectorResult = result ? sectorId : false;
+            apiResult = await updateSector(sectorId, sectorData);
+            sectorResult = apiResult ? sectorId : false;
           } else {
-            result = await addSector(sectorData as Omit<Sector, 'id'>);
-            sectorResult = typeof result === 'string' ? result : false;
+            apiResult = await addSector(sectorData as Omit<Sector, 'id'>);
+            sectorResult = typeof apiResult === 'string' ? apiResult : false;
           }
 
           break;
