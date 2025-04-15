@@ -148,29 +148,6 @@ export default function SectorForm({
     }
   };
 
-  // Função para captura de foto via câmera
-  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
-    e.preventDefault();
-    
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.capture = 'environment';
-    
-    fileInput.addEventListener('change', (e) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        if (serviceId) {
-          handlePhotoUpload(serviceId, target.files, 'before');
-        } else {
-          handleTagPhotoUpload(target.files);
-        }
-      }
-    });
-    
-    fileInput.click();
-  };
-
   const validateForm = (): boolean => {
     const errors = {
       tagNumber: !tagNumber.trim(),
