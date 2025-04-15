@@ -1,73 +1,36 @@
 
-import React from 'react';
-import { Service } from '@/types';
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import QuantityInput from './QuantityInput';
-import PhotoUpload from './PhotoUpload';
+import { Service } from "@/types";
+import { Check, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ServicesListProps {
   services: Service[];
-  onServiceChange: (serviceId: string, isSelected: boolean) => void;
-  onQuantityChange: (serviceId: string, quantity: number) => void;
-  onPhotoChange: (serviceId: string, files: FileList) => void;
-  disabled?: boolean;
-  beforePhotos: any[];
 }
 
-export default function ServicesList({
-  services,
-  onServiceChange,
-  onQuantityChange,
-  onPhotoChange,
-  disabled = false,
-  beforePhotos
-}: ServicesListProps) {
+export default function ServicesList({ services }: ServicesListProps) {
+  // Filtramos apenas os serviços selecionados
+  const selectedServices = services?.filter(service => service.selected) || [];
+
+  if (selectedServices.length === 0) {
+    return <p className="text-gray-500">Nenhum serviço selecionado</p>;
+  }
+
   return (
-    <div className="space-y-4">
-      {services.map((service) => (
-        <div key={service.id} className="border p-4 rounded-md">
-          <div className="flex items-start space-x-3">
-            <Checkbox 
-              id={`service-${service.id}`}
-              checked={service.selected}
-              onCheckedChange={(checked) => onServiceChange(service.id, !!checked)}
-              disabled={disabled}
-            />
-            <div className="flex-1 space-y-2">
-              <Label htmlFor={`service-${service.id}`} className="font-medium">
-                {service.name}
-              </Label>
-              
-              {service.selected && (
-                <div className="ml-6 space-y-4 mt-2">
-                  <div>
-                    <Label htmlFor={`quantity-${service.id}`}>Quantidade*</Label>
-                    <div className="mt-1">
-                      <QuantityInput
-                        id={`quantity-${service.id}`}
-                        value={service.quantity || 1}
-                        onChange={(value) => onQuantityChange(service.id, value)}
-                        min={1}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label>Fotos do Serviço (ANTES)*</Label>
-                    <div className="mt-1">
-                      <PhotoUpload
-                        photos={beforePhotos.filter(photo => photo.serviceId === service.id)}
-                        onChange={(files) => onPhotoChange(service.id, files)}
-                        disabled={disabled}
-                        title="Adicionar fotos do serviço"
-                        required={true}
-                      />
-                    </div>
-                  </div>
-                </div>
+    <div className="space-y-3">
+      {selectedServices.map(service => (
+        <div key={service.id} className="flex items-start space-x-2 border-b pb-2">
+          <div className="flex-1">
+            <div className="flex items-center">
+              <span className="font-medium">{service.name}</span>
+              {service.quantity && service.quantity > 1 && (
+                <Badge variant="outline" className="ml-2">
+                  Qtd: {service.quantity}
+                </Badge>
               )}
             </div>
+            {service.observations && (
+              <p className="text-sm text-gray-600 mt-1">{service.observations}</p>
+            )}
           </div>
         </div>
       ))}

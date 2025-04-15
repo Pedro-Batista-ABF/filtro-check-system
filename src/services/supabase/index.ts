@@ -1,47 +1,55 @@
-import { Sector } from "@/types";
-import { supabase } from "@/integrations/supabase/client";
-import { sectorService } from "./sectorService";
-import { photoService } from "@/services/supabase/photoService";
 
-export const supabaseServices = {
-  // Sectors
+import { Sector, Service, Photo } from "@/types";
+import { serviceTypeService } from "./serviceTypeService";
+import { photoService } from "./photoService";
+import { sectorService } from "./sectorService";
+
+/**
+ * Serviço para operações com o Supabase
+ */
+export const supabaseService = {
+  /**
+   * Busca todos os setores
+   */
   getAllSectors: sectorService.getAllSectors,
+  
+  /**
+   * Busca um setor pelo ID
+   */
   getSectorById: sectorService.getSectorById,
+  
+  /**
+   * Busca setores pela TAG
+   */
+  getSectorsByTag: sectorService.getSectorsByTag,
+  
+  /**
+   * Cria um novo setor
+   */
   addSector: sectorService.addSector,
+  
+  /**
+   * Atualiza um setor existente
+   */
   updateSector: sectorService.updateSector,
+  
+  /**
+   * Remove um setor
+   */
   deleteSector: sectorService.deleteSector,
   
-  // Add getSectorsByTag function
-  getSectorsByTag: async (tagNumber: string): Promise<Sector[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('sectors')
-        .select('*')
-        .ilike('tag_number', `%${tagNumber}%`)
-        .order('tag_number');
-        
-      if (error) throw error;
-      
-      // Process each sector to get complete data
-      const sectors: Sector[] = [];
-      for (const sector of data) {
-        try {
-          const completeData = await sectorService.getSectorById(sector.id);
-          if (completeData) {
-            sectors.push(completeData);
-          }
-        } catch (err) {
-          console.error(`Error getting complete data for sector ${sector.id}:`, err);
-        }
-      }
-      
-      return sectors;
-    } catch (error) {
-      console.error("Error searching sectors by tag:", error);
-      return [];
-    }
-  },
+  /**
+   * Busca os serviços disponíveis
+   */
+  getServiceTypes: serviceTypeService.getServiceTypes,
   
-  // Photos
+  /**
+   * Faz upload de uma foto para o bucket do Storage
+   */
   uploadPhoto: photoService.uploadPhoto
 };
+
+export * from "./photoService";
+export * from "./serviceTypeService";
+export * from "./sectorService";
+export * from "./mappers";

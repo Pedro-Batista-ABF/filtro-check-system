@@ -1,55 +1,69 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Trash } from "lucide-react";
 import { useApi } from "@/contexts/ApiContextExtended";
+import { Sector, Service } from "@/types";
+import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import SectorServices from "@/components/sectors/SectorServices";
 import SectorSummary from "@/components/sectors/SectorSummary";
 import SectorPhotos from "@/components/sectors/SectorPhotos";
-import { toast } from "sonner";
-import { Sector } from "@/types";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ExecucaoDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getSectorById, updateSector } = useApi();
-  const [sector, setSector] = useState<Sector>();
+  const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [markingScrap, setMarkingScrap] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showScrapDialog, setShowScrapDialog] = useState(false);
+  const [completingProduction, setCompletingProduction] = useState(false);
+  const [sucateando, setSucateando] = useState(false);
+  const [activeTab, setActiveTab] = useState("services");
 
   useEffect(() => {
+    document.title = "Detalhes de Execução - Gestão de Recuperação";
+    
     const fetchSector = async () => {
-      if (!id) return;
+      if (!id) {
+        navigate('/execucao');
+        return;
+      }
       
       try {
         const sectorData = await getSectorById(id);
+        
         if (!sectorData) {
           toast.error("Setor não encontrado");
           navigate('/execucao');
           return;
         }
         
+        // Verifica se o setor está em execução
+        if (sectorData.status !== 'emExecucao') {
+          toast.error("Status inválido", { 
+            description: `Este setor está com status "${sectorData.status}" e não é válido para execução.` 
+          });
+          navigate('/execucao');
+          return;
+        }
+        
+        // Garantir que todos os campos necessários estejam presentes
+        if (!sectorData.scrapPhotos) {
+          sectorData.scrapPhotos = [];
+        }
+        
+        if (!sectorData.outcome) {
+          sectorData.outcome = 'EmAndamento';
+        }
+        
         setSector(sectorData);
       } catch (error) {
-        console.error("Error fetching sector:", error);
+        console.error("Erro ao carregar setor:", error);
         toast.error("Erro ao carregar dados do setor");
+        navigate('/execucao');
       } finally {
         setLoading(false);
       }
@@ -58,119 +72,151 @@ export default function ExecucaoDetails() {
     fetchSector();
   }, [id, getSectorById, navigate]);
 
-  const handleMarkComplete = async () => {
-    if (!sector || !id) return;
+  const handleCompleteProduction = async () => {
+    if (!sector) return;
     
     try {
-      setUpdatingStatus(true);
-      setShowConfirmDialog(false);
+      setCompletingProduction(true);
       
-      const updates = {
-        ...sector,
-        status: 'checagemFinalPendente',
-        productionCompleted: true
+      // Preparar os dados para atualização
+      const updateData = {
+        productionCompleted: true,
+        status: 'checagemFinalPendente' as const
       };
       
-      await updateSector(id, updates);
+      // Atualizar o setor
+      await updateSector(sector.id, updateData);
       
-      // Also update directly in Supabase
-      await supabase.from('sectors')
-        .update({
-          current_status: 'checagemFinalPendente',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-        
-      // Update the cycle status
-      const { data: cycleData } = await supabase
-        .from('cycles')
-        .select('id')
-        .eq('sector_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (cycleData) {
-        await supabase
-          .from('cycles')
-          .update({
-            status: 'checagemFinalPendente',
-            production_completed: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', cycleData.id);
-      }
+      toast.success("Produção marcada como concluída!", {
+        description: "Setor movido para a fila de checagem final."
+      });
       
-      toast.success("Setor marcado como concluído com sucesso!");
       navigate('/execucao');
     } catch (error) {
-      console.error("Error updating sector status:", error);
-      toast.error("Erro ao marcar setor como concluído");
+      console.error("Erro ao completar produção:", error);
+      toast.error("Erro ao completar produção");
     } finally {
-      setUpdatingStatus(false);
+      setCompletingProduction(false);
     }
   };
 
-  const handleMarkScrap = async () => {
-    if (!sector || !id) return;
+  const handleSucateamento = async () => {
+    if (!sector) return;
     
     try {
-      setMarkingScrap(true);
-      setShowScrapDialog(false);
+      setSucateando(true);
       
-      const updates = {
-        ...sector,
-        status: 'sucateadoPendente',
-        outcome: 'scrapped'
-      };
+      // Atualizar status para sucateadoPendente
+      await updateSector(sector.id, {
+        status: 'sucateadoPendente' as const,
+        outcome: 'scrapped' as const
+      });
       
-      await updateSector(id, updates);
-      
-      // Also update directly in Supabase
-      await supabase.from('sectors')
-        .update({
-          current_status: 'sucateadoPendente',
-          current_outcome: 'scrapped',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-        
-      // Update the cycle status
-      const { data: cycleData } = await supabase
-        .from('cycles')
-        .select('id')
-        .eq('sector_id', id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (cycleData) {
-        await supabase
-          .from('cycles')
+      // Garantir a atualização direta no Supabase
+      try {
+        console.log("Atualizando status para sucateadoPendente...");
+        const { error } = await supabase.from('sectors')
           .update({
-            status: 'sucateadoPendente',
-            outcome: 'scrapped',
+            current_status: 'sucateadoPendente',
+            current_outcome: 'scrapped',
             updated_at: new Date().toISOString()
           })
-          .eq('id', cycleData.id);
+          .eq('id', sector.id);
+          
+        if (error) {
+          console.error("Erro ao atualizar status no Supabase:", error);
+          throw error;
+        }
+        
+        // Atualizar ciclo
+        const { data: cycleData } = await supabase
+          .from('cycles')
+          .select('id')
+          .eq('sector_id', sector.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+          
+        if (cycleData) {
+          const { error: cycleError } = await supabase
+            .from('cycles')
+            .update({
+              status: 'sucateadoPendente',
+              outcome: 'scrapped',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', cycleData.id);
+            
+          if (cycleError) {
+            console.error("Erro ao atualizar ciclo:", cycleError);
+          }
+        }
+      } catch (dbError) {
+        console.error("Erro na atualização direta:", dbError);
       }
       
-      toast.success("Setor marcado para sucateamento com sucesso!");
-      navigate('/sucateamento');
+      toast.success("Setor marcado para sucateamento", {
+        description: "Aguardando validação do sucateamento."
+      });
+      
+      navigate('/execucao');
     } catch (error) {
-      console.error("Error marking sector for scrap:", error);
-      toast.error("Erro ao marcar setor para sucateamento");
+      console.error("Erro ao marcar para sucateamento:", error);
+      toast.error("Erro ao marcar para sucateamento");
     } finally {
-      setMarkingScrap(false);
+      setSucateando(false);
+    }
+  };
+  
+  const updateServiceCompletion = async (serviceId: string, completed: boolean) => {
+    if (!sector) return;
+    
+    try {
+      // Encontrar o serviço a ser atualizado
+      const updatedServices = sector.services.map(service => 
+        service.id === serviceId 
+          ? { ...service, completed } 
+          : service
+      );
+      
+      // Atualizar o setor com os serviços atualizados
+      await updateSector(sector.id, { services: updatedServices });
+      
+      // Atualizar também o cycleService correspondente
+      const { error } = await supabase
+        .from('cycle_services')
+        .update({ completed })
+        .match({ 
+          cycle_id: sector.cycles?.[0]?.id, 
+          service_id: serviceId 
+        });
+        
+      if (error) {
+        console.error("Erro ao atualizar serviço:", error);
+        throw error;
+      }
+      
+      // Atualizar o estado local
+      setSector(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          services: updatedServices
+        };
+      });
+      
+      toast.success("Serviço atualizado");
+    } catch (error) {
+      console.error("Erro ao atualizar conclusão do serviço:", error);
+      toast.error("Erro ao atualizar serviço");
     }
   };
 
   if (loading) {
     return (
       <PageLayout>
-        <div className="flex justify-center items-center h-48">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-          <p className="ml-2">Carregando dados do setor...</p>
+        <div className="p-6 text-center">
+          <h2>Carregando dados do setor...</h2>
         </div>
       </PageLayout>
     );
@@ -179,16 +225,14 @@ export default function ExecucaoDetails() {
   if (!sector) {
     return (
       <PageLayout>
-        <div className="text-center py-12">
-          <h1 className="text-xl font-bold text-red-500">
-            Setor não encontrado
-          </h1>
+        <div className="p-6 text-center">
+          <h2 className="text-red-500">Setor não encontrado</h2>
           <Button 
             onClick={() => navigate('/execucao')} 
             className="mt-4"
             variant="outline"
           >
-            Voltar para Execução
+            Voltar para lista de execução
           </Button>
         </div>
       </PageLayout>
@@ -198,8 +242,8 @@ export default function ExecucaoDetails() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
               size="icon" 
@@ -208,136 +252,72 @@ export default function ExecucaoDetails() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="page-title">
-              Detalhes do Setor: {sector.tagNumber}
+              Detalhes da Execução
             </h1>
           </div>
           
           <div className="flex gap-2">
-            <Dialog open={showScrapDialog} onOpenChange={setShowScrapDialog}>
-              <DialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash className="mr-2 h-4 w-4" />
-                  Marcar para Sucateamento
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Confirmar Sucateamento</DialogTitle>
-                  <DialogDescription>
-                    Tem certeza que deseja marcar este setor para sucateamento? 
-                    Esta ação enviará o setor para validação de sucateamento.
-                  </DialogDescription>
-                </DialogHeader>
-                <Alert variant="destructive" className="mt-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Atenção</AlertTitle>
-                  <AlertDescription>
-                    O setor <strong>{sector.tagNumber}</strong> será marcado como sucateado.
-                    Esta ação é irreversível e requer validação posterior pela qualidade.
-                  </AlertDescription>
-                </Alert>
-                <DialogFooter className="mt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowScrapDialog(false)}
-                    disabled={markingScrap}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={handleMarkScrap}
-                    disabled={markingScrap}
-                  >
-                    {markingScrap ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash className="mr-2 h-4 w-4" />
-                        Confirmar Sucateamento
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              variant="destructive"
+              onClick={handleSucateamento}
+              disabled={sucateando || completingProduction}
+            >
+              {sucateando ? "Processando..." : "Marcar para Sucateamento"}
+            </Button>
             
-            <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Marcar como Concluído
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Confirmar Conclusão</DialogTitle>
-                  <DialogDescription>
-                    Tem certeza que deseja marcar este setor como concluído pela produção? 
-                    Esta ação enviará o setor para checagem de qualidade.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowConfirmDialog(false)}
-                    disabled={updatingStatus}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={handleMarkComplete}
-                    disabled={updatingStatus}
-                  >
-                    {updatingStatus ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Confirmar Conclusão
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              onClick={handleCompleteProduction}
+              disabled={completingProduction || sucateando}
+            >
+              {completingProduction ? "Processando..." : "Concluir Produção"}
+            </Button>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <SectorSummary sector={sector} />
-          </div>
-          
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardContent className="pt-6">
-                <SectorServices 
-                  sector={sector} 
-                  allowCompletion={true}
-                  onUpdateCompletion={(serviceId, completed) => {
-                    // Update service completion locally
-                    const updatedServices = sector.services?.map(service => 
-                      service.id === serviceId 
-                        ? { ...service, completed } 
-                        : service
-                    ) || [];
-                    
-                    setSector(prev => prev ? { ...prev, services: updatedServices } : prev);
-                  }}
-                />
-              </CardContent>
-            </Card>
-            
-            <SectorPhotos sector={sector} />
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">TAG</p>
+              <p className="font-medium">{sector.tagNumber}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">NF Entrada</p>
+              <p className="font-medium">{sector.entryInvoice}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Data Entrada</p>
+              <p className="font-medium">{sector.entryDate}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Data Peritagem</p>
+              <p className="font-medium">{sector.peritagemDate}</p>
+            </div>
           </div>
         </div>
+        
+        <Tabs defaultValue="services" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="services">Serviços</TabsTrigger>
+            <TabsTrigger value="photos">Fotos</TabsTrigger>
+            <TabsTrigger value="details">Detalhes</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="services" className="mt-4">
+            <SectorServices 
+              sector={sector} 
+              allowCompletion={true}
+              onUpdateCompletion={updateServiceCompletion}
+            />
+          </TabsContent>
+          
+          <TabsContent value="photos" className="mt-4">
+            <SectorPhotos sector={sector} />
+          </TabsContent>
+          
+          <TabsContent value="details" className="mt-4">
+            <SectorSummary sector={sector} />
+          </TabsContent>
+        </Tabs>
       </div>
     </PageLayout>
   );

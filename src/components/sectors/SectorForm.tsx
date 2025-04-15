@@ -9,10 +9,6 @@ import { Service, Sector, Photo, PhotoWithFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import ScrapForm from "./forms/ScrapForm";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import QuantityInput from "./QuantityInput";
-import ServicesList from "./ServicesList";
 
 interface SectorFormProps {
   sector: Sector;
@@ -34,10 +30,7 @@ export default function SectorForm({
   const [entryDate, setEntryDate] = useState(sector.entryDate || '');
   const [peritagemDate, setPeritagemDate] = useState(sector.peritagemDate || '');
   const [entryObservations, setEntryObservations] = useState(sector.entryObservations || '');
-  const [tagPhoto, setTagPhoto] = useState<PhotoWithFile[]>(
-    sector.tagPhotoUrl ? [{ id: 'tag-photo', url: sector.tagPhotoUrl, type: 'tag', file: null }] : []
-  );
-  const [services, setServices] = useState<Service[]>(sector.services || []);
+  const [selectedServices, setSelectedServices] = useState<Service[]>(sector.services || []);
   
   // Convert Photo[] to PhotoWithFile[] by adding file: null to each photo
   const [beforePhotos, setBeforePhotos] = useState<PhotoWithFile[]>(
@@ -52,7 +45,6 @@ export default function SectorForm({
     entryInvoice?: boolean;
     entryDate?: boolean;
     peritagemDate?: boolean;
-    tagPhoto?: boolean;
     scrapObservations?: boolean;
     scrapDate?: boolean;
     scrapInvoice?: boolean;
@@ -71,10 +63,9 @@ export default function SectorForm({
     setEntryDate(sector.entryDate || '');
     setPeritagemDate(sector.peritagemDate || '');
     setEntryObservations(sector.entryObservations || '');
-    setServices(sector.services || []);
+    setSelectedServices(sector.services || []);
     setBeforePhotos((sector.beforePhotos || []).map(photo => ({ ...photo, file: null })));
     setAfterPhotos((sector.afterPhotos || []).map(photo => ({ ...photo, file: null })));
-    setTagPhoto(sector.tagPhotoUrl ? [{ id: 'tag-photo', url: sector.tagPhotoUrl, type: 'tag', file: null }] : []);
 
     // Quando estamos em modo de sucateamento, inicializar scrapValidated
     if (mode === 'scrap') {
@@ -84,21 +75,9 @@ export default function SectorForm({
 
   useEffect(() => {
     if (sector.services) {
-      setServices(sector.services);
+      setSelectedServices(sector.services);
     }
   }, [sector.services]);
-
-  const handleTagPhotoChange = (files: FileList) => {
-    if (files.length > 0) {
-      const file = files[0]; // Take only the first file
-      setTagPhoto([{
-        id: `tag-photo-${Date.now()}`,
-        url: '',
-        type: 'tag',
-        file: file
-      }]);
-    }
-  };
 
   const handleBeforePhotoChange = (files: FileList) => {
     const newPhotos: PhotoWithFile[] = [];
@@ -130,61 +109,6 @@ export default function SectorForm({
     setAfterPhotos([...afterPhotos, ...newPhotos]);
   };
 
-  const handleServiceChange = (serviceId: string, isSelected: boolean) => {
-    setServices(
-      services.map(service => 
-        service.id === serviceId 
-          ? { ...service, selected: isSelected } 
-          : service
-      )
-    );
-  };
-
-  const handleServiceQuantityChange = (serviceId: string, quantity: number) => {
-    setServices(
-      services.map(service => 
-        service.id === serviceId 
-          ? { ...service, quantity } 
-          : service
-      )
-    );
-  };
-
-  const handleServicePhotoChange = (serviceId: string, files: FileList) => {
-    const newPhotos: PhotoWithFile[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const tempId = `${serviceId}-${Date.now()}-${i}`;
-      newPhotos.push({
-        id: tempId,
-        url: '',
-        type: 'before',
-        serviceId: serviceId,
-        file: file
-      });
-    }
-    
-    // Add the new photos to beforePhotos with serviceId
-    setBeforePhotos([...beforePhotos, ...newPhotos]);
-    
-    // Update the service's photos array
-    setServices(
-      services.map(service => 
-        service.id === serviceId 
-          ? { 
-              ...service, 
-              photos: [...(service.photos || []), ...newPhotos.map(p => ({
-                id: p.id,
-                url: '',
-                type: 'before' as const,
-                serviceId: serviceId
-              }))]
-            } 
-          : service
-      )
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -196,7 +120,6 @@ export default function SectorForm({
         entryInvoice: false,
         entryDate: false,
         peritagemDate: false,
-        tagPhoto: false,
         scrapObservations: false,
         scrapDate: false,
         scrapInvoice: false
@@ -218,10 +141,6 @@ export default function SectorForm({
         newErrors.peritagemDate = true;
         isValid = false;
       }
-      if (tagPhoto.length === 0) {
-        newErrors.tagPhoto = true;
-        isValid = false;
-      }
       
       // Em modo de sucateamento, validar campos específicos
       if (mode === 'scrap' && isScrap) {
@@ -239,20 +158,6 @@ export default function SectorForm({
         }
       }
       
-      // Validate that each selected service has at least one photo if required
-      const selectedServices = services.filter(service => service.selected);
-      const servicesWithoutPhotos = selectedServices.filter(service => {
-        const servicePhotos = beforePhotos.filter(photo => photo.serviceId === service.id);
-        return servicePhotos.length === 0;
-      });
-      
-      if (photoRequired && servicesWithoutPhotos.length > 0) {
-        toast.error("Serviços sem fotos", {
-          description: `Os serviços ${servicesWithoutPhotos.map(s => s.name).join(", ")} precisam ter pelo menos uma foto.`
-        });
-        isValid = false;
-      }
-      
       setFormErrors(newErrors);
 
       if (isValid) {
@@ -263,10 +168,9 @@ export default function SectorForm({
           entryDate,
           entryObservations,
           peritagemDate,
-          services: services,
+          services: selectedServices,
           beforePhotos,
           afterPhotos,
-          tagPhotoUrl: tagPhoto.length > 0 ? tagPhoto[0].url : undefined,
           scrapPhotos: sector.scrapPhotos || [] // Garantir que scrapPhotos seja incluído
         };
         
@@ -292,6 +196,20 @@ export default function SectorForm({
     }
   };
 
+  // Atualizar informações do ciclo atual
+  const currentCycle = sector.cycles && sector.cycles.length > 0 
+    ? sector.cycles[0] 
+    : {
+        tag_number: sector.tagNumber,
+        entry_invoice: sector.entryInvoice,
+        entry_date: sector.entryDate,
+        peritagem_date: sector.peritagemDate,
+        production_completed: sector.productionCompleted,
+        status: sector.status,
+        outcome: sector.outcome
+      };
+
+  // Renderizar formulário baseado no modo
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
@@ -372,24 +290,6 @@ export default function SectorForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Foto da TAG*</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PhotoUpload
-            photos={tagPhoto}
-            onChange={handleTagPhotoChange}
-            disabled={isLoading || mode === 'view'}
-            title="Adicionar foto da TAG"
-            required={true}
-          />
-          {formErrors.tagPhoto && (
-            <p className="text-xs text-red-500 mt-2">Foto da TAG é obrigatória</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>Observações</CardTitle>
         </CardHeader>
         <CardContent>
@@ -406,71 +306,15 @@ export default function SectorForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Serviços</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {services.map((service) => (
-              <div key={service.id} className="border p-4 rounded-md">
-                <div className="flex items-start space-x-3">
-                  <Checkbox 
-                    id={`service-${service.id}`}
-                    checked={service.selected}
-                    onCheckedChange={(checked) => handleServiceChange(service.id, !!checked)}
-                    disabled={isLoading || mode === 'view'}
-                  />
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor={`service-${service.id}`} className="font-medium">
-                      {service.name}
-                    </Label>
-                    
-                    {service.selected && (
-                      <div className="ml-6 space-y-4 mt-2">
-                        <div>
-                          <Label htmlFor={`quantity-${service.id}`}>Quantidade*</Label>
-                          <div className="mt-1">
-                            <QuantityInput
-                              id={`quantity-${service.id}`}
-                              value={service.quantity || 1}
-                              onChange={(value) => handleServiceQuantityChange(service.id, value)}
-                              min={1}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label>Fotos do Serviço (ANTES)*</Label>
-                          <div className="mt-1">
-                            <PhotoUpload
-                              photos={beforePhotos.filter(photo => photo.serviceId === service.id)}
-                              onChange={(files) => handleServicePhotoChange(service.id, files)}
-                              disabled={isLoading || mode === 'view'}
-                              title="Adicionar fotos do serviço"
-                              required={true}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
           <CardTitle>Fotos da Entrada</CardTitle>
         </CardHeader>
         <CardContent>
           <PhotoUpload
-            photos={beforePhotos.filter(photo => !photo.serviceId)}
+            photos={beforePhotos}
             onChange={handleBeforePhotoChange}
             disabled={isLoading || mode === 'view'}
-            title="Adicionar fotos gerais da entrada"
-            required={false}
+            title="Adicionar fotos da entrada"
+            required={photoRequired}
           />
         </CardContent>
       </Card>
