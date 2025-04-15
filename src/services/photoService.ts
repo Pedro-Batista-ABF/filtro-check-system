@@ -50,6 +50,7 @@ export const photoService = {
           metadata: {
             sector_id: sectorId,
             service_id: serviceId,
+            stage: 'peritagem',
             type
           }
         });

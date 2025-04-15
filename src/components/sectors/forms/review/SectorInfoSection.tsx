@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TagPhotoField } from "../../form-fields/TagPhotoField";
 
 interface SectorInfoSectionProps {
   tagNumber: string;
@@ -131,40 +132,13 @@ export default function SectorInfoSection({
           </div>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="tagPhoto" className={formErrors.tagPhoto ? "text-red-500" : ""}>
-            Foto do TAG*
-          </Label>
-          <div className="flex space-x-2">
-            <Input
-              id="tagPhoto"
-              type="file"
-              accept="image/*"
-              onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
-              className={cn("flex-1", formErrors.tagPhoto ? "border-red-500" : "")}
-            />
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={onCameraCapture}
-              title="Usar câmera"
-            >
-              <Camera className="h-4 w-4" />
-            </Button>
-          </div>
-          {tagPhotoUrl && (
-            <div className="mt-2">
-              <img 
-                src={tagPhotoUrl} 
-                alt="TAG do Setor" 
-                className="w-32 h-32 object-cover rounded-md border"
-              />
-            </div>
-          )}
-          {formErrors.tagPhoto && (
-            <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
-          )}
-        </div>
+        <TagPhotoField
+          tagPhotoUrl={tagPhotoUrl}
+          onPhotoUpload={handleTagPhotoUpload}
+          onCameraCapture={onCameraCapture}
+          error={formErrors.tagPhoto}
+          required={true}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="entryObservations">

@@ -44,7 +44,7 @@ export default function SectorForm({
       formState.setServices([]);
     }
 
-    if (mode === 'scrap') {
+    if (mode === 'scrap') {, after the user has confirmed running the SQL commands. Share first the SQL commands in a `lov-sql` block, then the code changes in a `lov-code` block after the user has confirmed running the SQL commands.
       formState.setIsScrap(sector.scrapValidated || false);
     }
   }, [sector, mode]);
@@ -165,7 +165,7 @@ export default function SectorForm({
     }
   };
   
-  const handleCameraCapture = (e: React.MouseEvent) => {
+  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
     e.preventDefault();
     
     const fileInput = document.createElement('input');
@@ -176,7 +176,11 @@ export default function SectorForm({
     fileInput.addEventListener('change', (e) => {
       const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
-        handleTagPhotoUpload(target.files);
+        if (serviceId) {
+          handlePhotoUpload(serviceId, target.files, 'before');
+        } else {
+          handleTagPhotoUpload(target.files);
+        }
       }
     });
     

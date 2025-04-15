@@ -10,6 +10,7 @@ import { usePhotoUploadWithMetadata } from "./usePhotoUploadWithMetadata";
 import { useSectorStatus } from "./useSectorStatus";
 import { useSectorDataPreparation } from "./useSectorDataPreparation";
 import { supabase } from "@/integrations/supabase/client";
+import { validatePeritagemData, findServicesWithoutPhotos } from "@/utils/peritagemValidation";
 
 export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
@@ -19,49 +20,6 @@ export function usePeritagemSubmit() {
   const { uploadPhotosWithMetadata } = usePhotoUploadWithMetadata();
   const { updateSectorStatus } = useSectorStatus();
   const { prepareSectorData } = useSectorDataPreparation();
-
-  // Função para validar os dados da peritagem
-  const validatePeritagemData = (data: Partial<Sector>) => {
-    // Validar campos obrigatórios básicos
-    if (!data.tagNumber || !data.tagNumber.trim()) {
-      return { error: "Número do TAG é obrigatório" };
-    }
-
-    if (!data.entryInvoice || !data.entryInvoice.trim()) {
-      return { error: "Nota fiscal de entrada é obrigatória" };
-    }
-
-    if (!data.entryDate) {
-      return { error: "Data de entrada é obrigatória" };
-    }
-
-    if (!data.tagPhotoUrl) {
-      return { error: "Foto do TAG é obrigatória" };
-    }
-
-    // Verificar serviços
-    const selectedServices = data.services?.filter(service => service.selected) || [];
-    if (selectedServices.length === 0) {
-      return { error: "Selecione pelo menos um serviço" };
-    }
-
-    // Verificar fotos para serviços selecionados
-    const servicesWithoutPhotos = findServicesWithoutPhotos(selectedServices);
-    if (servicesWithoutPhotos.length > 0) {
-      return { 
-        error: `Os seguintes serviços estão sem fotos: ${servicesWithoutPhotos.join(", ")}` 
-      };
-    }
-
-    return null;
-  };
-
-  // Função auxiliar para encontrar serviços sem fotos
-  const findServicesWithoutPhotos = (services: Service[]): string[] => {
-    return services
-      .filter(service => service.selected && (!service.photos || service.photos.length === 0))
-      .map(s => s.name);
-  };
 
   const handleSubmit = async (data: Partial<Sector>, isEditing: boolean, sectorId?: string) => {
     try {
@@ -80,6 +38,22 @@ export function usePeritagemSubmit() {
         throw new Error(validationResult.error);
       }
 
+      // Validação extra para a foto da TAG
+      if (!data.tagPhotoUrl) {
+        throw new Error("Foto da TAG do setor é obrigatória");
+      }
+
+      // Verificar se todos os serviços selecionados possuem quantidade válida
+      const selectedServices = data.services?.filter(service => service.selected) || [];
+      const servicesWithoutValidQuantity = selectedServices.filter(
+        service => !service.quantity || service.quantity <= 0
+      );
+      
+      if (servicesWithoutValidQuantity.length > 0) {
+        const serviceNames = servicesWithoutValidQuantity.map(s => s.name).join(", ");
+        throw new Error(`Os seguintes serviços estão sem quantidade válida: ${serviceNames}`);
+      }
+
       // Processar fotos
       const processedPhotos = await processServicePhotos(data.services || [], uploadPhoto);
       const status = isEditing ? (data.status as SectorStatus) || 'peritagemPendente' : 'emExecucao';
@@ -94,7 +68,17 @@ export function usePeritagemSubmit() {
             (data.cycleCount || 1) : 
             generateUniqueCycleCount(attempt);
 
+          // Preparar dados do setor garantindo metadados completos
           const sectorData = prepareSectorData(data, isEditing, sectorId, status, processedPhotos, cycleCount);
+
+          // Garantir que os serviços tenham stage = 'peritagem'
+          if (sectorData.services) {
+            sectorData.services = sectorData.services.map(service => ({
+              ...service,
+              stage: 'peritagem',
+              quantity: service.quantity || 1
+            }));
+          }
 
           let apiResult;
           if (isEditing && sectorId) {

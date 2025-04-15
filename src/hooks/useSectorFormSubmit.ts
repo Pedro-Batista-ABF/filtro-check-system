@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Sector, Service } from '@/types';
 import { format } from 'date-fns';
 import { toast } from "sonner";
+import { findServicesWithoutPhotos } from '@/utils/peritagemValidation';
 
 interface FormState {
   tagNumber: string;
@@ -28,19 +29,45 @@ export function useSectorFormSubmit() {
       photos: false
     };
 
+    // Verificar se ao menos um serviço foi selecionado
     const selectedServices = formData.services.filter(s => s.selected);
     errors.services = selectedServices.length === 0;
 
+    // Verificar se serviços selecionados têm quantidade e foto
     const servicesWithoutPhotos = selectedServices.filter(
       service => !service.photos || service.photos.length === 0
     );
-    errors.photos = servicesWithoutPhotos.length > 0;
+
+    // Verificar se serviços selecionados têm quantidade válida
+    const servicesWithoutQuantity = selectedServices.filter(
+      service => !service.quantity || service.quantity <= 0
+    );
+
+    errors.photos = servicesWithoutPhotos.length > 0 || servicesWithoutQuantity.length > 0;
+
+    // Validação extra para o console
+    if (servicesWithoutPhotos.length > 0) {
+      console.warn('Serviços sem fotos:', servicesWithoutPhotos.map(s => s.name));
+    }
+    
+    if (servicesWithoutQuantity.length > 0) {
+      console.warn('Serviços sem quantidade:', servicesWithoutQuantity.map(s => s.name));
+    }
 
     return errors;
   };
 
   const prepareFormData = (formState: FormState, isEditing: boolean, sectorId?: string) => {
     const entryDateStr = formState.entryDate ? format(formState.entryDate, 'yyyy-MM-dd') : '';
+    
+    // Filtrar apenas serviços selecionados e garantir que possuem quantidade
+    const selectedServices = formState.services
+      .filter(service => service.selected)
+      .map(service => ({
+        ...service,
+        quantity: service.quantity || 1, // Garantir quantidade mínima
+        stage: 'peritagem' // Adicionar etapa do processo
+      }));
     
     const formData: Partial<Sector> = {
       tagNumber: formState.tagNumber,
@@ -49,8 +76,12 @@ export function useSectorFormSubmit() {
       entryDate: entryDateStr,
       peritagemDate: format(new Date(), 'yyyy-MM-dd'),
       entryObservations: formState.entryObservations,
-      services: formState.services,
-      beforePhotos: formState.services.flatMap(s => s.photos || []),
+      services: selectedServices,
+      beforePhotos: selectedServices.flatMap(s => (s.photos || []).map(photo => ({
+        ...photo,
+        stage: 'peritagem', // Garantir que fotos tenham etapa
+        serviceId: s.id
+      }))),
       afterPhotos: []
     };
 
