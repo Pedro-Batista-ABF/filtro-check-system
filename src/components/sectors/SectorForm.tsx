@@ -1,18 +1,15 @@
-
-import React, { useState, useEffect, useRef } from "react";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import PhotoUpload from "@/components/sectors/PhotoUpload";
-import { Service, Sector, Photo, PhotoWithFile } from "@/types";
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { format } from 'date-fns';
+import { EntryFormSection } from "./form-sections/EntryFormSection";
 import ScrapForm from "./forms/ScrapForm";
 import ReviewForm from "./forms/ReviewForm";
-import { Camera } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { Sector } from "@/types";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { format } from 'date-fns';
+import { Service } from "@/types";
 
 interface SectorFormProps {
   sector: Sector;
@@ -279,52 +276,21 @@ export default function SectorForm({
   // Renderizar versão simplificada para outros modos
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações do Setor</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="tagNumber" className={formErrors.tagNumber ? "text-red-500" : ""}>
-                Número da TAG*
-              </Label>
-              <Input
-                id="tagNumber"
-                type="text"
-                value={tagNumber}
-                onChange={(e) => setTagNumber(e.target.value)}
-                placeholder="Número da TAG"
-                disabled={isLoading || mode === 'view'}
-                className={formErrors.tagNumber ? "border-red-500" : ""}
-              />
-              {formErrors.tagNumber && (
-                <p className="text-xs text-red-500">Número da TAG é obrigatório</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
-                Nota Fiscal de Entrada*
-              </Label>
-              <Input
-                id="entryInvoice"
-                type="text"
-                value={entryInvoice}
-                onChange={(e) => setEntryInvoice(e.target.value)}
-                placeholder="Número da Nota Fiscal"
-                disabled={isLoading || mode === 'view'}
-                className={formErrors.entryInvoice ? "border-red-500" : ""}
-              />
-              {formErrors.entryInvoice && (
-                <p className="text-xs text-red-500">Nota Fiscal é obrigatória</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <EntryFormSection
+        tagNumber={tagNumber}
+        setTagNumber={setTagNumber}
+        entryInvoice={entryInvoice}
+        setEntryInvoice={setEntryInvoice}
+        entryDate={entryDate}
+        setEntryDate={setEntryDate}
+        tagPhotoUrl={tagPhotoUrl}
+        handleTagPhotoUpload={handleTagPhotoUpload}
+        handleCameraCapture={handleCameraCapture}
+        entryObservations={entryObservations}
+        setEntryObservations={setEntryObservations}
+        formErrors={formErrors}
+      />
 
-      {/* Informações específicas para outros modos */}
       {mode === 'scrap' && (
         <ScrapForm 
           sector={sector}
