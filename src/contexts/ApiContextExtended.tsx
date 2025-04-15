@@ -1,4 +1,3 @@
-
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
 import { Sector, Photo, PhotoWithFile } from "@/types";
 import { useApiOriginal, ApiContextType } from "./ApiContext";
@@ -79,6 +78,7 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
       setError(null);
       
       const result = await supabaseService.getAllSectors();
+      console.log("Fetched sectors:", result);
       setSectors(result);
     } catch (err) {
       console.error("Error fetching sectors:", err);
@@ -93,6 +93,7 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
 
   // Initial data load
   useEffect(() => {
+    console.log("ApiContextExtended: Initializing and fetching data");
     refreshData();
   }, []);
 
