@@ -1,4 +1,3 @@
-
 export type ServiceType = 
   | 'substituicao_parafusos'
   | 'troca_trecho'
@@ -15,9 +14,18 @@ export type ServiceType =
 export interface Photo {
   id: string;
   url: string;
-  type: 'before' | 'after';
+  type: 'before' | 'after' | 'tag' | 'scrap';
   serviceId?: string;
   file?: File;
+  metadata?: {
+    sector_id?: string;
+    service_id?: string;
+    stage?: 'peritagem' | 'checagem';
+    type?: 'tag' | 'servico' | 'geral';
+    service_name?: string;
+    upload_time?: string;
+    existing_photo?: boolean;
+  };
 }
 
 // Interface para trabalhar com uploads de arquivos

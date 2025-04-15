@@ -4,13 +4,14 @@ import { useApi as useApiBase } from './ApiContext';
 import { supabaseServices } from '@/services/supabase';
 import { usePhotoService } from '@/services/photoService';
 
-// Create an extended context that includes additional functions
-export type ApiContextExtendedType = ReturnType<typeof useApiOriginal>;
+// Define the extended API context type
+export type ApiContextExtendedType = ReturnType<typeof useApiExtendedOriginal>;
 
+// Create the extended context
 export const ApiContextExtended = createContext<ApiContextExtendedType | null>(null);
 
 // This hook combines the base API with extended functionality
-export const useApiOriginal = () => {
+export const useApiExtendedOriginal = () => {
   const baseApi = useApiBase();
   const photoService = usePhotoService();
   
@@ -25,14 +26,14 @@ export const useApiOriginal = () => {
 export const useApi = () => {
   const context = useContext(ApiContextExtended);
   if (!context) {
-    throw new Error('useApi must be used within an ApiProvider');
+    throw new Error('useApi must be used within an ApiContextExtendedProvider');
   }
   return context;
 };
 
 // The provider component
 export const ApiContextExtendedProvider = ({ children }: { children: React.ReactNode }) => {
-  const api = useApiOriginal();
+  const api = useApiExtendedOriginal();
   
   return (
     <ApiContextExtended.Provider value={api}>
