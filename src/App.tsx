@@ -24,6 +24,8 @@ import Checagem from "@/pages/Checagem";
 import PeritagemPendente from "@/pages/PeritagemPendente";
 
 const App = () => {
+  console.log("App component rendering");
+  
   return (
     <>
       <Routes>

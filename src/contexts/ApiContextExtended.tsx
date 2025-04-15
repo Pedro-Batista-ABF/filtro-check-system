@@ -1,5 +1,6 @@
+
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
-import { Sector, Photo, PhotoWithFile } from "@/types";
+import { Sector, Photo } from "@/types";
 import { useApiOriginal, ApiContextType } from "./ApiContext";
 import { supabaseService } from "@/services/supabase";
 import { useSectorService } from "@/services/sectorService";
@@ -32,7 +33,7 @@ interface ApiContextExtendedType extends Omit<ApiContextType, 'updateSector'> {
 const defaultContext: ApiContextExtendedType = {
   isLoading: false,
   error: null,
-  loading: false, // Add this from ApiContextType
+  loading: false, 
   sectors: [],
   pendingSectors: [],
   inProgressSectors: [],
@@ -77,9 +78,10 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
       setIsLoading(true);
       setError(null);
       
+      console.log("Fetching all sectors...");
       const result = await supabaseService.getAllSectors();
       console.log("Fetched sectors:", result);
-      setSectors(result);
+      setSectors(result || []);
     } catch (err) {
       console.error("Error fetching sectors:", err);
       setError(err instanceof Error ? err.message : "Unknown error fetching sectors");
@@ -224,4 +226,4 @@ export function useApi() {
 }
 
 // Export the provider component properly
-export { ApiContextExtended, ApiContextExtendedProvider as ApiProvider };
+export { ApiContextExtended, ApiContextExtendedProvider };

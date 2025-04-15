@@ -2,7 +2,7 @@ import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { ClipboardCheck, Filter, CheckSquare, FileText, Calendar, ArrowRight, SendHorizontal, AlertTriangle } from "lucide-react";
+import { ClipboardCheck, Filter, CheckSquare, FileText, ArrowRight, AlertTriangle } from "lucide-react";
 import { useApi } from "@/contexts/ApiContextExtended";
 import SectorGrid from "@/components/sectors/SectorGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,8 @@ export default function Index() {
     acc[sector.status] = (acc[sector.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  console.log("Index rendering with sectors:", sectors.length);
 
   return (
     <div className="space-y-10">
@@ -225,7 +227,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Setores Recentes</h2>
               <Button asChild variant="outline">
-                <Link to="/relatorios">
+                <Link to="/relatorio">
                   <FileText className="h-4 w-4 mr-2" /> 
                   Ver Relatórios
                 </Link>
@@ -247,7 +249,7 @@ export default function Index() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Relatórios Salvos</h2>
               <Button asChild variant="outline">
-                <Link to="/relatorios">
+                <Link to="/relatorio">
                   <FileText className="h-4 w-4 mr-2" /> 
                   Gerar Novo Relatório
                 </Link>
