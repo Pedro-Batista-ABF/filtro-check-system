@@ -32,10 +32,10 @@ interface ReviewFormProps {
   handleObservationChange: (id: string, observations: string) => void;
   handlePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
   formErrors: {
-    tagNumber: boolean;
-    tagPhoto: boolean;
-    entryInvoice: boolean;
-    entryDate: boolean;
+    tagNumber?: boolean;
+    tagPhoto?: boolean;
+    entryInvoice?: boolean;
+    entryDate?: boolean;
     services?: boolean;
     photos?: boolean;
   };

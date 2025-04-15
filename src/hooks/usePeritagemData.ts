@@ -27,21 +27,30 @@ export function usePeritagemData(id?: string) {
         setLoading(true);
         setErrorMessage(null);
         
-        // Primeiro carregamos os serviços padrão
+        // Primeiro carregamos os serviços padrão com timeout de segurança
+        const timeoutId = setTimeout(() => {
+          if (loading) {
+            console.error("Timeout loading services");
+            setErrorMessage("Tempo esgotado ao carregar serviços. Atualize a página.");
+            setLoading(false);
+          }
+        }, 10000); // 10 segundos de timeout
+
         await fetchDefaultServices();
         
         if (isEditing && id) {
           // Se estiver editando, busca os dados do setor
           await fetchSector();
         }
+        
+        clearTimeout(timeoutId);
+        setLoading(false);
       } catch (error) {
         console.error("Error loading peritagem data:", error);
         setErrorMessage("Erro ao carregar dados. Tente novamente mais tarde.");
         toast.error("Erro ao carregar dados", {
           description: "Ocorreu um erro ao carregar os dados. Tente novamente."
         });
-      } finally {
-        // Garantir que o loading seja desativado mesmo em caso de erro
         setLoading(false);
       }
     };
@@ -49,9 +58,12 @@ export function usePeritagemData(id?: string) {
     loadData();
   }, [id, isEditing, fetchSector, fetchDefaultServices]);
 
+  // Garantir que temos um setor padrão válido mesmo se houver erro
+  const validDefaultSector = defaultSector || (services ? getDefaultSector(services || []) : null);
+
   return {
     sector,
-    defaultSector: defaultSector || getDefaultSector(services || []),
+    defaultSector: validDefaultSector,
     loading,
     errorMessage,
     isEditing,

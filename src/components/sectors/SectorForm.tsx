@@ -9,6 +9,10 @@ import { Service, Sector, Photo, PhotoWithFile } from "@/types";
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import ScrapForm from "./forms/ScrapForm";
+import ReviewForm from "./forms/ReviewForm";
+import { Camera } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 interface SectorFormProps {
   sector: Sector;
@@ -27,189 +31,252 @@ export default function SectorForm({
 }: SectorFormProps) {
   const [tagNumber, setTagNumber] = useState(sector.tagNumber || '');
   const [entryInvoice, setEntryInvoice] = useState(sector.entryInvoice || '');
-  const [entryDate, setEntryDate] = useState(sector.entryDate || '');
-  const [peritagemDate, setPeritagemDate] = useState(sector.peritagemDate || '');
+  const [entryDate, setEntryDate] = useState<Date | undefined>(
+    sector.entryDate ? new Date(sector.entryDate) : new Date()
+  );
+  const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(sector.tagPhotoUrl);
   const [entryObservations, setEntryObservations] = useState(sector.entryObservations || '');
-  const [selectedServices, setSelectedServices] = useState<Service[]>(sector.services || []);
   
-  // Convert Photo[] to PhotoWithFile[] by adding file: null to each photo
-  const [beforePhotos, setBeforePhotos] = useState<PhotoWithFile[]>(
-    (sector.beforePhotos || []).map(photo => ({ ...photo, file: null }))
-  );
-  const [afterPhotos, setAfterPhotos] = useState<PhotoWithFile[]>(
-    (sector.afterPhotos || []).map(photo => ({ ...photo, file: null }))
+  const [services, setServices] = useState<Service[]>(
+    Array.isArray(sector.services) ? sector.services : []
   );
   
-  const [formErrors, setFormErrors] = useState<{
-    tagNumber?: boolean;
-    entryInvoice?: boolean;
-    entryDate?: boolean;
-    peritagemDate?: boolean;
-    scrapObservations?: boolean;
-    scrapDate?: boolean;
-    scrapInvoice?: boolean;
-  }>({});
+  const [formErrors, setFormErrors] = useState({
+    tagNumber: false,
+    tagPhoto: false,
+    entryInvoice: false,
+    entryDate: false,
+    services: false,
+    photos: false
+  });
   
   const [isScrap, setIsScrap] = useState(false);
   const [scrapObservations, setScrapObservations] = useState('');
   const [scrapDate, setScrapDate] = useState<Date | undefined>();
   const [scrapInvoice, setScrapInvoice] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Effect para inicializar o formulário com os dados do setor
   useEffect(() => {
     setTagNumber(sector.tagNumber || '');
     setEntryInvoice(sector.entryInvoice || '');
-    setEntryDate(sector.entryDate || '');
-    setPeritagemDate(sector.peritagemDate || '');
+    setEntryDate(sector.entryDate ? new Date(sector.entryDate) : new Date());
+    setTagPhotoUrl(sector.tagPhotoUrl);
     setEntryObservations(sector.entryObservations || '');
-    setSelectedServices(sector.services || []);
-    setBeforePhotos((sector.beforePhotos || []).map(photo => ({ ...photo, file: null })));
-    setAfterPhotos((sector.afterPhotos || []).map(photo => ({ ...photo, file: null })));
+    
+    // Garantir que services seja sempre um array
+    if (Array.isArray(sector.services)) {
+      setServices(sector.services);
+    } else {
+      console.warn("Services não é um array válido:", sector.services);
+      setServices([]);
+    }
 
-    // Quando estamos em modo de sucateamento, inicializar scrapValidated
+    // Quando estamos em modo de sucateamento
     if (mode === 'scrap') {
       setIsScrap(sector.scrapValidated || false);
     }
   }, [sector, mode]);
 
-  useEffect(() => {
-    if (sector.services) {
-      setSelectedServices(sector.services);
-    }
-  }, [sector.services]);
-
-  const handleBeforePhotoChange = (files: FileList) => {
-    const newPhotos: PhotoWithFile[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const tempId = `temp-${Date.now()}-${i}`; // ID temporário
-      newPhotos.push({
-        id: tempId,
-        url: '',
-        type: 'before',
-        file: file
-      });
-    }
-    setBeforePhotos([...beforePhotos, ...newPhotos]);
+  const handleServiceChange = (id: string, checked: boolean) => {
+    setServices(prev => 
+      prev.map(service => 
+        service.id === id 
+          ? { ...service, selected: checked } 
+          : service
+      )
+    );
   };
 
-  const handleAfterPhotoChange = (files: FileList) => {
-    const newPhotos: PhotoWithFile[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const tempId = `temp-${Date.now()}-${i}`; // ID temporário
-      newPhotos.push({
-        id: tempId,
-        url: '',
-        type: 'after',
-        file: file
-      });
-    }
-    setAfterPhotos([...afterPhotos, ...newPhotos]);
+  const handleQuantityChange = (id: string, quantity: number) => {
+    setServices(prev => 
+      prev.map(service => 
+        service.id === id 
+          ? { ...service, quantity } 
+          : service
+      )
+    );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleObservationChange = (id: string, observations: string) => {
+    setServices(prev => 
+      prev.map(service => 
+        service.id === id 
+          ? { ...service, observations } 
+          : service
+      )
+    );
+  };
+
+  const handleTagPhotoUpload = async (files: FileList) => {
+    if (files.length > 0) {
+      // Simular URL temporária para visualização
+      const tempUrl = URL.createObjectURL(files[0]);
+      setTagPhotoUrl(tempUrl);
+      
+      // Aqui você adicionaria a lógica para upload real
+      // E então atualizaria a URL após o upload completar
+      toast.success("Foto da TAG capturada");
+    }
+  };
+
+  const handlePhotoUpload = (id: string, files: FileList, type: "before" | "after") => {
+    if (files.length > 0) {
+      setServices(prev => 
+        prev.map(service => {
+          if (service.id === id) {
+            // Criar foto com URL temporária
+            const newPhotos = [...(service.photos || [])];
+            
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+              const tempId = `temp-${Date.now()}-${i}`;
+              const tempUrl = URL.createObjectURL(file);
+              
+              newPhotos.push({
+                id: tempId,
+                url: tempUrl,
+                type,
+                serviceId: id,
+                file // Armazenar o arquivo para upload posterior
+              });
+            }
+            
+            return { ...service, photos: newPhotos };
+          }
+          return service;
+        })
+      );
+      
+      toast.success("Foto adicionada ao serviço");
+    }
+  };
+
+  // Função para captura de foto via câmera
+  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
     e.preventDefault();
     
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'environment';
+    
+    fileInput.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        if (serviceId) {
+          handlePhotoUpload(serviceId, target.files, 'before');
+        } else {
+          handleTagPhotoUpload(target.files);
+        }
+      }
+    });
+    
+    fileInput.click();
+  };
+
+  const validateForm = (): boolean => {
+    const errors = {
+      tagNumber: !tagNumber.trim(),
+      tagPhoto: !tagPhotoUrl,
+      entryInvoice: !entryInvoice.trim(),
+      entryDate: !entryDate,
+      services: false,
+      photos: false
+    };
+
+    const selectedServices = services.filter(s => s.selected);
+    errors.services = selectedServices.length === 0;
+
+    // Verificar se todos os serviços selecionados têm fotos
+    const servicesWithoutPhotos = selectedServices.filter(
+      service => !service.photos || service.photos.length === 0
+    );
+    errors.photos = servicesWithoutPhotos.length > 0;
+
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error("Formulário com erros", {
+        description: "Verifique os campos destacados e tente novamente."
+      });
+      return;
+    }
+    
     if (onSubmit) {
-      // Validar os campos do formulário
-      let isValid = true;
-      const newErrors = {
-        tagNumber: false,
-        entryInvoice: false,
-        entryDate: false,
-        peritagemDate: false,
-        scrapObservations: false,
-        scrapDate: false,
-        scrapInvoice: false
+      // Formatar a data para string no formato ISO
+      const entryDateStr = entryDate ? format(entryDate, 'yyyy-MM-dd') : '';
+      
+      const formData: Partial<Sector> = {
+        tagNumber,
+        tagPhotoUrl,
+        entryInvoice,
+        entryDate: entryDateStr,
+        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+        entryObservations,
+        services,
+        beforePhotos: services.flatMap(s => s.photos || []),
+        afterPhotos: []
       };
       
-      if (!tagNumber.trim()) {
-        newErrors.tagNumber = true;
-        isValid = false;
-      }
-      if (!entryInvoice.trim()) {
-        newErrors.entryInvoice = true;
-        isValid = false;
-      }
-      if (!entryDate) {
-        newErrors.entryDate = true;
-        isValid = false;
-      }
-      if (!peritagemDate) {
-        newErrors.peritagemDate = true;
-        isValid = false;
-      }
-      
-      // Em modo de sucateamento, validar campos específicos
+      // Informações específicas de sucateamento
       if (mode === 'scrap' && isScrap) {
-        if (!scrapObservations.trim()) {
-          newErrors.scrapObservations = true;
-          isValid = false;
-        }
-        if (!scrapInvoice.trim()) {
-          newErrors.scrapInvoice = true;
-          isValid = false;
-        }
-        if (!scrapDate) {
-          newErrors.scrapDate = true;
-          isValid = false;
-        }
+        formData.scrapObservations = scrapObservations;
+        formData.scrapReturnInvoice = scrapInvoice;
+        formData.scrapReturnDate = scrapDate ? format(scrapDate, "yyyy-MM-dd") : undefined;
+        formData.scrapValidated = true;
+        formData.outcome = 'scrapped';
       }
       
-      setFormErrors(newErrors);
-
-      if (isValid) {
-        // Montar o objeto de dados baseado no modo
-        const formData: Partial<Sector> = {
-          tagNumber,
-          entryInvoice,
-          entryDate,
-          entryObservations,
-          peritagemDate,
-          services: selectedServices,
-          beforePhotos,
-          afterPhotos,
-          scrapPhotos: sector.scrapPhotos || [] // Garantir que scrapPhotos seja incluído
-        };
-        
-        // Adicionar informações específicas para cada modo
-        if (mode === 'checagem') {
-          formData.afterPhotos = afterPhotos;
-        }
-        
-        // Informações específicas de sucateamento
-        if (mode === 'scrap' && isScrap) {
-          formData.scrapObservations = scrapObservations;
-          formData.scrapReturnInvoice = scrapInvoice;
-          formData.scrapReturnDate = scrapDate ? format(scrapDate, "yyyy-MM-dd") : undefined;
-          formData.scrapValidated = true;
-          formData.outcome = 'scrapped'; // Garantir que o outcome seja atualizado corretamente
-        }
-        
-        // Enviar dados para o componente pai
-        onSubmit(formData);
-      } else {
-        setFormErrors(newErrors);
-      }
+      onSubmit(formData);
     }
   };
 
-  // Atualizar informações do ciclo atual
-  const currentCycle = sector.cycles && sector.cycles.length > 0 
-    ? sector.cycles[0] 
-    : {
-        tag_number: sector.tagNumber,
-        entry_invoice: sector.entryInvoice,
-        entry_date: sector.entryDate,
-        peritagem_date: sector.peritagemDate,
-        production_completed: sector.productionCompleted,
-        status: sector.status,
-        outcome: sector.outcome
-      };
+  // Se estamos em modo de criação, usar o ReviewForm que tem todos os elementos necessários
+  if (mode === 'create') {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {Object.values(formErrors).some(error => error) && (
+          <Alert variant="destructive">
+            <AlertTitle>Formulário com erros</AlertTitle>
+            <AlertDescription>
+              Verifique os campos destacados em vermelho e tente novamente.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <ReviewForm
+          tagNumber={tagNumber}
+          setTagNumber={setTagNumber}
+          entryInvoice={entryInvoice}
+          setEntryInvoice={setEntryInvoice}
+          entryDate={entryDate}
+          setEntryDate={setEntryDate}
+          tagPhotoUrl={tagPhotoUrl}
+          handleTagPhotoUpload={handleTagPhotoUpload}
+          entryObservations={entryObservations}
+          setEntryObservations={setEntryObservations}
+          services={services}
+          handleServiceChange={handleServiceChange}
+          handleQuantityChange={handleQuantityChange}
+          handleObservationChange={handleObservationChange}
+          handlePhotoUpload={handlePhotoUpload}
+          formErrors={formErrors}
+          photoRequired={photoRequired}
+        />
+        
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading ? "Salvando..." : "Registrar Peritagem"}
+        </Button>
+      </form>
+    );
+  }
 
-  // Renderizar formulário baseado no modo
+  // Renderizar versão simplificada para outros modos
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
@@ -235,6 +302,7 @@ export default function SectorForm({
                 <p className="text-xs text-red-500">Número da TAG é obrigatório</p>
               )}
             </div>
+            
             <div>
               <Label htmlFor="entryInvoice" className={formErrors.entryInvoice ? "text-red-500" : ""}>
                 Nota Fiscal de Entrada*
@@ -252,93 +320,28 @@ export default function SectorForm({
                 <p className="text-xs text-red-500">Nota Fiscal é obrigatória</p>
               )}
             </div>
-            <div>
-              <Label htmlFor="entryDate" className={formErrors.entryDate ? "text-red-500" : ""}>
-                Data de Entrada*
-              </Label>
-              <Input
-                id="entryDate"
-                type="date"
-                value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
-                disabled={isLoading || mode === 'view'}
-                className={formErrors.entryDate ? "border-red-500" : ""}
-              />
-              {formErrors.entryDate && (
-                <p className="text-xs text-red-500">Data de Entrada é obrigatória</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="peritagemDate" className={formErrors.peritagemDate ? "text-red-500" : ""}>
-                Data da Peritagem*
-              </Label>
-              <Input
-                id="peritagemDate"
-                type="date"
-                value={peritagemDate}
-                onChange={(e) => setPeritagemDate(e.target.value)}
-                disabled={isLoading || mode === 'view'}
-                className={formErrors.peritagemDate ? "border-red-500" : ""}
-              />
-              {formErrors.peritagemDate && (
-                <p className="text-xs text-red-500">Data da Peritagem é obrigatória</p>
-              )}
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Observações</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Label htmlFor="entryObservations">Observações da Entrada</Label>
-          <Textarea
-            id="entryObservations"
-            placeholder="Observações sobre a entrada do setor..."
-            value={entryObservations}
-            onChange={(e) => setEntryObservations(e.target.value)}
-            disabled={isLoading || mode === 'view'}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Fotos da Entrada</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PhotoUpload
-            photos={beforePhotos}
-            onChange={handleBeforePhotoChange}
-            disabled={isLoading || mode === 'view'}
-            title="Adicionar fotos da entrada"
-            required={photoRequired}
-          />
-        </CardContent>
-      </Card>
-      
-      {/* Informações de sucateamento */}
+      {/* Informações específicas para outros modos */}
       {mode === 'scrap' && (
-        <div>
-          <ScrapForm 
-            sector={sector}
-            isScrap={isScrap}
-            setIsScrap={setIsScrap}
-            scrapObservations={scrapObservations}
-            setScrapObservations={setScrapObservations}
-            scrapDate={scrapDate}
-            setScrapDate={setScrapDate}
-            scrapInvoice={scrapInvoice}
-            setScrapInvoice={setScrapInvoice}
-            formErrors={formErrors}
-          />
-        </div>
+        <ScrapForm 
+          sector={sector}
+          isScrap={isScrap}
+          setIsScrap={setIsScrap}
+          scrapObservations={scrapObservations}
+          setScrapObservations={setScrapObservations}
+          scrapDate={scrapDate}
+          setScrapDate={setScrapDate}
+          scrapInvoice={scrapInvoice}
+          setScrapInvoice={setScrapInvoice}
+          formErrors={{}}
+        />
       )}
       
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Salvando..." : "Salvar"}
+      <Button type="submit" disabled={isLoading} className="w-full">
+        {isLoading ? "Salvando..." : (mode === 'checagem' ? "Concluir Checagem" : "Salvar")}
       </Button>
     </form>
   );

@@ -26,6 +26,14 @@ export const validatePeritagemData = (data: Partial<Sector>): { error: string } 
     return { error: "Selecione pelo menos um serviço" };
   }
 
+  // Verificar se todos os serviços selecionados têm pelo menos uma foto
+  const servicesWithoutPhotos = findServicesWithoutPhotos(selectedServices);
+  if (servicesWithoutPhotos.length > 0) {
+    return { 
+      error: `Os seguintes serviços estão sem fotos: ${servicesWithoutPhotos.join(", ")}` 
+    };
+  }
+
   return null;
 };
 
@@ -40,4 +48,42 @@ export const findServicesWithoutPhotos = (services: Service[]): string[] => {
     .map(s => s.name);
     
   return servicesWithoutPhotos;
+};
+
+/**
+ * Validar se formulário possui todos os dados obrigatórios
+ * @param data 
+ * @returns Objeto com erros do formulário
+ */
+export const validatePeritagemForm = (data: {
+  tagNumber?: string,
+  tagPhotoUrl?: string,
+  entryInvoice?: string,
+  entryDate?: Date | string,
+  services?: Service[]
+}) => {
+  const errors = {
+    tagNumber: !data.tagNumber?.trim(),
+    tagPhoto: !data.tagPhotoUrl,
+    entryInvoice: !data.entryInvoice?.trim(),
+    entryDate: !data.entryDate,
+    services: false,
+    photos: false
+  };
+
+  // Verificar serviços
+  const selectedServices = data.services?.filter(s => s.selected) || [];
+  errors.services = selectedServices.length === 0;
+
+  // Verificar fotos dos serviços
+  const servicesWithoutPhotos = selectedServices.filter(
+    service => !service.photos || service.photos.length === 0
+  );
+  errors.photos = servicesWithoutPhotos.length > 0;
+
+  return {
+    errors,
+    hasErrors: Object.values(errors).some(error => error),
+    servicesWithoutPhotos: servicesWithoutPhotos.map(s => s.name)
+  };
 };
