@@ -3,22 +3,35 @@ import { Service, ServiceType } from "@/types";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { handleDatabaseError } from "@/utils/errorHandlers";
 
 export function useServicesManagement() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDefaultServices = async () => {
     try {
-      const { data: serviceTypes } = await supabase
+      console.log("Iniciando busca de serviços padrão");
+      
+      const { data: serviceTypes, error } = await supabase
         .from('service_types')
         .select('*');
 
-      if (!serviceTypes) {
-        toast.error("Não foi possível carregar os serviços disponíveis");
+      if (error) {
+        throw handleDatabaseError(error, "Erro ao carregar tipos de serviço");
+      }
+
+      if (!serviceTypes || serviceTypes.length === 0) {
+        console.warn("Nenhum tipo de serviço encontrado");
+        setError("Não foram encontrados serviços disponíveis");
+        setServices([]);
+        setLoading(false);
         return [];
       }
 
+      console.log(`${serviceTypes.length} tipos de serviço encontrados`);
+      
       // Process services with proper type casting
       const processedServices = serviceTypes.map(service => ({
         id: service.id,
@@ -29,13 +42,17 @@ export function useServicesManagement() {
       }));
       
       setServices(processedServices);
+      setLoading(false);
       return processedServices;
     } catch (error) {
       console.error("Error fetching default services:", error);
-      toast.error("Erro ao carregar serviços");
-      return [];
-    } finally {
+      setError("Erro ao carregar serviços");
+      toast.error("Erro ao carregar serviços", {
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde"
+      });
+      setServices([]);
       setLoading(false);
+      return [];
     }
   };
 
@@ -44,6 +61,7 @@ export function useServicesManagement() {
     setServices,
     loading,
     setLoading,
+    error,
     fetchDefaultServices
   };
 }

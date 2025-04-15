@@ -4,6 +4,7 @@ import { Sector } from "@/types";
 import { useSectorFetch } from "./useSectorFetch";
 import { useServicesManagement } from "./useServicesManagement";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function usePeritagemData(id?: string) {
   const [loading, setLoading] = useState(true);
@@ -12,34 +13,75 @@ export function usePeritagemData(id?: string) {
   const { services, fetchDefaultServices } = useServicesManagement();
   const isEditing = !!id;
   const [defaultSector, setDefaultSector] = useState<Sector | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Verificar autenticação do usuário
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Erro ao verificar autenticação:", error);
+          setErrorMessage("Erro ao verificar autenticação. Por favor, faça login novamente.");
+          setLoading(false);
+        } else if (!data.session) {
+          console.warn("Usuário não autenticado");
+          setErrorMessage("Você precisa estar logado para acessar esta página.");
+          setLoading(false);
+        } else {
+          console.log("Usuário autenticado com sucesso");
+          setAuthChecked(true);
+        }
+      } catch (error) {
+        console.error("Exceção ao verificar autenticação:", error);
+        setErrorMessage("Erro ao verificar a sessão do usuário.");
+        setLoading(false);
+      }
+    }
+    
+    checkAuth();
+  }, []);
 
   // Inicializar o setor padrão logo que possível
   useEffect(() => {
     if (services && services.length > 0 && !defaultSector) {
-      const newDefaultSector = getDefaultSector(services);
-      setDefaultSector(newDefaultSector);
+      try {
+        const newDefaultSector = getDefaultSector(services);
+        setDefaultSector(newDefaultSector);
+        console.log("Default sector criado com sucesso", newDefaultSector);
+      } catch (error) {
+        console.error("Erro ao criar setor padrão:", error);
+        setErrorMessage("Erro ao criar dados padrão do setor.");
+        setLoading(false);
+      }
     }
   }, [services, getDefaultSector, defaultSector]);
 
+  // Carregar dados apenas quando autenticado
   useEffect(() => {
+    if (!authChecked) return;
+    
     const loadData = async () => {
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        if (loading) {
+          console.error("Timeout loading services");
+          setErrorMessage("Tempo esgotado ao carregar serviços. Atualize a página.");
+          setLoading(false);
+          abortController.abort();
+        }
+      }, 10000); // 10 segundos de timeout
+
       try {
         setLoading(true);
         setErrorMessage(null);
         
-        // Primeiro carregamos os serviços padrão com timeout de segurança
-        const timeoutId = setTimeout(() => {
-          if (loading) {
-            console.error("Timeout loading services");
-            setErrorMessage("Tempo esgotado ao carregar serviços. Atualize a página.");
-            setLoading(false);
-          }
-        }, 10000); // 10 segundos de timeout
-
-        await fetchDefaultServices();
+        console.log("Iniciando carregamento de serviços padrão");
+        const loadedServices = await fetchDefaultServices();
+        console.log("Serviços carregados:", loadedServices?.length || 0);
         
         if (isEditing && id) {
-          // Se estiver editando, busca os dados do setor
+          console.log("Carregando dados do setor:", id);
           await fetchSector();
         }
         
@@ -52,14 +94,23 @@ export function usePeritagemData(id?: string) {
           description: "Ocorreu um erro ao carregar os dados. Tente novamente."
         });
         setLoading(false);
+      } finally {
+        clearTimeout(timeoutId);
+        if (loading) setLoading(false);
       }
     };
 
     loadData();
-  }, [id, isEditing, fetchSector, fetchDefaultServices]);
+    
+    // Cleanup function
+    return () => {
+      console.log("Limpando recursos do usePeritagemData");
+    };
+  }, [id, isEditing, fetchSector, fetchDefaultServices, authChecked]);
 
-  // Garantir que temos um setor padrão válido mesmo se houver erro
-  const validDefaultSector = defaultSector || (services ? getDefaultSector(services || []) : null);
+  // Garantir que temos dados válidos antes de prosseguir
+  const validDefaultSector = defaultSector || 
+    (services && services.length > 0 ? getDefaultSector(services) : null);
 
   return {
     sector,
@@ -67,6 +118,7 @@ export function usePeritagemData(id?: string) {
     loading,
     errorMessage,
     isEditing,
-    services
+    services,
+    hasValidData: !loading && (!!validDefaultSector || !!sector)
   };
 }
