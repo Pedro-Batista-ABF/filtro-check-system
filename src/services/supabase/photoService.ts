@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 /**
  * Serviço para operações com fotos
@@ -39,8 +40,7 @@ export const photoService = {
         .from('photos')
         .select('*')
         .eq('service_id', serviceId)
-        .eq('metadata->stage', stage)
-        .maybeSingle();
+        .eq('metadata->stage', stage);
       
       if (error) {
         console.error('Erro ao buscar fotos do serviço:', error);

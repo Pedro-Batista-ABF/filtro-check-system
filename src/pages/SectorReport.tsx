@@ -1,162 +1,112 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import PageLayoutWrapper from '@/components/layout/PageLayoutWrapper';
 import { useApi } from '@/contexts/ApiContextExtended';
-import { Sector, Cycle, PhotoWithMetadata } from '@/types';
-import PageLayout from '@/components/layout/PageLayout';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Printer } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
+import { Sector, Photo } from '@/types';
+import { Loader2 } from 'lucide-react';
+import { toast } from "sonner";
 import ReportHeader from '@/components/reports/ReportHeader';
 import ServicePhotosList from '@/components/reports/ServicePhotosList';
 import ServiceChecklist from '@/components/reports/ServiceChecklist';
 
 export default function SectorReport() {
   const { id } = useParams<{ id: string }>();
-  const [sector, setSector] = useState<Sector | null>(null);
-  const [cycle, setCycle] = useState<Cycle | null>(null);
-  const [photos, setPhotos] = useState<PhotoWithMetadata[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { getSectorById } = useApi();
+  const [sector, setSector] = useState<Sector | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = 'Relatório do Setor - Gestão de Recuperação';
-    
-    const loadData = async () => {
-      if (!id) return;
-      
+    const fetchSector = async () => {
       try {
-        setLoading(true);
+        if (!id) return;
         
-        // Carregar setor
+        setLoading(true);
         const sectorData = await getSectorById(id);
-        if (sectorData) {
-          setSector(sectorData);
-          
-          // Carregar dados do ciclo atual
-          const { data: cycleData, error } = await supabase
-            .from('cycles')
-            .select('*')
-            .eq('sector_id', id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-            
-          if (error) {
-            throw error;
-          }
-          
-          if (cycleData) {
-            setCycle(cycleData as Cycle);
-            
-            // Carregar todas as fotos com metadados
-            const { data: photosData, error: photosError } = await supabase
-              .from('photos')
-              .select('*')
-              .eq('cycle_id', cycleData.id);
-              
-            if (photosError) {
-              throw photosError;
-            }
-            
-            setPhotos(photosData as PhotoWithMetadata[]);
-          }
+        
+        if (!sectorData) {
+          toast.error('Setor não encontrado');
+          navigate('/');
+          return;
         }
+        
+        setSector(sectorData);
       } catch (error) {
-        console.error("Erro ao carregar relatório:", error);
+        console.error('Erro ao carregar setor:', error);
+        toast.error('Erro ao carregar dados do setor');
       } finally {
         setLoading(false);
       }
     };
     
-    loadData();
-  }, [id, getSectorById]);
-
-  const handlePrint = () => {
-    window.print();
-  };
+    fetchSector();
+  }, [id, getSectorById, navigate]);
 
   if (loading) {
     return (
-      <PageLayout>
-        <div className="text-center py-12">
-          <p className="text-lg text-gray-600">Carregando relatório...</p>
+      <PageLayoutWrapper>
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+          <span className="ml-3 text-gray-500">Carregando relatório...</span>
         </div>
-      </PageLayout>
+      </PageLayoutWrapper>
     );
   }
 
   if (!sector) {
     return (
-      <PageLayout>
+      <PageLayoutWrapper>
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-red-600">Setor não encontrado</h2>
-          <p className="text-gray-500 mt-2">O setor solicitado não existe ou foi removido.</p>
-          <Button variant="outline" onClick={() => navigate('/setores')} className="mt-4">
-            Voltar para Gerenciamento
+          <h2 className="text-lg font-medium text-gray-700">Setor não encontrado</h2>
+          <p className="text-gray-500 mt-2">O setor solicitado não foi encontrado ou não está disponível.</p>
+          <Button className="mt-4" onClick={() => navigate('/')}>
+            Voltar para o Início
           </Button>
         </div>
-      </PageLayout>
+      </PageLayoutWrapper>
     );
   }
 
+  // Get all completed services
+  const completedServices = sector.services.filter(service => service.selected && service.completed);
+
   return (
-    <PageLayout>
-      <div className="space-y-6 print:p-0">
-        <div className="flex justify-between items-center print:hidden">
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => navigate('/setores')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-bold">Relatório do Setor</h1>
-          </div>
+    <PageLayoutWrapper>
+      <div className="max-w-4xl mx-auto space-y-8 pb-12">
+        <ReportHeader sector={sector} showPrint={true} />
+        
+        <ServiceChecklist services={sector.services} />
+        
+        <div className="space-y-6">
+          <h2 className="text-xl font-bold">Fotos por Serviço</h2>
           
-          <Button onClick={handlePrint} className="flex items-center space-x-2">
-            <Printer className="h-4 w-4 mr-2" />
+          {completedServices.length > 0 ? (
+            completedServices.map(service => (
+              <ServicePhotosList
+                key={service.id}
+                service={service}
+                beforePhotos={sector.beforePhotos || []}
+                afterPhotos={sector.afterPhotos || []}
+              />
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">
+              Nenhum serviço com fotos disponível.
+            </p>
+          )}
+        </div>
+        
+        <div className="print:hidden flex justify-end space-x-4 mt-8">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
+          <Button onClick={() => window.print()}>
             Imprimir Relatório
           </Button>
         </div>
-        
-        <div className="print:shadow-none">
-          <Card className="p-6 print:shadow-none print:border-none">
-            <div className="space-y-8">
-              {/* Cabeçalho do Relatório */}
-              <ReportHeader sector={sector} />
-              
-              {/* Lista de Serviços */}
-              <ServiceChecklist services={sector.services} />
-              
-              {/* Fotos dos Serviços */}
-              <ServicePhotosList sector={sector} />
-              
-              {/* Observações */}
-              <div>
-                <h3 className="text-lg font-bold mb-2">Observações</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium mb-1">Entrada</h4>
-                    <p className="text-gray-700 border p-3 rounded-md min-h-[60px] bg-gray-50">
-                      {sector.entryObservations || "Nenhuma observação de entrada registrada."}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-1">Saída</h4>
-                    <p className="text-gray-700 border p-3 rounded-md min-h-[60px] bg-gray-50">
-                      {sector.exitObservations || "Nenhuma observação de saída registrada."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
       </div>
-    </PageLayout>
+    </PageLayoutWrapper>
   );
 }

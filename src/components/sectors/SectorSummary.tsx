@@ -1,101 +1,116 @@
 
 import React from 'react';
 import { Sector } from '@/types';
-import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface SectorSummaryProps {
   sector: Sector;
 }
 
-export default function SectorSummary({ sector }: SectorSummaryProps) {
-  // Formatar datas para exibição
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch (e) {
-      return dateString;
-    }
-  };
-  
-  // Mapear status para exibição amigável
-  const getStatusDisplay = (status: string) => {
-    switch(status) {
-      case 'peritagemPendente': return 'Peritagem Pendente';
-      case 'emExecucao': return 'Em Execução';
-      case 'sucateadoPendente': return 'Sucateamento Pendente';
-      case 'sucateado': return 'Sucateado';
-      case 'concluido': return 'Concluído';
-      default: return status;
-    }
-  };
-  
-  // Obter classe de cor para o status
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'peritagemPendente': return 'bg-gray-100 text-gray-800';
-      case 'emExecucao': return 'bg-blue-100 text-blue-800';
-      case 'sucateadoPendente': return 'bg-red-100 text-red-800';
-      case 'sucateado': return 'bg-red-100 text-red-800';
-      case 'concluido': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+// Helper function to format dates
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return format(date, 'dd/MM/yyyy');
+  } catch (e) {
+    return dateString;
+  }
+};
+
+// Helper to get status label and color
+const getStatusInfo = (status: string) => {
+  const statusMap: Record<string, { label: string; color: string }> = {
+    peritagemPendente: { label: 'Peritagem Pendente', color: 'bg-yellow-100 text-yellow-800' },
+    emExecucao: { label: 'Em Execução', color: 'bg-blue-100 text-blue-800' },
+    aguardandoChecagem: { label: 'Aguardando Checagem', color: 'bg-indigo-100 text-indigo-800' },
+    checagemCompleta: { label: 'Checagem Completa', color: 'bg-green-100 text-green-800' },
+    sucateadoPendente: { label: 'Sucateamento Pendente', color: 'bg-red-100 text-red-800' },
+    sucateado: { label: 'Sucateado', color: 'bg-red-100 text-red-800' },
+    default: { label: 'Status Desconhecido', color: 'bg-gray-100 text-gray-800' }
   };
 
+  return statusMap[status] || statusMap.default;
+};
+
+export default function SectorSummary({ sector }: SectorSummaryProps) {
+  const statusInfo = getStatusInfo(sector.status);
+  
   return (
-    <div>
-      <div className="flex justify-between items-start">
-        <div>
-          <h2 className="text-xl font-bold">TAG: {sector.tagNumber}</h2>
-          <p className="text-sm text-gray-500">
-            NF Entrada: {sector.entryInvoice || "N/A"}
-          </p>
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <CardTitle>Informações do Setor</CardTitle>
+          <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
         </div>
-        <Badge className={getStatusColor(sector.status)}>
-          {getStatusDisplay(sector.status)}
-        </Badge>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div>
-          <p className="text-sm text-gray-500">Data de Entrada</p>
-          <p className="font-medium">{formatDate(sector.entryDate)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Data da Peritagem</p>
-          <p className="font-medium">{formatDate(sector.peritagemDate)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Número de Ciclo</p>
-          <p className="font-medium">{sector.cycleCount || 1}</p>
-        </div>
-      </div>
-      
-      <div className="mt-4">
-        <p className="text-sm text-gray-500">Observações da Entrada</p>
-        <p className="text-gray-700 border p-2 rounded-md mt-1 bg-gray-50 min-h-[50px]">
-          {sector.entryObservations || "Nenhuma observação registrada."}
-        </p>
-      </div>
-      
-      {/* Mostrar a foto da TAG se disponível */}
-      {sector.tagPhotoUrl && (
-        <div className="mt-4">
-          <p className="text-sm text-gray-500 mb-1">Foto da TAG</p>
-          <div className="border rounded-md overflow-hidden w-48 h-48">
-            <img 
-              src={sector.tagPhotoUrl} 
-              alt="Foto da TAG" 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = '/placeholder.svg';
-                target.className = "w-full h-full object-contain bg-gray-100";
-              }}
-            />
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">TAG</h3>
+            <p className="text-lg font-semibold">{sector.tagNumber}</p>
           </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">NF Entrada</h3>
+            <p>{sector.entryInvoice || 'N/A'}</p>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Data de Entrada</h3>
+            <p>{formatDate(sector.entryDate)}</p>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Data da Peritagem</h3>
+            <p>{formatDate(sector.peritagemDate)}</p>
+          </div>
+          
+          {sector.checagemDate && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Data da Checagem</h3>
+              <p>{formatDate(sector.checagemDate)}</p>
+            </div>
+          )}
+          
+          {sector.exitDate && (
+            <>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Data de Saída</h3>
+                <p>{formatDate(sector.exitDate)}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">NF Saída</h3>
+                <p>{sector.exitInvoice || 'N/A'}</p>
+              </div>
+            </>
+          )}
         </div>
-      )}
-    </div>
+        
+        {sector.entryObservations && (
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-gray-500">Observações de Entrada</h3>
+            <p className="text-sm mt-1">{sector.entryObservations}</p>
+          </div>
+        )}
+        
+        {sector.exitObservations && (
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-gray-500">Observações de Saída</h3>
+            <p className="text-sm mt-1">{sector.exitObservations}</p>
+          </div>
+        )}
+        
+        {sector.scrapObservations && (
+          <div className="mt-4">
+            <h3 className="text-sm font-medium text-gray-500">Observações de Sucateamento</h3>
+            <p className="text-sm mt-1">{sector.scrapObservations}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

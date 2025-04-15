@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useApi } from '@/contexts/ApiContextExtended';
 import { Sector } from '@/types';
 import PageLayout from '@/components/layout/PageLayout';
 import { Input } from '@/components/ui/input';
@@ -15,7 +14,6 @@ export default function Sucateamento() {
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { getAllSectors } = useApi();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,14 +24,37 @@ export default function Sucateamento() {
   const loadSectors = async () => {
     try {
       setLoading(true);
-      const allSectors = await getAllSectors();
       
-      // Filtrar apenas os setores com status "sucateadoPendente"
-      const pendingSectors = allSectors.filter(
-        sector => sector.status === 'sucateadoPendente'
-      );
+      // Query sectors with status "sucateadoPendente" directly from Supabase
+      const { data, error } = await supabase
+        .from('sectors')
+        .select('*')
+        .eq('current_status', 'sucateadoPendente')
+        .order('updated_at', { ascending: false });
       
-      console.log(`Encontrados ${pendingSectors.length} setores pendentes de sucateamento`);
+      if (error) throw error;
+      
+      console.log(`Encontrados ${data.length} setores pendentes de sucateamento`);
+      
+      // Map to Sector type
+      const pendingSectors: Sector[] = data.map(sector => ({
+        id: sector.id,
+        tagNumber: sector.tag_number,
+        tagPhotoUrl: sector.tag_photo_url,
+        entryInvoice: sector.nf_entrada || '',
+        entryDate: sector.data_entrada ? new Date(sector.data_entrada).toISOString().split('T')[0] : '',
+        status: sector.current_status as any,
+        outcome: sector.current_outcome as any || 'EmAndamento',
+        peritagemDate: '',  // Will be populated as needed
+        productionCompleted: false,
+        services: [],
+        beforePhotos: [],
+        afterPhotos: [],
+        scrapPhotos: [],
+        cycleCount: sector.cycle_count || 1,
+        updated_at: sector.updated_at
+      }));
+      
       setSectors(pendingSectors);
     } catch (error) {
       console.error("Erro ao carregar setores:", error);

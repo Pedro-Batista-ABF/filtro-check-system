@@ -1,33 +1,35 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Minus, Plus } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Minus, Plus } from "lucide-react";
 
-interface QuantityInputProps {
+export interface QuantityInputProps {
+  id: string;
   value: number;
   onChange: (value: number) => void;
   min?: number;
   max?: number;
-  id?: string;
+  disabled?: boolean;
 }
 
 export default function QuantityInput({
+  id,
   value,
   onChange,
-  min = 0,
-  max = Infinity,
-  id = 'quantity'
+  min = 1,
+  max = 999,
+  disabled = false
 }: QuantityInputProps) {
-  const increment = () => {
-    if (value < max) {
-      onChange(value + 1);
+  const handleDecrement = () => {
+    if (value > min) {
+      onChange(value - 1);
     }
   };
 
-  const decrement = () => {
-    if (value > min) {
-      onChange(value - 1);
+  const handleIncrement = () => {
+    if (value < max) {
+      onChange(value + 1);
     }
   };
 
@@ -43,29 +45,30 @@ export default function QuantityInput({
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="h-8 w-8 p-0"
-        onClick={decrement}
+        size="icon"
+        onClick={handleDecrement}
+        disabled={value <= min || disabled}
+        className="h-8 w-8"
       >
         <Minus className="h-3 w-3" />
       </Button>
-      
       <Input
         id={id}
         type="number"
-        className="h-8 w-20 mx-2 text-center"
         value={value}
+        onChange={handleChange}
         min={min}
         max={max}
-        onChange={handleChange}
+        disabled={disabled}
+        className="h-8 w-16 mx-2 text-center"
       />
-      
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="h-8 w-8 p-0"
-        onClick={increment}
+        size="icon"
+        onClick={handleIncrement}
+        disabled={value >= max || disabled}
+        className="h-8 w-8"
       >
         <Plus className="h-3 w-3" />
       </Button>

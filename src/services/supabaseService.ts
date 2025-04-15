@@ -1,6 +1,6 @@
 
 // This file is kept for backward compatibility
 // Import from the refactored services instead
-import { supabaseService } from "./supabase";
+import { supabaseServices } from "./supabase";
 
-export { supabaseService };
+export { supabaseServices };

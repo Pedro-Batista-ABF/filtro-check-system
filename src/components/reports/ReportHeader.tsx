@@ -1,72 +1,82 @@
 
 import React from 'react';
 import { Sector } from '@/types';
+import { format } from 'date-fns';
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ReportHeaderProps {
   sector: Sector;
+  showPrint?: boolean;
 }
 
-export default function ReportHeader({ sector }: ReportHeaderProps) {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
+export default function ReportHeader({ sector, showPrint = false }: ReportHeaderProps) {
+  // Helper function to format date
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return 'N/A';
     try {
-      return new Date(dateString).toLocaleDateString();
+      return format(new Date(dateString), 'dd/MM/yyyy');
     } catch (e) {
       return dateString;
     }
   };
 
   return (
-    <div className="border-b pb-4">
-      <div className="flex justify-between items-start">
-        <h2 className="text-xl font-bold">TAG: {sector.tagNumber}</h2>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-          sector.status === 'concluido' ? 'bg-green-100 text-green-800' : 
-          sector.status === 'sucateado' ? 'bg-red-100 text-red-800' :
-          'bg-blue-100 text-blue-800'
-        }`}>
-          {sector.status === 'concluido' ? 'Concluído' : 
-           sector.status === 'sucateado' ? 'Sucateado' :
-           sector.status === 'emExecucao' ? 'Em Execução' :
-           sector.status === 'peritagemPendente' ? 'Peritagem Pendente' :
-           sector.status === 'sucateadoPendente' ? 'Sucateamento Pendente' :
-           sector.status}
-        </span>
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-        <div>
-          <p className="text-sm text-gray-500">NF Entrada</p>
-          <p className="font-medium">{sector.entryInvoice || "N/A"}</p>
+    <Card className="border-none shadow-sm print:shadow-none">
+      <CardContent className="p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Relatório de Recuperação</h1>
+            <p className="text-gray-500">Setor: {sector.tagNumber}</p>
+          </div>
+          
+          {showPrint && (
+            <button 
+              onClick={() => window.print()}
+              className="mt-4 md:mt-0 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 flex items-center print:hidden"
+            >
+              <span className="mr-2">Imprimir Relatório</span>
+            </button>
+          )}
         </div>
-        <div>
-          <p className="text-sm text-gray-500">Data Entrada</p>
-          <p className="font-medium">{formatDate(sector.entryDate)}</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Informações do Setor</h3>
+            <div className="mt-2 space-y-1">
+              <p><span className="font-medium">TAG:</span> {sector.tagNumber}</p>
+              <p><span className="font-medium">NF Entrada:</span> {sector.entryInvoice || 'N/A'}</p>
+              <p><span className="font-medium">Data Entrada:</span> {formatDate(sector.entryDate)}</p>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Peritagem</h3>
+            <div className="mt-2 space-y-1">
+              <p><span className="font-medium">Data:</span> {formatDate(sector.peritagemDate)}</p>
+              <p><span className="font-medium">Serviços:</span> {sector.services.filter(s => s.selected).length}</p>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Saída</h3>
+            <div className="mt-2 space-y-1">
+              <p>
+                <span className="font-medium">NF Saída:</span> {sector.exitInvoice || 'N/A'}
+              </p>
+              <p>
+                <span className="font-medium">Data Checagem:</span> {formatDate(sector.checagemDate)}
+              </p>
+              <p>
+                <span className="font-medium">Status:</span> {
+                  sector.status === 'sucateado' ? 'Sucateado' : 
+                  sector.status === 'checagemCompleta' ? 'Completo' : 
+                  'Em Processamento'
+                }
+              </p>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="text-sm text-gray-500">NF Saída</p>
-          <p className="font-medium">{sector.exitInvoice || "N/A"}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Data Saída</p>
-          <p className="font-medium">{formatDate(sector.exitDate)}</p>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
-        <div>
-          <p className="text-sm text-gray-500">Data da Peritagem</p>
-          <p className="font-medium">{formatDate(sector.peritagemDate)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Data da Checagem</p>
-          <p className="font-medium">{formatDate(sector.checagemDate)}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">Ciclo</p>
-          <p className="font-medium">{sector.cycleCount || 1}</p>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
