@@ -19,7 +19,7 @@ export function useTagPhotoUpload() {
         service_id: null,
         url: tagPhotoUrl,
         type: 'tag',
-        created_by: userId,
+        created_by: userId, // Make sure created_by is included
         metadata: {
           sector_id: sectorId,
           stage: 'peritagem',

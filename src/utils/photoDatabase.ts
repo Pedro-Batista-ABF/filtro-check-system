@@ -16,6 +16,12 @@ export const insertServicePhoto = async ({
   type?: string;
   userId: string;
 }) => {
+  // Make sure we have a userId
+  if (!userId) {
+    console.error("No userId provided for photo insertion");
+    throw new Error("User ID is required for inserting photos");
+  }
+
   const { error } = await supabase
     .from('photos')
     .insert({
@@ -23,7 +29,7 @@ export const insertServicePhoto = async ({
       service_id: serviceId,
       url: url,
       type: type || 'before',
-      created_by: userId,
+      created_by: userId, // Make sure this is provided
       metadata: {
         sector_id: sectorId,
         service_id: serviceId,

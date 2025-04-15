@@ -17,7 +17,14 @@ export const photoService = {
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      // First find the current cycle for this sector
+      // First get the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        console.error("Error getting user for photo:", userError);
+        return false;
+      }
+
+      // Find the current cycle for this sector
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
@@ -31,7 +38,7 @@ export const photoService = {
         return false;
       }
       
-      // Then insert the photo with service association
+      // Then insert the photo with service association and user ID
       const { data: photoData, error: photoError } = await supabase
         .from('photos')
         .insert({
@@ -39,6 +46,7 @@ export const photoService = {
           service_id: serviceId,
           url: photoUrl,
           type,
+          created_by: userData.user.id, // Add the required created_by field
           metadata: {
             sector_id: sectorId,
             service_id: serviceId,
