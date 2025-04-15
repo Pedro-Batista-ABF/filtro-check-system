@@ -44,7 +44,7 @@ export default function SectorForm({
       formState.setServices([]);
     }
 
-    if (mode === 'scrap') {, after the user has confirmed running the SQL commands. Share first the SQL commands in a `lov-sql` block, then the code changes in a `lov-code` block after the user has confirmed running the SQL commands.
+    if (mode === 'scrap') {
       formState.setIsScrap(sector.scrapValidated || false);
     }
   }, [sector, mode]);
