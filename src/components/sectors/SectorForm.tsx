@@ -1,15 +1,16 @@
 
 import React, { useEffect } from 'react';
-import { Button } from "@/components/ui/button";
 import { EntryFormSection } from "./form-sections/EntryFormSection";
 import ScrapForm from "./forms/ScrapForm";
 import ReviewForm from "./forms/ReviewForm";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 import { Sector } from "@/types";
 import { toast } from "sonner";
 import { useSectorFormState } from '@/hooks/useSectorFormState';
 import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit';
+import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
+import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
+import { FormValidationAlert } from './form-parts/FormValidationAlert';
+import { FormSubmitButton } from './form-parts/FormSubmitButton';
 
 interface SectorFormProps {
   sector: Sector;
@@ -28,6 +29,8 @@ export default function SectorForm({
 }: SectorFormProps) {
   const formState = useSectorFormState(sector);
   const { validateForm, prepareFormData } = useSectorFormSubmit();
+  const { handleTagPhotoUpload, handleServicePhotoUpload } = useSectorPhotoHandling();
+  const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling();
 
   // Effect para inicializar o formulário com os dados do setor
   useEffect(() => {
@@ -49,73 +52,52 @@ export default function SectorForm({
     }
   }, [sector, mode]);
 
-  const handleServiceChange = (id: string, checked: boolean) => {
-    formState.setServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, selected: checked } 
-          : service
-      )
-    );
+  const handlePhotoUploadWrapper = async (files: FileList) => {
+    const url = await handleTagPhotoUpload(files);
+    if (url) formState.setTagPhotoUrl(url);
   };
 
-  const handleQuantityChange = (id: string, quantity: number) => {
-    formState.setServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, quantity } 
-          : service
-      )
-    );
+  const handleServicePhotoUploadWrapper = (id: string, files: FileList, type: "before" | "after") => {
+    const updatedServices = handleServicePhotoUpload(id, files, type, formState.services);
+    formState.setServices(updatedServices);
+    toast.success("Foto adicionada ao serviço");
   };
 
-  const handleObservationChange = (id: string, observations: string) => {
-    formState.setServices(prev => 
-      prev.map(service => 
-        service.id === id 
-          ? { ...service, observations } 
-          : service
-      )
-    );
+  const handleServiceChangeWrapper = (id: string, checked: boolean) => {
+    const updatedServices = handleServiceChange(formState.services, id, checked);
+    formState.setServices(updatedServices);
   };
 
-  const handleTagPhotoUpload = async (files: FileList) => {
-    if (files.length > 0) {
-      const tempUrl = URL.createObjectURL(files[0]);
-      formState.setTagPhotoUrl(tempUrl);
-      toast.success("Foto da TAG capturada");
-    }
+  const handleQuantityChangeWrapper = (id: string, quantity: number) => {
+    const updatedServices = handleQuantityChange(formState.services, id, quantity);
+    formState.setServices(updatedServices);
   };
 
-  const handlePhotoUpload = (id: string, files: FileList, type: "before" | "after") => {
-    if (files.length > 0) {
-      formState.setServices(prev => 
-        prev.map(service => {
-          if (service.id === id) {
-            const newPhotos = [...(service.photos || [])];
-            
-            for (let i = 0; i < files.length; i++) {
-              const file = files[i];
-              const tempId = `temp-${Date.now()}-${i}`;
-              const tempUrl = URL.createObjectURL(file);
-              
-              newPhotos.push({
-                id: tempId,
-                url: tempUrl,
-                type,
-                serviceId: id,
-                file
-              });
-            }
-            
-            return { ...service, photos: newPhotos };
-          }
-          return service;
-        })
-      );
-      
-      toast.success("Foto adicionada ao serviço");
-    }
+  const handleObservationChangeWrapper = (id: string, observations: string) => {
+    const updatedServices = handleObservationChange(formState.services, id, observations);
+    formState.setServices(updatedServices);
+  };
+
+  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
+    e.preventDefault();
+    
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'environment';
+    
+    fileInput.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        if (serviceId) {
+          handleServicePhotoUploadWrapper(serviceId, target.files, 'before');
+        } else {
+          handlePhotoUploadWrapper(target.files);
+        }
+      }
+    });
+    
+    fileInput.click();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -164,42 +146,13 @@ export default function SectorForm({
       onSubmit(formData);
     }
   };
-  
-  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
-    e.preventDefault();
-    
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.capture = 'environment';
-    
-    fileInput.addEventListener('change', (e) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        if (serviceId) {
-          handlePhotoUpload(serviceId, target.files, 'before');
-        } else {
-          handleTagPhotoUpload(target.files);
-        }
-      }
-    });
-    
-    fileInput.click();
-  };
 
-  // Se estamos em modo de criação, usar o ReviewForm que tem todos os elementos necessários
   if (mode === 'create') {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {Object.values(formState.formErrors).some(error => error) && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Formulário com erros</AlertTitle>
-            <AlertDescription>
-              Verifique os campos destacados em vermelho e tente novamente.
-            </AlertDescription>
-          </Alert>
-        )}
+        <FormValidationAlert 
+          show={Object.values(formState.formErrors).some(error => error)} 
+        />
         
         <ReviewForm
           tagNumber={formState.tagNumber}
@@ -209,27 +162,28 @@ export default function SectorForm({
           entryDate={formState.entryDate}
           setEntryDate={formState.setEntryDate}
           tagPhotoUrl={formState.tagPhotoUrl}
-          handleTagPhotoUpload={handleTagPhotoUpload}
+          handleTagPhotoUpload={handlePhotoUploadWrapper}
           entryObservations={formState.entryObservations}
           setEntryObservations={formState.setEntryObservations}
           services={formState.services}
-          handleServiceChange={handleServiceChange}
-          handleQuantityChange={handleQuantityChange}
-          handleObservationChange={handleObservationChange}
-          handlePhotoUpload={handlePhotoUpload}
+          handleServiceChange={handleServiceChangeWrapper}
+          handleQuantityChange={handleQuantityChangeWrapper}
+          handleObservationChange={handleObservationChangeWrapper}
+          handlePhotoUpload={handleServicePhotoUploadWrapper}
           formErrors={formState.formErrors}
           photoRequired={photoRequired}
           handleCameraCapture={handleCameraCapture}
         />
         
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? "Salvando..." : "Registrar Peritagem"}
-        </Button>
+        <FormSubmitButton 
+          isLoading={isLoading} 
+          mode={mode} 
+          fullWidth 
+        />
       </form>
     );
   }
 
-  // Renderizar versão simplificada para outros modos
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <EntryFormSection
@@ -240,7 +194,7 @@ export default function SectorForm({
         entryDate={formState.entryDate}
         setEntryDate={formState.setEntryDate}
         tagPhotoUrl={formState.tagPhotoUrl}
-        handleTagPhotoUpload={handleTagPhotoUpload}
+        handleTagPhotoUpload={handlePhotoUploadWrapper}
         handleCameraCapture={handleCameraCapture}
         entryObservations={formState.entryObservations}
         setEntryObservations={formState.setEntryObservations}
@@ -262,9 +216,11 @@ export default function SectorForm({
         />
       )}
       
-      <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? "Salvando..." : (mode === 'checagem' ? "Concluir Checagem" : "Salvar")}
-      </Button>
+      <FormSubmitButton 
+        isLoading={isLoading} 
+        mode={mode} 
+        fullWidth 
+      />
     </form>
   );
 }
