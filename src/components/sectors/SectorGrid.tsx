@@ -7,7 +7,7 @@ import { toast } from "sonner";
 interface SectorGridProps {
   sectors: Sector[];
   onSelect?: (sector: Sector) => void;
-  onSectorClick?: (sector: Sector) => void;
+  onSectorClick?: (sector: Sector) => void; // Adicionando o prop onSectorClick
 }
 
 export default function SectorGrid({ sectors, onSelect, onSectorClick }: SectorGridProps) {

@@ -24,7 +24,7 @@ export function useServicesManagement() {
         id: service.id,
         name: service.name,
         selected: false,
-        type: service.id as ServiceType, // Corrigido: usando as ServiceType para evitar o erro TS2352
+        type: service.id as unknown as ServiceType, // Usando unknown como intermediário para evitar o erro TS2352
         photos: []
       }));
       
