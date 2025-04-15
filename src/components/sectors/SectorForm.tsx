@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { EntryFormSection } from "./form-sections/EntryFormSection";
 import ScrapForm from "./forms/ScrapForm";
@@ -6,10 +7,9 @@ import ReviewForm from "./forms/ReviewForm";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Sector } from "@/types";
-import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { format } from 'date-fns';
-import { Service } from "@/types";
+import { useSectorFormState } from '@/hooks/useSectorFormState';
+import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit';
 
 interface SectorFormProps {
   sector: Sector;
@@ -26,56 +26,31 @@ export default function SectorForm({
   isLoading = false,
   photoRequired = false
 }: SectorFormProps) {
-  const [tagNumber, setTagNumber] = useState(sector.tagNumber || '');
-  const [entryInvoice, setEntryInvoice] = useState(sector.entryInvoice || '');
-  const [entryDate, setEntryDate] = useState<Date | undefined>(
-    sector.entryDate ? new Date(sector.entryDate) : new Date()
-  );
-  const [tagPhotoUrl, setTagPhotoUrl] = useState<string | undefined>(sector.tagPhotoUrl);
-  const [entryObservations, setEntryObservations] = useState(sector.entryObservations || '');
-  
-  const [services, setServices] = useState<Service[]>(
-    Array.isArray(sector.services) ? sector.services : []
-  );
-  
-  const [formErrors, setFormErrors] = useState({
-    tagNumber: false,
-    tagPhoto: false,
-    entryInvoice: false,
-    entryDate: false,
-    services: false,
-    photos: false
-  });
-  
-  const [isScrap, setIsScrap] = useState(false);
-  const [scrapObservations, setScrapObservations] = useState('');
-  const [scrapDate, setScrapDate] = useState<Date | undefined>();
-  const [scrapInvoice, setScrapInvoice] = useState('');
+  const formState = useSectorFormState(sector);
+  const { validateForm, prepareFormData } = useSectorFormSubmit();
 
   // Effect para inicializar o formulário com os dados do setor
   useEffect(() => {
-    setTagNumber(sector.tagNumber || '');
-    setEntryInvoice(sector.entryInvoice || '');
-    setEntryDate(sector.entryDate ? new Date(sector.entryDate) : new Date());
-    setTagPhotoUrl(sector.tagPhotoUrl);
-    setEntryObservations(sector.entryObservations || '');
+    formState.setTagNumber(sector.tagNumber || '');
+    formState.setEntryInvoice(sector.entryInvoice || '');
+    formState.setEntryDate(sector.entryDate ? new Date(sector.entryDate) : new Date());
+    formState.setTagPhotoUrl(sector.tagPhotoUrl);
+    formState.setEntryObservations(sector.entryObservations || '');
     
-    // Garantir que services seja sempre um array
     if (Array.isArray(sector.services)) {
-      setServices(sector.services);
+      formState.setServices(sector.services);
     } else {
       console.warn("Services não é um array válido:", sector.services);
-      setServices([]);
+      formState.setServices([]);
     }
 
-    // Quando estamos em modo de sucateamento
     if (mode === 'scrap') {
-      setIsScrap(sector.scrapValidated || false);
+      formState.setIsScrap(sector.scrapValidated || false);
     }
   }, [sector, mode]);
 
   const handleServiceChange = (id: string, checked: boolean) => {
-    setServices(prev => 
+    formState.setServices(prev => 
       prev.map(service => 
         service.id === id 
           ? { ...service, selected: checked } 
@@ -85,7 +60,7 @@ export default function SectorForm({
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
-    setServices(prev => 
+    formState.setServices(prev => 
       prev.map(service => 
         service.id === id 
           ? { ...service, quantity } 
@@ -95,7 +70,7 @@ export default function SectorForm({
   };
 
   const handleObservationChange = (id: string, observations: string) => {
-    setServices(prev => 
+    formState.setServices(prev => 
       prev.map(service => 
         service.id === id 
           ? { ...service, observations } 
@@ -106,22 +81,17 @@ export default function SectorForm({
 
   const handleTagPhotoUpload = async (files: FileList) => {
     if (files.length > 0) {
-      // Simular URL temporária para visualização
       const tempUrl = URL.createObjectURL(files[0]);
-      setTagPhotoUrl(tempUrl);
-      
-      // Aqui você adicionaria a lógica para upload real
-      // E então atualizaria a URL após o upload completar
+      formState.setTagPhotoUrl(tempUrl);
       toast.success("Foto da TAG capturada");
     }
   };
 
   const handlePhotoUpload = (id: string, files: FileList, type: "before" | "after") => {
     if (files.length > 0) {
-      setServices(prev => 
+      formState.setServices(prev => 
         prev.map(service => {
           if (service.id === id) {
-            // Criar foto com URL temporária
             const newPhotos = [...(service.photos || [])];
             
             for (let i = 0; i < files.length; i++) {
@@ -134,7 +104,7 @@ export default function SectorForm({
                 url: tempUrl,
                 type,
                 serviceId: id,
-                file // Armazenar o arquivo para upload posterior
+                file
               });
             }
             
@@ -148,33 +118,25 @@ export default function SectorForm({
     }
   };
 
-  const validateForm = (): boolean => {
-    const errors = {
-      tagNumber: !tagNumber.trim(),
-      tagPhoto: !tagPhotoUrl,
-      entryInvoice: !entryInvoice.trim(),
-      entryDate: !entryDate,
-      services: false,
-      photos: false
-    };
-
-    const selectedServices = services.filter(s => s.selected);
-    errors.services = selectedServices.length === 0;
-
-    // Verificar se todos os serviços selecionados têm fotos
-    const servicesWithoutPhotos = selectedServices.filter(
-      service => !service.photos || service.photos.length === 0
-    );
-    errors.photos = servicesWithoutPhotos.length > 0;
-
-    setFormErrors(errors);
-    return !Object.values(errors).some(error => error);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    const errors = validateForm({
+      tagNumber: formState.tagNumber,
+      tagPhotoUrl: formState.tagPhotoUrl,
+      entryInvoice: formState.entryInvoice,
+      entryDate: formState.entryDate,
+      entryObservations: formState.entryObservations,
+      services: formState.services,
+      isScrap: formState.isScrap,
+      scrapObservations: formState.scrapObservations,
+      scrapDate: formState.scrapDate,
+      scrapInvoice: formState.scrapInvoice
+    });
+    
+    formState.setFormErrors(errors);
+    
+    if (Object.values(errors).some(error => error)) {
       toast.error("Formulário com erros", {
         description: "Verifique os campos destacados e tente novamente."
       });
@@ -182,29 +144,22 @@ export default function SectorForm({
     }
     
     if (onSubmit) {
-      // Formatar a data para string no formato ISO
-      const entryDateStr = entryDate ? format(entryDate, 'yyyy-MM-dd') : '';
-      
-      const formData: Partial<Sector> = {
-        tagNumber,
-        tagPhotoUrl,
-        entryInvoice,
-        entryDate: entryDateStr,
-        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-        entryObservations,
-        services,
-        beforePhotos: services.flatMap(s => s.photos || []),
-        afterPhotos: []
-      };
-      
-      // Informações específicas de sucateamento
-      if (mode === 'scrap' && isScrap) {
-        formData.scrapObservations = scrapObservations;
-        formData.scrapReturnInvoice = scrapInvoice;
-        formData.scrapReturnDate = scrapDate ? format(scrapDate, "yyyy-MM-dd") : undefined;
-        formData.scrapValidated = true;
-        formData.outcome = 'scrapped';
-      }
+      const formData = prepareFormData(
+        {
+          tagNumber: formState.tagNumber,
+          tagPhotoUrl: formState.tagPhotoUrl,
+          entryInvoice: formState.entryInvoice,
+          entryDate: formState.entryDate,
+          entryObservations: formState.entryObservations,
+          services: formState.services,
+          isScrap: formState.isScrap,
+          scrapObservations: formState.scrapObservations,
+          scrapDate: formState.scrapDate,
+          scrapInvoice: formState.scrapInvoice
+        },
+        mode === 'edit',
+        sector.id
+      );
       
       onSubmit(formData);
     }
@@ -232,8 +187,9 @@ export default function SectorForm({
   if (mode === 'create') {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {Object.values(formErrors).some(error => error) && (
+        {Object.values(formState.formErrors).some(error => error) && (
           <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
             <AlertTitle>Formulário com erros</AlertTitle>
             <AlertDescription>
               Verifique os campos destacados em vermelho e tente novamente.
@@ -242,23 +198,24 @@ export default function SectorForm({
         )}
         
         <ReviewForm
-          tagNumber={tagNumber}
-          setTagNumber={setTagNumber}
-          entryInvoice={entryInvoice}
-          setEntryInvoice={setEntryInvoice}
-          entryDate={entryDate}
-          setEntryDate={setEntryDate}
-          tagPhotoUrl={tagPhotoUrl}
+          tagNumber={formState.tagNumber}
+          setTagNumber={formState.setTagNumber}
+          entryInvoice={formState.entryInvoice}
+          setEntryInvoice={formState.setEntryInvoice}
+          entryDate={formState.entryDate}
+          setEntryDate={formState.setEntryDate}
+          tagPhotoUrl={formState.tagPhotoUrl}
           handleTagPhotoUpload={handleTagPhotoUpload}
-          entryObservations={entryObservations}
-          setEntryObservations={setEntryObservations}
-          services={services}
+          entryObservations={formState.entryObservations}
+          setEntryObservations={formState.setEntryObservations}
+          services={formState.services}
           handleServiceChange={handleServiceChange}
           handleQuantityChange={handleQuantityChange}
           handleObservationChange={handleObservationChange}
           handlePhotoUpload={handlePhotoUpload}
-          formErrors={formErrors}
+          formErrors={formState.formErrors}
           photoRequired={photoRequired}
+          handleCameraCapture={handleCameraCapture}
         />
         
         <Button type="submit" disabled={isLoading} className="w-full">
@@ -272,31 +229,31 @@ export default function SectorForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <EntryFormSection
-        tagNumber={tagNumber}
-        setTagNumber={setTagNumber}
-        entryInvoice={entryInvoice}
-        setEntryInvoice={setEntryInvoice}
-        entryDate={entryDate}
-        setEntryDate={setEntryDate}
-        tagPhotoUrl={tagPhotoUrl}
+        tagNumber={formState.tagNumber}
+        setTagNumber={formState.setTagNumber}
+        entryInvoice={formState.entryInvoice}
+        setEntryInvoice={formState.setEntryInvoice}
+        entryDate={formState.entryDate}
+        setEntryDate={formState.setEntryDate}
+        tagPhotoUrl={formState.tagPhotoUrl}
         handleTagPhotoUpload={handleTagPhotoUpload}
         handleCameraCapture={handleCameraCapture}
-        entryObservations={entryObservations}
-        setEntryObservations={setEntryObservations}
-        formErrors={formErrors}
+        entryObservations={formState.entryObservations}
+        setEntryObservations={formState.setEntryObservations}
+        formErrors={formState.formErrors}
       />
 
       {mode === 'scrap' && (
         <ScrapForm 
           sector={sector}
-          isScrap={isScrap}
-          setIsScrap={setIsScrap}
-          scrapObservations={scrapObservations}
-          setScrapObservations={setScrapObservations}
-          scrapDate={scrapDate}
-          setScrapDate={setScrapDate}
-          scrapInvoice={scrapInvoice}
-          setScrapInvoice={setScrapInvoice}
+          isScrap={formState.isScrap}
+          setIsScrap={formState.setIsScrap}
+          scrapObservations={formState.scrapObservations}
+          setScrapObservations={formState.setScrapObservations}
+          scrapDate={formState.scrapDate}
+          setScrapDate={formState.setScrapDate}
+          scrapInvoice={formState.scrapInvoice}
+          setScrapInvoice={formState.setScrapInvoice}
           formErrors={{}}
         />
       )}
