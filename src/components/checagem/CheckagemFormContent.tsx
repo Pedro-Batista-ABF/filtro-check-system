@@ -35,7 +35,7 @@ export default function CheckagemFormContent({ sector }: CheckagemFormContentPro
     // Convert afterPhotos from Photo to PhotoWithFile
     const convertedPhotos: PhotoWithFile[] = (sector.afterPhotos || []).map(photo => ({
       ...photo,
-      file: null
+      file: undefined
     }));
     setExitPhotos(convertedPhotos);
     setUpdatedSector(sector);
@@ -48,7 +48,7 @@ export default function CheckagemFormContent({ sector }: CheckagemFormContentPro
   const handleServiceChange = (serviceId: string, isSelected: boolean) => {
     const updatedServices = updatedSector.services.map(service => 
       service.id === serviceId
-        ? { ...service, selected, completed: isSelected }
+        ? { ...service, selected: isSelected, completed: isSelected }
         : service
     );
     setUpdatedSector(prev => ({ ...prev, services: updatedServices }));

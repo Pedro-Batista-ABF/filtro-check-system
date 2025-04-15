@@ -20,9 +20,7 @@ export default function SectorPhotos({ sector, title = "Fotos do Setor" }: Secto
     <div className="space-y-4">
       <h3 className="text-lg font-bold">{title}</h3>
       {allPhotos.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <PhotoViewer photos={allPhotos} />
-        </div>
+        <PhotoViewer photos={allPhotos} />
       ) : (
         <p className="text-gray-500 text-center py-4">Nenhuma foto disponível</p>
       )}
