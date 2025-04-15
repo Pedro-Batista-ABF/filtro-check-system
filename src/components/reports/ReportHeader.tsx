@@ -2,81 +2,97 @@
 import React from 'react';
 import { Sector } from '@/types';
 import { format } from 'date-fns';
-import { Card, CardContent } from "@/components/ui/card";
+import { ptBR } from 'date-fns/locale';
 
 interface ReportHeaderProps {
   sector: Sector;
-  showPrint?: boolean;
 }
 
-export default function ReportHeader({ sector, showPrint = false }: ReportHeaderProps) {
-  // Helper function to format date
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return 'N/A';
+export default function ReportHeader({ sector }: ReportHeaderProps) {
+  // Format date function
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Não definida";
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy');
+      return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
     } catch (e) {
       return dateString;
     }
   };
 
   return (
-    <Card className="border-none shadow-sm print:shadow-none">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Relatório de Recuperação</h1>
-            <p className="text-gray-500">Setor: {sector.tagNumber}</p>
-          </div>
-          
-          {showPrint && (
-            <button 
-              onClick={() => window.print()}
-              className="mt-4 md:mt-0 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 flex items-center print:hidden"
-            >
-              <span className="mr-2">Imprimir Relatório</span>
-            </button>
-          )}
+    <div className="border-b pb-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Relatório de Setor</h1>
+          <p className="text-gray-500">Gerado em {formatDate(new Date().toISOString())}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold">TAG: {sector.tagNumber}</p>
+          <p className="text-sm">Status: {getStatusText(sector.status)}</p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <div>
+          <h3 className="font-medium text-gray-600">Informações de Entrada</h3>
+          <ul className="mt-1">
+            <li><span className="font-medium">NF de Entrada:</span> {sector.entryInvoice || "Não informada"}</li>
+            <li><span className="font-medium">Data de Entrada:</span> {formatDate(sector.entryDate)}</li>
+            <li><span className="font-medium">Data de Peritagem:</span> {formatDate(sector.peritagemDate)}</li>
+          </ul>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        {sector.status === 'concluido' && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500">Informações do Setor</h3>
-            <div className="mt-2 space-y-1">
-              <p><span className="font-medium">TAG:</span> {sector.tagNumber}</p>
-              <p><span className="font-medium">NF Entrada:</span> {sector.entryInvoice || 'N/A'}</p>
-              <p><span className="font-medium">Data Entrada:</span> {formatDate(sector.entryDate)}</p>
-            </div>
+            <h3 className="font-medium text-gray-600">Informações de Saída</h3>
+            <ul className="mt-1">
+              <li><span className="font-medium">NF de Saída:</span> {sector.exitInvoice || "Não informada"}</li>
+              <li><span className="font-medium">Data de Saída:</span> {formatDate(sector.exitDate)}</li>
+              <li><span className="font-medium">Data de Checagem:</span> {formatDate(sector.checagemDate)}</li>
+            </ul>
           </div>
-          
+        )}
+        
+        {(sector.status === 'sucateadoPendente' || sector.status === 'sucateado') && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500">Peritagem</h3>
-            <div className="mt-2 space-y-1">
-              <p><span className="font-medium">Data:</span> {formatDate(sector.peritagemDate)}</p>
-              <p><span className="font-medium">Serviços:</span> {sector.services.filter(s => s.selected).length}</p>
-            </div>
+            <h3 className="font-medium text-gray-600 text-red-600">Informações de Sucateamento</h3>
+            <ul className="mt-1">
+              <li><span className="font-medium">Observações:</span> {sector.scrapObservations || "Não informadas"}</li>
+              {sector.scrapReturnDate && (
+                <li><span className="font-medium">Data de Devolução:</span> {formatDate(sector.scrapReturnDate.toString())}</li>
+              )}
+              {sector.scrapReturnInvoice && (
+                <li><span className="font-medium">NF de Devolução:</span> {sector.scrapReturnInvoice}</li>
+              )}
+            </ul>
           </div>
-          
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Saída</h3>
-            <div className="mt-2 space-y-1">
-              <p>
-                <span className="font-medium">NF Saída:</span> {sector.exitInvoice || 'N/A'}
-              </p>
-              <p>
-                <span className="font-medium">Data Checagem:</span> {formatDate(sector.checagemDate)}
-              </p>
-              <p>
-                <span className="font-medium">Status:</span> {
-                  sector.status === 'sucateado' ? 'Sucateado' : 
-                  sector.status === 'checagemCompleta' ? 'Completo' : 
-                  'Em Processamento'
-                }
-              </p>
-            </div>
-          </div>
+        )}
+      </div>
+      
+      {(sector.entryObservations || sector.exitObservations) && (
+        <div className="mt-4">
+          <h3 className="font-medium text-gray-600">Observações</h3>
+          {sector.entryObservations && (
+            <p className="mt-1"><span className="font-medium">Entrada:</span> {sector.entryObservations}</p>
+          )}
+          {sector.exitObservations && (
+            <p className="mt-1"><span className="font-medium">Saída:</span> {sector.exitObservations}</p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
+}
+
+// Helper function to get formatted status text
+function getStatusText(status: string): string {
+  switch(status) {
+    case 'peritagemPendente': return 'Peritagem Pendente';
+    case 'emExecucao': return 'Em Execução';
+    case 'checagemFinalPendente': return 'Checagem Pendente';
+    case 'concluido': return 'Concluído';
+    case 'sucateadoPendente': return 'Sucateamento Pendente';
+    case 'sucateado': return 'Sucateado';
+    default: return status;
+  }
 }

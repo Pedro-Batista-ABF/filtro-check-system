@@ -2,14 +2,14 @@
 import { Photo, PhotoWithFile } from '@/types';
 import { toast } from 'sonner';
 import { handleDatabaseError } from '@/utils/errorHandlers';
-import { useApi } from '@/contexts/ApiContext';
+import { useApiOriginal } from '@/contexts/ApiContext';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Service for photo operations
  */
 export const usePhotoService = () => {
-  const api = useApi();
+  const api = useApiOriginal();
 
   const updateServicePhotos = async (
     sectorId: string,

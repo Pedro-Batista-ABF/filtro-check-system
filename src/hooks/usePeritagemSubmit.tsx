@@ -105,7 +105,7 @@ export function usePeritagemSubmit() {
       
       // Make sure both entryInvoice and nf_entrada are set to the same value
       if (data.entryInvoice) {
-        (data as any).nf_entrada = data.entryInvoice;
+        data.nf_entrada = data.entryInvoice;
       }
       
       while (attempt < maxRetries) {

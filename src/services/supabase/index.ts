@@ -1,5 +1,4 @@
-
-import { Sector, Service } from "@/types";
+import { Sector } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { sectorService } from "./sectorService";
 import { photoService } from "@/services/supabase/photoService";
@@ -11,29 +10,6 @@ export const supabaseServices = {
   addSector: sectorService.addSector,
   updateSector: sectorService.updateSector,
   deleteSector: sectorService.deleteSector,
-  
-  // Get default services
-  getDefaultServices: async (): Promise<Service[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('service_types')
-        .select('*')
-        .order('name');
-        
-      if (error) throw error;
-      
-      return data.map(service => ({
-        id: service.id,
-        name: service.name,
-        selected: false,
-        type: service.id as any,
-        description: service.description
-      }));
-    } catch (error) {
-      console.error("Error getting default services:", error);
-      return [];
-    }
-  },
   
   // Add getSectorsByTag function
   getSectorsByTag: async (tagNumber: string): Promise<Sector[]> => {

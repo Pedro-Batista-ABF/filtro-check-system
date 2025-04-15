@@ -1,115 +1,147 @@
 
-import React from 'react';
-import { Sector } from '@/types';
-import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Sector } from "@/types";
+import { ArrowUpRight, Calendar, FileText, Tag } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface SectorSummaryProps {
   sector: Sector;
 }
 
-// Helper function to format dates
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = new Date(dateString);
-    return format(date, 'dd/MM/yyyy');
-  } catch (e) {
-    return dateString;
-  }
-};
-
-// Helper to get status label and color
-const getStatusInfo = (status: string) => {
-  const statusMap: Record<string, { label: string; color: string }> = {
-    peritagemPendente: { label: 'Peritagem Pendente', color: 'bg-yellow-100 text-yellow-800' },
-    emExecucao: { label: 'Em Execução', color: 'bg-blue-100 text-blue-800' },
-    aguardandoChecagem: { label: 'Aguardando Checagem', color: 'bg-indigo-100 text-indigo-800' },
-    checagemCompleta: { label: 'Checagem Completa', color: 'bg-green-100 text-green-800' },
-    sucateadoPendente: { label: 'Sucateamento Pendente', color: 'bg-red-100 text-red-800' },
-    sucateado: { label: 'Sucateado', color: 'bg-red-100 text-red-800' },
-    default: { label: 'Status Desconhecido', color: 'bg-gray-100 text-gray-800' }
+export default function SectorSummary({ sector }: SectorSummaryProps) {
+  // Format dates appropriately
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Não definida";
+    try {
+      return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+    } catch (e) {
+      return dateString;
+    }
   };
 
-  return statusMap[status] || statusMap.default;
-};
-
-export default function SectorSummary({ sector }: SectorSummaryProps) {
-  const statusInfo = getStatusInfo(sector.status);
+  // Get selected services count
+  const selectedServicesCount = sector.services?.filter(service => service.selected).length || 0;
   
+  // Determine the status text and color
+  const getStatusInfo = (status: string) => {
+    switch(status) {
+      case 'peritagemPendente':
+        return { text: 'Peritagem Pendente', color: 'text-yellow-600 bg-yellow-50' };
+      case 'emExecucao':
+        return { text: 'Em Execução', color: 'text-blue-600 bg-blue-50' };
+      case 'checagemFinalPendente':
+        return { text: 'Checagem Pendente', color: 'text-purple-600 bg-purple-50' };
+      case 'concluido':
+        return { text: 'Concluído', color: 'text-green-600 bg-green-50' };
+      case 'sucateadoPendente':
+        return { text: 'Sucateamento Pendente', color: 'text-red-600 bg-red-50' };
+      case 'sucateado':
+        return { text: 'Sucateado', color: 'text-red-600 bg-red-50' };
+      default:
+        return { text: status, color: 'text-gray-600 bg-gray-50' };
+    }
+  };
+  
+  const statusInfo = getStatusInfo(sector.status);
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
+    <Card className="border-none shadow-lg">
+      <CardHeader>
+        <div className="flex justify-between items-center">
           <CardTitle>Informações do Setor</CardTitle>
-          <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+          <span className={`text-sm font-medium px-3 py-1 rounded-full ${statusInfo.color}`}>
+            {statusInfo.text}
+          </span>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">TAG</h3>
-            <p className="text-lg font-semibold">{sector.tagNumber}</p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-start space-x-3">
+              <Tag className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">TAG do Setor</p>
+                <p className="font-medium">{sector.tagNumber}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-3">
+              <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">NF de Entrada</p>
+                <p className="font-medium">{sector.entryInvoice || "Não informada"}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-3">
+              <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Data de Entrada</p>
+                <p className="font-medium">{formatDate(sector.entryDate)}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-3">
+              <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">Data da Peritagem</p>
+                <p className="font-medium">{formatDate(sector.peritagemDate)}</p>
+              </div>
+            </div>
+            
+            {sector.status === 'concluido' && (
+              <>
+                <div className="flex items-start space-x-3">
+                  <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">NF de Saída</p>
+                    <p className="font-medium">{sector.exitInvoice || "Não informada"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Data de Saída</p>
+                    <p className="font-medium">{formatDate(sector.exitDate)}</p>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {(sector.status === 'sucateadoPendente' || sector.status === 'sucateado') && (
+              <div className="flex items-start space-x-3">
+                <ArrowUpRight className="h-5 w-5 text-red-500 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-500">Setor Sucateado</p>
+                  <p className="font-medium">{
+                    sector.scrapObservations || "Sem observações"
+                  }</p>
+                </div>
+              </div>
+            )}
           </div>
           
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">NF Entrada</h3>
-            <p>{sector.entryInvoice || 'N/A'}</p>
+          <div className="pt-4 border-t">
+            <h3 className="font-medium mb-2">Serviços Selecionados</h3>
+            <p>{selectedServicesCount} serviço(s) selecionado(s) para este setor</p>
           </div>
           
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Data de Entrada</h3>
-            <p>{formatDate(sector.entryDate)}</p>
-          </div>
-          
-          <div>
-            <h3 className="text-sm font-medium text-gray-500">Data da Peritagem</h3>
-            <p>{formatDate(sector.peritagemDate)}</p>
-          </div>
-          
-          {sector.checagemDate && (
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Data da Checagem</h3>
-              <p>{formatDate(sector.checagemDate)}</p>
+          {sector.entryObservations && (
+            <div className="pt-4 border-t">
+              <h3 className="font-medium mb-2">Observações de Entrada</h3>
+              <p className="text-sm">{sector.entryObservations}</p>
             </div>
           )}
           
-          {sector.exitDate && (
-            <>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Data de Saída</h3>
-                <p>{formatDate(sector.exitDate)}</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">NF Saída</h3>
-                <p>{sector.exitInvoice || 'N/A'}</p>
-              </div>
-            </>
+          {sector.exitObservations && (
+            <div className="pt-4 border-t">
+              <h3 className="font-medium mb-2">Observações de Saída</h3>
+              <p className="text-sm">{sector.exitObservations}</p>
+            </div>
           )}
         </div>
-        
-        {sector.entryObservations && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-500">Observações de Entrada</h3>
-            <p className="text-sm mt-1">{sector.entryObservations}</p>
-          </div>
-        )}
-        
-        {sector.exitObservations && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-500">Observações de Saída</h3>
-            <p className="text-sm mt-1">{sector.exitObservations}</p>
-          </div>
-        )}
-        
-        {sector.scrapObservations && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-500">Observações de Sucateamento</h3>
-            <p className="text-sm mt-1">{sector.scrapObservations}</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -1,80 +1,140 @@
 
 import React from 'react';
-import { Service, Photo } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sector, Photo } from '@/types';
 
 interface ServicePhotosListProps {
-  service: Service;
-  beforePhotos: Photo[];
-  afterPhotos: Photo[];
+  sector: Sector;
 }
 
-export default function ServicePhotosList({ 
-  service, 
-  beforePhotos, 
-  afterPhotos 
-}: ServicePhotosListProps) {
-  // Filter photos for this specific service
-  const serviceBeforePhotos = beforePhotos.filter(
-    photo => photo.serviceId === service.id
-  );
+export default function ServicePhotosList({ sector }: ServicePhotosListProps) {
+  const beforePhotos = sector.beforePhotos || [];
+  const afterPhotos = sector.afterPhotos || [];
   
-  const serviceAfterPhotos = afterPhotos.filter(
-    photo => photo.serviceId === service.id
-  );
+  // Group photos by service ID
+  const serviceIds = new Set<string>();
   
-  if (serviceBeforePhotos.length === 0 && serviceAfterPhotos.length === 0) {
-    return null;
+  // Find all service IDs that have photos
+  beforePhotos.forEach(photo => {
+    if (photo.serviceId) serviceIds.add(photo.serviceId);
+  });
+  
+  afterPhotos.forEach(photo => {
+    if (photo.serviceId) serviceIds.add(photo.serviceId);
+  });
+  
+  // Get services with photos
+  const servicesWithPhotos = Array.from(serviceIds).map(serviceId => {
+    const service = sector.services?.find(s => s.id === serviceId);
+    const serviceBefore = beforePhotos.filter(p => p.serviceId === serviceId);
+    const serviceAfter = afterPhotos.filter(p => p.serviceId === serviceId);
+    
+    return {
+      id: serviceId,
+      name: service?.name || `Serviço ${serviceId}`,
+      beforePhotos: serviceBefore,
+      afterPhotos: serviceAfter
+    };
+  });
+  
+  if (servicesWithPhotos.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Não há fotos de serviços disponíveis.</p>
+      </div>
+    );
   }
-
+  
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="text-lg">{service.name}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* ANTES - Fotos da peritagem */}
+    <div className="space-y-8">
+      <h2 className="text-xl font-bold">Fotos de Serviços</h2>
+      
+      {servicesWithPhotos.map(service => (
+        <div key={service.id} className="border-t pt-4">
+          <h3 className="font-medium text-lg mb-3">{service.name}</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium mb-2">Antes</h4>
+              {service.beforePhotos.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {service.beforePhotos.map(photo => (
+                    <PhotoThumbnail key={`before-${photo.id}`} photo={photo} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Sem fotos de antes</p>
+              )}
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-2">Depois</h4>
+              {service.afterPhotos.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {service.afterPhotos.map(photo => (
+                    <PhotoThumbnail key={`after-${photo.id}`} photo={photo} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Sem fotos de depois</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+      
+      {/* General Photos */}
+      <div className="border-t pt-4">
+        <h3 className="font-medium text-lg mb-3">Fotos Gerais</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="font-medium mb-2">Antes</h3>
-            {serviceBeforePhotos.length > 0 ? (
+            <h4 className="font-medium mb-2">Antes</h4>
+            {beforePhotos.filter(p => !p.serviceId).length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
-                {serviceBeforePhotos.map(photo => (
-                  <div key={photo.id} className="aspect-square relative overflow-hidden rounded-md border">
-                    <img 
-                      src={photo.url} 
-                      alt={`Antes - ${service.name}`}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
+                {beforePhotos.filter(p => !p.serviceId).map(photo => (
+                  <PhotoThumbnail key={`general-before-${photo.id}`} photo={photo} />
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Nenhuma foto antes disponível</p>
+              <p className="text-sm text-gray-500">Sem fotos gerais de antes</p>
             )}
           </div>
           
-          {/* DEPOIS - Fotos da checagem */}
           <div>
-            <h3 className="font-medium mb-2">Depois</h3>
-            {serviceAfterPhotos.length > 0 ? (
+            <h4 className="font-medium mb-2">Depois</h4>
+            {afterPhotos.filter(p => !p.serviceId).length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
-                {serviceAfterPhotos.map(photo => (
-                  <div key={photo.id} className="aspect-square relative overflow-hidden rounded-md border">
-                    <img 
-                      src={photo.url} 
-                      alt={`Depois - ${service.name}`}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
+                {afterPhotos.filter(p => !p.serviceId).map(photo => (
+                  <PhotoThumbnail key={`general-after-${photo.id}`} photo={photo} />
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Nenhuma foto depois disponível</p>
+              <p className="text-sm text-gray-500">Sem fotos gerais de depois</p>
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+}
+
+interface PhotoThumbnailProps {
+  photo: Photo;
+}
+
+function PhotoThumbnail({ photo }: PhotoThumbnailProps) {
+  return (
+    <div className="border rounded overflow-hidden">
+      <img 
+        src={photo.url} 
+        alt="Foto de serviço" 
+        className="w-full h-32 object-cover"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = '/placeholder.svg';
+          target.className = "w-full h-32 object-contain bg-gray-100";
+        }}
+      />
+    </div>
   );
 }

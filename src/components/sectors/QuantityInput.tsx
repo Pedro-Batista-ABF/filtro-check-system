@@ -1,35 +1,33 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Minus, Plus } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Minus, Plus } from 'lucide-react';
 
-export interface QuantityInputProps {
-  id: string;
+interface QuantityInputProps {
   value: number;
   onChange: (value: number) => void;
   min?: number;
   max?: number;
-  disabled?: boolean;
+  id?: string;
 }
 
 export default function QuantityInput({
-  id,
   value,
   onChange,
-  min = 1,
-  max = 999,
-  disabled = false
+  min = 0,
+  max = Infinity,
+  id = 'quantity'
 }: QuantityInputProps) {
-  const handleDecrement = () => {
-    if (value > min) {
-      onChange(value - 1);
+  const increment = () => {
+    if (value < max) {
+      onChange(value + 1);
     }
   };
 
-  const handleIncrement = () => {
-    if (value < max) {
-      onChange(value + 1);
+  const decrement = () => {
+    if (value > min) {
+      onChange(value - 1);
     }
   };
 
@@ -45,30 +43,29 @@ export default function QuantityInput({
       <Button
         type="button"
         variant="outline"
-        size="icon"
-        onClick={handleDecrement}
-        disabled={value <= min || disabled}
-        className="h-8 w-8"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={decrement}
       >
         <Minus className="h-3 w-3" />
       </Button>
+      
       <Input
         id={id}
         type="number"
+        className="h-8 w-20 mx-2 text-center"
         value={value}
-        onChange={handleChange}
         min={min}
         max={max}
-        disabled={disabled}
-        className="h-8 w-16 mx-2 text-center"
+        onChange={handleChange}
       />
+      
       <Button
         type="button"
         variant="outline"
-        size="icon"
-        onClick={handleIncrement}
-        disabled={value >= max || disabled}
-        className="h-8 w-8"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={increment}
       >
         <Plus className="h-3 w-3" />
       </Button>

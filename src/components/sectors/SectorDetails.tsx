@@ -1,158 +1,150 @@
 
-import React from 'react';
+import { Sector } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sector, Service } from '@/types';
-import { format } from 'date-fns';
-import { Check, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ServicesList from "./ServicesList";
+import { format, parseISO } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import TagPhoto from "./TagPhoto";
 
 interface SectorDetailsProps {
   sector: Sector;
 }
 
 export default function SectorDetails({ sector }: SectorDetailsProps) {
-  // Helper function to format dates
+  // Função para formatar data
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy');
-    } catch (e) {
+      return format(parseISO(dateString), "dd/MM/yyyy");
+    } catch (error) {
       return dateString;
     }
   };
-
-  // Get status display information
-  const getStatusDisplay = (status: string) => {
-    const statusMap: Record<string, { label: string; color: string }> = {
-      'peritagemPendente': { label: 'Peritagem Pendente', color: 'bg-yellow-100 text-yellow-800' },
-      'emExecucao': { label: 'Em Execução', color: 'bg-blue-100 text-blue-800' },
-      'aguardandoChecagem': { label: 'Aguardando Checagem', color: 'bg-purple-100 text-purple-800' },
-      'checagemCompleta': { label: 'Checagem Completa', color: 'bg-green-100 text-green-800' },
-      'sucateadoPendente': { label: 'Aguardando Validação de Sucateamento', color: 'bg-red-100 text-red-800' },
-      'sucateado': { label: 'Sucateado', color: 'bg-red-100 text-red-800' }
+  
+  // Status badge
+  const renderStatusBadge = () => {
+    const statusMap: Record<string, { label: string, variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      peritagemPendente: { label: "Peritagem Pendente", variant: "outline" },
+      emExecucao: { label: "Em Execução", variant: "default" },
+      checagemFinalPendente: { label: "Checagem Pendente", variant: "secondary" },
+      concluido: { label: "Concluído", variant: "default" },
+      sucateado: { label: "Sucateado", variant: "destructive" },
+      sucateadoPendente: { label: "Sucateamento Pendente", variant: "destructive" }
     };
     
-    return statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
+    const status = statusMap[sector.status] || { label: sector.status, variant: "outline" };
+    
+    return (
+      <Badge variant={status.variant} className="ml-2">
+        {status.label}
+      </Badge>
+    );
   };
   
-  const statusInfo = getStatusDisplay(sector.status);
-
+  // Obter a nota fiscal da entrada - priorizar nf_entrada sobre entryInvoice
+  const getEntryInvoice = () => {
+    return sector.nf_entrada || sector.entryInvoice || "N/A";
+  };
+  
+  // Obter a data de entrada - priorizar data_entrada sobre entryDate
+  const getEntryDate = () => {
+    return formatDate(sector.data_entrada || sector.entryDate);
+  };
+  
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <CardTitle>Informações do Setor</CardTitle>
-            <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
-              {statusInfo.label}
-            </div>
-          </div>
+          <CardTitle className="flex items-center">
+            TAG: {sector.tagNumber}
+            {renderStatusBadge()}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h3 className="text-sm font-medium text-gray-500">TAG</h3>
-              <p className="text-lg font-semibold">{sector.tagNumber}</p>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">NF Entrada</h3>
-              <p>{sector.entryInvoice || 'N/A'}</p>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Data de Entrada</h3>
-              <p>{formatDate(sector.entryDate)}</p>
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Data da Peritagem</h3>
-              <p>{formatDate(sector.peritagemDate)}</p>
-            </div>
-            
-            {sector.checagemDate && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Data da Checagem</h3>
-                <p>{formatDate(sector.checagemDate)}</p>
+              <h3 className="text-lg font-medium mb-4">Informações do Setor</h3>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2">
+                  <span className="text-gray-500">Nota Fiscal Entrada:</span>
+                  <span>{getEntryInvoice()}</span>
+                </div>
+                <div className="grid grid-cols-2">
+                  <span className="text-gray-500">Data de Entrada:</span>
+                  <span>{getEntryDate()}</span>
+                </div>
+                <div className="grid grid-cols-2">
+                  <span className="text-gray-500">Data de Peritagem:</span>
+                  <span>{formatDate(sector.peritagemDate)}</span>
+                </div>
+                {sector.entryObservations && (
+                  <div className="grid grid-cols-2">
+                    <span className="text-gray-500">Observações:</span>
+                    <span>{sector.entryObservations}</span>
+                  </div>
+                )}
               </div>
-            )}
-            
-            {sector.exitDate && (
-              <>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Data de Saída</h3>
-                  <p>{formatDate(sector.exitDate)}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">NF Saída</h3>
-                  <p>{sector.exitInvoice || 'N/A'}</p>
-                </div>
-              </>
-            )}
-          </div>
-          
-          {(sector.entryObservations || sector.exitObservations || sector.scrapObservations) && (
-            <div className="mt-4 pt-4 border-t">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Observações</h3>
-              
-              {sector.entryObservations && (
-                <div className="mb-2">
-                  <h4 className="text-xs font-medium text-gray-500">Entrada:</h4>
-                  <p className="text-sm">{sector.entryObservations}</p>
-                </div>
-              )}
-              
-              {sector.exitObservations && (
-                <div className="mb-2">
-                  <h4 className="text-xs font-medium text-gray-500">Saída:</h4>
-                  <p className="text-sm">{sector.exitObservations}</p>
-                </div>
-              )}
-              
-              {sector.scrapObservations && (
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500">Sucateamento:</h4>
-                  <p className="text-sm">{sector.scrapObservations}</p>
-                </div>
-              )}
             </div>
-          )}
+            
+            <div>
+              <h3 className="text-lg font-medium mb-4">Foto da TAG</h3>
+              <TagPhoto sector={sector} />
+            </div>
+          </div>
         </CardContent>
       </Card>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Serviços</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sector.services.filter(s => s.selected).length === 0 ? (
-            <p className="text-gray-500 text-center py-4">Nenhum serviço registrado para este setor.</p>
-          ) : (
-            <ul className="space-y-3">
-              {sector.services.filter(s => s.selected).map(service => (
-                <li key={service.id} className="flex items-start space-x-3 border-b pb-3">
-                  {service.completed ? (
-                    <Check className="h-5 w-5 text-green-500 mt-0.5" />
-                  ) : (
-                    <X className="h-5 w-5 text-gray-300 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="font-medium">{service.name}</span>
-                    <div className="flex items-center text-sm text-gray-500 mt-1">
-                      <span>Qtd: {service.quantity || 1}</span>
-                      <span className={`ml-3 px-2 py-0.5 rounded-full text-xs ${
-                        service.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {service.completed ? 'Concluído' : 'Pendente'}
-                      </span>
+      <Tabs defaultValue="services">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="services">Serviços Solicitados</TabsTrigger>
+          <TabsTrigger value="photos">Fotos</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="services" className="pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Serviços</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ServicesList services={sector.services} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="photos" className="pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fotos do Setor</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sector.beforePhotos && sector.beforePhotos.length > 0 ? (
+                  sector.beforePhotos.map((photo) => (
+                    <div key={photo.id} className="rounded overflow-hidden border">
+                      <img 
+                        src={photo.url} 
+                        alt="Foto antes do serviço" 
+                        className="w-full h-48 object-cover"
+                        onError={(e) => {
+                          // Tratar erros de carregamento de imagem
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg'; // URL de imagem de fallback
+                        }}
+                      />
+                      <div className="p-2 bg-gray-50">
+                        <Badge variant="outline">Antes</Badge>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                  ))
+                ) : (
+                  <p className="col-span-full text-gray-500">Nenhuma foto registrada</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

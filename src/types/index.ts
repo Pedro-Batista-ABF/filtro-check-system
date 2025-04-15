@@ -1,24 +1,87 @@
 
-export type SectorStatus =
-  | "peritagemPendente"
-  | "emExecucao"
-  | "checagemPendente"
-  | "checagemFinalPendente"
-  | "finalizado"
-  | "concluido"
-  | "sucateamento" 
-  | "sucateamentoPendente"
-  | "sucateado"
-  | "sucateadoPendente";
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  created_at?: string;
+  updated_at?: string;
+}
 
-export type CycleOutcome =
-  | "Aprovado"
-  | "Reprovado"
-  | "EmAndamento"
-  | "recovered"
-  | "scrapped";
+export interface ServiceType {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  created_at?: string;
+  updated_at?: string;
+}
 
-export type Sector = {
+export interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  selected: boolean;
+  quantity?: number;
+  observations?: string;
+  photos?: (Photo | PhotoWithFile)[];
+  type?: ServiceType | string;
+  created_at?: string;
+  updated_at?: string;
+  completed?: boolean;
+}
+
+export interface Photo {
+  id: string;
+  url: string;
+  type: 'before' | 'after' | 'service' | 'tag' | 'scrap';
+  serviceId?: string;
+  metadata?: any;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PhotoWithFile extends Photo {
+  file: File | null;
+}
+
+export interface Cycle {
+  id: string;
+  sector_id: string;
+  tag_number: string;
+  entry_invoice: string;
+  entry_date: string;
+  peritagem_date?: string;
+  entry_observations?: string;
+  production_completed: boolean;
+  exit_date?: string;
+  exit_invoice?: string;
+  checagem_date?: string;
+  exit_observations?: string;
+  scrap_observations?: string;
+  scrap_validated: boolean;
+  scrap_return_date?: string;
+  scrap_return_invoice?: string;
+  status: SectorStatus;
+  outcome: CycleOutcome;
+  created_at?: string;
+  updated_at?: string;
+  comments?: string;
+  technician_id?: string;
+}
+
+export type SectorStatus = 
+  | 'peritagemPendente' 
+  | 'emExecucao' 
+  | 'checagemFinalPendente' 
+  | 'concluido'
+  | 'sucateadoPendente'
+  | 'sucateado';
+
+export type CycleOutcome = 'recovered' | 'scrapped' | 'redirected' | 'EmAndamento';
+
+export interface Sector {
   id: string;
   tagNumber: string;
   tagPhotoUrl?: string;
@@ -30,10 +93,10 @@ export type Sector = {
   afterPhotos: Photo[];
   scrapPhotos: Photo[];
   productionCompleted: boolean;
-  cycleCount: number;
-  cycles?: Cycle[];
   status: SectorStatus;
   outcome: CycleOutcome;
+  cycleCount: number;
+  updated_at?: string;
   entryObservations?: string;
   exitDate?: string;
   exitInvoice?: string;
@@ -43,82 +106,9 @@ export type Sector = {
   scrapValidated?: boolean;
   scrapReturnDate?: string;
   scrapReturnInvoice?: string;
-  updated_at: string;
+  cycles?: Cycle[];
   nf_entrada?: string;
   nf_saida?: string;
   data_entrada?: string;
   data_saida?: string;
-};
-
-export type ServiceType =
-  | "motor"
-  | "caixaCambio"
-  | "diferencial"
-  | "modulo"
-  | "chicote"
-  | "substituicao_parafusos"
-  | "troca_trecho"
-  | "desempeno"
-  | "troca_tela_lado_a"
-  | "troca_tela_lado_b"
-  | "troca_ambos_lados"
-  | "fabricacao_canaleta"
-  | "fabricacao_setor_completo"
-  | "lavagem"
-  | "pintura"
-  | "troca_elemento";
-
-export type Service = {
-  id: string;
-  name: string;
-  selected: boolean;
-  type: ServiceType;
-  photos?: Photo[];
-  quantity?: number;
-  observations?: string;
-  completed?: boolean;
-};
-
-export type Photo = {
-  id: string;
-  url: string;
-  type: 'before' | 'after' | 'scrap' | 'tag';
-  serviceId?: string;
-  metadata?: {
-    service_id?: string;
-    service_name?: string;
-    stage?: 'peritagem' | 'checagem' | 'sucateamento';
-    type?: string;
-    sector_id?: string;
-    upload_time?: string;
-    existing_photo?: boolean;
-    created_at?: string;
-  };
-};
-
-export type PhotoWithFile = Photo & {
-  file?: File;
-};
-
-export type Cycle = {
-  id?: string;
-  sector_id: string;
-  tagNumber: string;
-  entryInvoice: string;
-  entryDate: string;
-  peritagemDate: string;
-  entryObservations?: string;
-  productionCompleted?: boolean;
-  exitDate?: string;
-  exitInvoice?: string;
-  checagemDate?: string;
-  exitObservations?: string;
-  scrapObservations?: string;
-  scrapValidated?: boolean;
-  scrapReturnDate?: string;
-  scrapReturnInvoice?: string;
-  status: SectorStatus;
-  outcome: CycleOutcome;
-  created_at?: string;
-  updated_at?: string;
-};
+}

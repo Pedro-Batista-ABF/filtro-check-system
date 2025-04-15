@@ -49,7 +49,6 @@ export default function ServicesList({
                         value={service.quantity || 1}
                         onChange={(value) => onQuantityChange(service.id, value)}
                         min={1}
-                        disabled={disabled}
                       />
                     </div>
                   </div>

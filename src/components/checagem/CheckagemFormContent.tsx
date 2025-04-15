@@ -1,291 +1,221 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sector, Service, Photo, PhotoWithFile } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import SectorSummary from '@/components/sectors/SectorSummary';
-import ExitForm from '@/components/sectors/ExitForm';
-import ServicesList from '@/components/sectors/ServicesList';
-import { useApi } from '@/contexts/ApiContextExtended';
-import { usePhotoService } from '@/services/photoService';
-import ServiceChecklist from '@/components/reports/ServiceChecklist';
-import { supabase } from '@/integrations/supabase/client';
+import { Sector, PhotoWithFile } from "@/types";
+import PhotoUpload from "../sectors/PhotoUpload";
+import SectorServices from "../sectors/SectorServices";
+import { useToast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
 
 interface CheckagemFormContentProps {
   sector: Sector;
+  onSubmit: (data: Partial<Sector>) => void;
+  isLoading: boolean;
 }
 
-export default function CheckagemFormContent({ sector }: CheckagemFormContentProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [exitPhotos, setExitPhotos] = useState<PhotoWithFile[]>([]);
-  const [updatedSector, setUpdatedSector] = useState<Sector>(sector);
-  const [errors, setErrors] = useState({
-    exitDate: false,
+export default function CheckagemFormContent({ sector, onSubmit, isLoading }: CheckagemFormContentProps) {
+  const [exitInvoice, setExitInvoice] = useState(sector.exitInvoice || '');
+  const [exitDate, setExitDate] = useState(sector.exitDate || format(new Date(), 'yyyy-MM-dd'));
+  const [checagemDate, setChecagemDate] = useState(sector.checagemDate || format(new Date(), 'yyyy-MM-dd'));
+  const [exitObservations, setExitObservations] = useState(sector.exitObservations || '');
+  const [afterPhotos, setAfterPhotos] = useState<PhotoWithFile[]>(
+    (sector.afterPhotos || []).map(photo => ({ ...photo, file: null }))
+  );
+  const [formErrors, setFormErrors] = useState({
     exitInvoice: false,
-    exitPhotos: false
+    exitDate: false,
+    checagemDate: false
   });
-  const navigate = useNavigate();
-  const { updateSector, uploadPhoto } = useApi();
-  const photoService = usePhotoService();
+  const { toast } = useToast();
 
-  // Initialize photos from sector
+  // Update form data when sector changes
   useEffect(() => {
-    // Convert afterPhotos from Photo to PhotoWithFile
-    const convertedPhotos: PhotoWithFile[] = (sector.afterPhotos || []).map(photo => ({
-      ...photo,
-      file: undefined
-    }));
-    setExitPhotos(convertedPhotos);
-    setUpdatedSector(sector);
+    setExitInvoice(sector.exitInvoice || '');
+    setExitDate(sector.exitDate || format(new Date(), 'yyyy-MM-dd'));
+    setChecagemDate(sector.checagemDate || format(new Date(), 'yyyy-MM-dd'));
+    setExitObservations(sector.exitObservations || '');
+    setAfterPhotos((sector.afterPhotos || []).map(photo => ({ ...photo, file: null })));
   }, [sector]);
 
-  const handleSectorChange = (updates: Partial<Sector>) => {
-    setUpdatedSector(prev => ({ ...prev, ...updates }));
-  };
-
-  const handleServiceChange = (serviceId: string, isSelected: boolean) => {
-    const updatedServices = updatedSector.services.map(service => 
-      service.id === serviceId
-        ? { ...service, selected: isSelected, completed: isSelected }
-        : service
-    );
-    setUpdatedSector(prev => ({ ...prev, services: updatedServices }));
-  };
-
-  const handlePhotoUpload = async (files: FileList) => {
-    try {
-      const newPhotos: PhotoWithFile[] = [];
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        newPhotos.push({
-          id: `temp-${Date.now()}-${i}`,
-          url: '',
-          type: 'after',
-          file
-        });
-      }
-      
-      setExitPhotos(prev => [...prev, ...newPhotos]);
-    } catch (error) {
-      console.error('Erro ao processar fotos:', error);
-      toast.error('Erro ao processar fotos');
+  const handleAfterPhotoChange = (files: FileList) => {
+    const newPhotos: PhotoWithFile[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const tempId = `temp-${Date.now()}-${i}`;
+      newPhotos.push({
+        id: tempId,
+        url: '',
+        type: 'after',
+        file: file
+      });
     }
+    setAfterPhotos([...afterPhotos, ...newPhotos]);
   };
 
-  const handleServicePhotoChange = async (serviceId: string, files: FileList) => {
-    try {
-      const serviceName = updatedSector.services.find(s => s.id === serviceId)?.name || serviceId;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        // Upload the file
-        const photoUrl = await uploadPhoto(file, `services/${serviceId}`);
-        
-        // Add to the service photos
-        await photoService.updateServicePhotos(
-          updatedSector.id,
-          serviceId,
-          photoUrl,
-          'after'
-        );
-        
-        toast.success(`Foto adicionada ao serviço ${serviceName}`);
-      }
-    } catch (error) {
-      console.error('Erro ao fazer upload de foto do serviço:', error);
-      toast.error('Erro ao fazer upload da foto');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form fields
+    let isValid = true;
+    const newErrors = {
+      exitInvoice: false,
+      exitDate: false,
+      checagemDate: false
+    };
+    
+    if (!exitInvoice.trim()) {
+      newErrors.exitInvoice = true;
+      isValid = false;
     }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      // Validar campos obrigatórios
-      const newErrors = {
-        exitDate: !updatedSector.exitDate,
-        exitInvoice: !updatedSector.exitInvoice,
-        exitPhotos: exitPhotos.length === 0
-      };
-      
-      if (Object.values(newErrors).some(Boolean)) {
-        setErrors(newErrors);
-        toast.error('Preencha todos os campos obrigatórios');
-        return;
-      }
-      
-      setIsLoading(true);
-      
-      // Processar fotos de saída
-      const photosToUpload = exitPhotos.filter(photo => photo.file);
-      const uploadedPhotos: Photo[] = [];
-      
-      for (const photo of photosToUpload) {
-        if (photo.file) {
-          const photoUrl = await uploadPhoto(photo.file, 'exit');
-          uploadedPhotos.push({
-            id: photo.id,
-            url: photoUrl,
-            type: 'after'
-          });
-          
-          // Also save to the photos table with metadata
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              // Get the latest cycle ID
-              const { data: cycleData } = await supabase
-                .from('cycles')
-                .select('id')
-                .eq('sector_id', updatedSector.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
-                
-              if (cycleData) {
-                // Add the photo to the photos table
-                await supabase
-                  .from('photos')
-                  .insert({
-                    cycle_id: cycleData.id,
-                    service_id: null,
-                    url: photoUrl,
-                    type: 'after',
-                    created_by: user.id,
-                    metadata: {
-                      sector_id: updatedSector.id,
-                      stage: 'checagem',
-                      type: 'geral'
-                    }
-                  });
-              }
-            }
-          } catch (directError) {
-            console.error('Erro ao salvar foto na tabela:', directError);
-          }
-        }
-      }
-      
-      // Combine existing photos (without files) with new uploaded ones
-      const allExitPhotos = [
-        ...exitPhotos.filter(p => !p.file).map(p => ({
-          id: p.id,
-          url: p.url,
-          type: p.type
-        })),
-        ...uploadedPhotos
-      ];
-      
-      // Atualizar o setor com os dados da checagem
-      const sectorToUpdate = {
-        ...updatedSector,
-        afterPhotos: allExitPhotos,
-        status: 'checagemCompleta',
-        checagemDate: new Date().toISOString().split('T')[0]
-      };
-      
-      // Update sector in database
-      await updateSector(updatedSector.id, sectorToUpdate);
-      
-      toast.success('Checagem concluída com sucesso');
-      navigate('/checagem');
-    } catch (error) {
-      console.error('Erro ao salvar checagem:', error);
-      toast.error('Erro ao salvar checagem');
-    } finally {
-      setIsLoading(false);
+    
+    if (!exitDate) {
+      newErrors.exitDate = true;
+      isValid = false;
     }
+    
+    if (!checagemDate) {
+      newErrors.checagemDate = true;
+      isValid = false;
+    }
+    
+    setFormErrors(newErrors);
+    
+    if (!isValid) {
+      toast({
+        title: "Erro de validação",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Prepare data for submission
+    const formData: Partial<Sector> = {
+      exitInvoice,
+      exitDate,
+      checagemDate,
+      exitObservations,
+      afterPhotos,
+      status: 'concluido',
+      outcome: 'Recuperado'
+    };
+    
+    onSubmit(formData);
   };
-
+  
   return (
-    <div className="space-y-6">
-      <SectorSummary sector={updatedSector} />
-      
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Serviços Executados</CardTitle>
+          <CardTitle>Informações de Saída</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ServiceChecklist services={updatedSector.services} />
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Fotos de Serviços - Depois da Execução</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-500 mb-4">
-            Adicione fotos para cada serviço executado. Essas fotos serão comparadas com as fotos 
-            da peritagem para documentar a recuperação.
-          </p>
-          
-          <div className="space-y-4">
-            {updatedSector.services
-              .filter(service => service.selected)
-              .map(service => (
-                <div key={service.id} className="border p-4 rounded-md">
-                  <h3 className="font-medium">{service.name}</h3>
-                  <div className="mt-2">
-                    <label className="block text-sm font-medium mb-1">
-                      Fotos do Serviço (DEPOIS)*
-                    </label>
-                    <div className="mt-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
-                            handleServicePhotoChange(service.id, e.target.files);
-                          }
-                        }}
-                        className="block w-full text-sm text-gray-500
-                          file:mr-4 file:py-2 file:px-4
-                          file:rounded-md file:border-0
-                          file:text-sm file:font-medium
-                          file:bg-gray-100 file:text-gray-700
-                          hover:file:bg-gray-200"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="exitInvoice" className={formErrors.exitInvoice ? "text-red-500" : ""}>
+                Nota Fiscal de Saída*
+              </Label>
+              <Input
+                id="exitInvoice"
+                type="text"
+                value={exitInvoice}
+                onChange={(e) => setExitInvoice(e.target.value)}
+                placeholder="Número da Nota Fiscal de Saída"
+                disabled={isLoading}
+                className={formErrors.exitInvoice ? "border-red-500" : ""}
+              />
+              {formErrors.exitInvoice && (
+                <p className="text-xs text-red-500">Nota Fiscal de Saída é obrigatória</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="exitDate" className={formErrors.exitDate ? "text-red-500" : ""}>
+                Data de Saída*
+              </Label>
+              <Input
+                id="exitDate"
+                type="date"
+                value={exitDate}
+                onChange={(e) => setExitDate(e.target.value)}
+                disabled={isLoading}
+                className={formErrors.exitDate ? "border-red-500" : ""}
+              />
+              {formErrors.exitDate && (
+                <p className="text-xs text-red-500">Data de Saída é obrigatória</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="checagemDate" className={formErrors.checagemDate ? "text-red-500" : ""}>
+                Data da Checagem*
+              </Label>
+              <Input
+                id="checagemDate"
+                type="date"
+                value={checagemDate}
+                onChange={(e) => setChecagemDate(e.target.value)}
+                disabled={isLoading}
+                className={formErrors.checagemDate ? "border-red-500" : ""}
+              />
+              {formErrors.checagemDate && (
+                <p className="text-xs text-red-500">Data da Checagem é obrigatória</p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
       
       <Card>
         <CardHeader>
-          <CardTitle>Dados de Saída</CardTitle>
+          <CardTitle>Observações</CardTitle>
         </CardHeader>
         <CardContent>
-          <ExitForm
-            sector={updatedSector}
-            onChange={handleSectorChange}
-            onPhotoUpload={handlePhotoUpload}
-            exitPhotos={exitPhotos}
-            errors={errors}
+          <Label htmlFor="exitObservations">Observações da Saída</Label>
+          <Textarea
+            id="exitObservations"
+            placeholder="Observações sobre a saída do setor..."
+            value={exitObservations}
+            onChange={(e) => setExitObservations(e.target.value)}
+            disabled={isLoading}
           />
         </CardContent>
       </Card>
       
-      <div className="flex justify-end space-x-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/checagem')}
-          disabled={isLoading}
-        >
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={isLoading}
-        >
-          {isLoading ? "Salvando..." : "Concluir Checagem"}
-        </Button>
-      </div>
-    </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Serviços Executados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SectorServices sector={sector} />
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Fotos de Conclusão</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 mb-4">
+            Adicione fotos que comprovem a execução dos serviços.
+          </p>
+          <PhotoUpload
+            photos={afterPhotos}
+            onChange={handleAfterPhotoChange}
+            disabled={isLoading}
+            title="Adicionar fotos da conclusão"
+            required={true}
+          />
+        </CardContent>
+      </Card>
+      
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? "Salvando..." : "Finalizar Checagem"}
+      </Button>
+    </form>
   );
 }
