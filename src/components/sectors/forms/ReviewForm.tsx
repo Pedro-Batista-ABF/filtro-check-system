@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -61,9 +61,21 @@ export default function ReviewForm({
   formErrors,
   photoRequired
 }: ReviewFormProps) {
+  // Verificar que services está definido antes de usar
+  const [safeServices, setSafeServices] = useState<Service[]>([]);
+  
+  useEffect(() => {
+    if (Array.isArray(services)) {
+      setSafeServices(services);
+    } else {
+      console.error("Services não é um array válido:", services);
+      setSafeServices([]);
+    }
+  }, [services]);
+  
   // Verifica se algum serviço está sem foto
   const getServicesWithoutPhotos = () => {
-    return services
+    return safeServices
       .filter(service => service.selected && (!service.photos || service.photos.length === 0))
       .map(service => service.name);
   };
@@ -98,6 +110,11 @@ export default function ReviewForm({
     // Simular clique no input
     fileInput.click();
   };
+
+  // Verificar se temos todos os dados necessários
+  if (!Array.isArray(safeServices) || safeServices.length === 0) {
+    console.warn("Serviços não estão disponíveis no ReviewForm");
+  }
 
   return (
     <div className="space-y-6">
@@ -267,20 +284,29 @@ export default function ReviewForm({
             </Alert>
           )}
           
-          {services.map((service) => (
-            <ServiceCheckbox
-              key={service.id}
-              service={service}
-              checked={service.selected}
-              onChecked={handleServiceChange}
-              onQuantityChange={handleQuantityChange}
-              onObservationChange={handleObservationChange}
-              onPhotoUpload={handlePhotoUpload}
-              photoType="before"
-              required={photoRequired}
-              onCameraCapture={(e) => handleCameraCapture(e, service.id)}
-            />
-          ))}
+          {safeServices.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Nenhum serviço disponível. Entre em contato com o administrador.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            safeServices.map((service) => (
+              <ServiceCheckbox
+                key={service.id}
+                service={service}
+                checked={service.selected}
+                onChecked={handleServiceChange}
+                onQuantityChange={handleQuantityChange}
+                onObservationChange={handleObservationChange}
+                onPhotoUpload={handlePhotoUpload}
+                photoType="before"
+                required={photoRequired}
+                onCameraCapture={(e) => handleCameraCapture(e, service.id)}
+              />
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

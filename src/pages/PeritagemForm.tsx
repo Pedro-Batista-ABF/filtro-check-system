@@ -8,6 +8,8 @@ import { usePeritagemSubmit } from "@/hooks/usePeritagemSubmit";
 import PeritagemHeader from "@/components/peritagem/PeritagemHeader";
 import ErrorMessage from "@/components/peritagem/ErrorMessage";
 import LoadingState from "@/components/peritagem/LoadingState";
+import { useEffect, useState } from "react";
+import { Sector } from "@/types";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +18,8 @@ export default function PeritagemForm() {
     defaultSector, 
     loading, 
     errorMessage, 
-    isEditing 
+    isEditing,
+    services 
   } = usePeritagemData(id);
   
   const { 
@@ -25,8 +28,29 @@ export default function PeritagemForm() {
     errorMessage: submitError 
   } = usePeritagemSubmit();
 
+  const [formSector, setFormSector] = useState<Sector | null>(null);
+
+  // Garantir que temos um setor válido para o formulário
+  useEffect(() => {
+    if (isEditing && sector) {
+      setFormSector(sector);
+    } else if (!isEditing && defaultSector) {
+      setFormSector(defaultSector);
+    }
+  }, [sector, defaultSector, isEditing]);
+
   if (loading) {
     return <LoadingState />;
+  }
+
+  // Validação adicional para garantir que temos dados válidos
+  if (!formSector && !loading) {
+    console.error("Sem dados de setor disponíveis para renderizar o formulário");
+    return (
+      <PageLayoutWrapper>
+        <ErrorMessage message="Não foi possível carregar os dados necessários. Por favor, tente novamente." />
+      </PageLayoutWrapper>
+    );
   }
 
   return (
@@ -40,13 +64,15 @@ export default function PeritagemForm() {
         
         <Card className="border-none shadow-lg">
           <div className="p-6">
-            <SectorForm 
-              sector={sector || defaultSector}
-              onSubmit={(data) => handleSubmit(data, isEditing, sector?.id)}
-              mode="create"
-              photoRequired={true}
-              isLoading={isSaving}
-            />
+            {formSector && (
+              <SectorForm 
+                sector={formSector}
+                onSubmit={(data) => handleSubmit(data, isEditing, sector?.id)}
+                mode="create"
+                photoRequired={true}
+                isLoading={isSaving}
+              />
+            )}
           </div>
         </Card>
       </div>

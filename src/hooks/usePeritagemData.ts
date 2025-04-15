@@ -11,6 +11,15 @@ export function usePeritagemData(id?: string) {
   const { sector, fetchSector, getDefaultSector } = useSectorFetch(id);
   const { services, fetchDefaultServices } = useServicesManagement();
   const isEditing = !!id;
+  const [defaultSector, setDefaultSector] = useState<Sector | null>(null);
+
+  // Inicializar o setor padrão logo que possível
+  useEffect(() => {
+    if (services && services.length > 0 && !defaultSector) {
+      const newDefaultSector = getDefaultSector(services);
+      setDefaultSector(newDefaultSector);
+    }
+  }, [services, getDefaultSector, defaultSector]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -19,14 +28,12 @@ export function usePeritagemData(id?: string) {
         setErrorMessage(null);
         
         // Primeiro carregamos os serviços padrão
-        const defaultServices = await fetchDefaultServices();
+        await fetchDefaultServices();
         
         if (isEditing && id) {
           // Se estiver editando, busca os dados do setor
           await fetchSector();
         }
-        
-        setLoading(false);
       } catch (error) {
         console.error("Error loading peritagem data:", error);
         setErrorMessage("Erro ao carregar dados. Tente novamente mais tarde.");
@@ -42,14 +49,12 @@ export function usePeritagemData(id?: string) {
     loadData();
   }, [id, isEditing, fetchSector, fetchDefaultServices]);
 
-  // Obter o setor padrão com serviços padrão
-  const defaultSector = getDefaultSector(services || []);
-
   return {
     sector,
-    defaultSector,
+    defaultSector: defaultSector || getDefaultSector(services || []),
     loading,
     errorMessage,
-    isEditing
+    isEditing,
+    services
   };
 }
