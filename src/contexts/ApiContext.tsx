@@ -55,9 +55,7 @@ export const ApiProvider = ({ children }: { children: React.ReactNode }) => {
   // Get default services implementation
   const getDefaultServices = async (): Promise<Service[]> => {
     try {
-      // This would typically come from your service, but for now we'll return an empty array
-      // or could be implemented in supabaseServices later
-      return [];
+      return supabaseServices.getDefaultServices();
     } catch (error) {
       console.error("Error getting default services:", error);
       return [];

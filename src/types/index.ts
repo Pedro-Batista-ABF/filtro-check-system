@@ -3,9 +3,13 @@ export type SectorStatus =
   | "peritagemPendente"
   | "emExecucao"
   | "checagemPendente"
-  | "sucateamentoPendente"
+  | "checagemFinalPendente"
   | "finalizado"
-  | "sucateado";
+  | "concluido"
+  | "sucateamento" 
+  | "sucateamentoPendente"
+  | "sucateado"
+  | "sucateadoPendente";
 
 export type CycleOutcome =
   | "Aprovado"
@@ -27,6 +31,7 @@ export type Sector = {
   scrapPhotos: Photo[];
   productionCompleted: boolean;
   cycleCount: number;
+  cycles?: Cycle[];
   status: SectorStatus;
   outcome: CycleOutcome;
   entryObservations?: string;
@@ -50,7 +55,18 @@ export type ServiceType =
   | "caixaCambio"
   | "diferencial"
   | "modulo"
-  | "chicote";
+  | "chicote"
+  | "substituicao_parafusos"
+  | "troca_trecho"
+  | "desempeno"
+  | "troca_tela_lado_a"
+  | "troca_tela_lado_b"
+  | "troca_ambos_lados"
+  | "fabricacao_canaleta"
+  | "fabricacao_setor_completo"
+  | "lavagem"
+  | "pintura"
+  | "troca_elemento";
 
 export type Service = {
   id: string;

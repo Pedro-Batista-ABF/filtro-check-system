@@ -26,7 +26,7 @@ export const supabaseServices = {
         id: service.id,
         name: service.name,
         selected: false,
-        type: service.id,
+        type: service.id as any,
         description: service.description
       }));
     } catch (error) {

@@ -15,13 +15,17 @@ export default function Peritagem() {
   const [hasRefreshed, setHasRefreshed] = useState(false);
   
   // Calculate sector counts by status with appropriate type checking
-  const statusCounts = {
+  const statusCounts: Record<SectorStatus, number> = {
     peritagemPendente: sectors?.filter(s => s.status === 'peritagemPendente')?.length || 0,
     emExecucao: sectors?.filter(s => s.status === 'emExecucao')?.length || 0,
     checagemPendente: sectors?.filter(s => s.status === 'checagemPendente')?.length || 0,
+    checagemFinalPendente: sectors?.filter(s => s.status === 'checagemFinalPendente')?.length || 0,
     finalizado: sectors?.filter(s => s.status === 'finalizado')?.length || 0,
+    concluido: sectors?.filter(s => s.status === 'concluido')?.length || 0,
     sucateado: sectors?.filter(s => s.status === 'sucateado')?.length || 0,
-    sucateamentoPendente: sectors?.filter(s => s.status === 'sucateamentoPendente')?.length || 0
+    sucateamentoPendente: sectors?.filter(s => s.status === 'sucateamentoPendente')?.length || 0,
+    sucateadoPendente: sectors?.filter(s => s.status === 'sucateadoPendente')?.length || 0,
+    sucateamento: sectors?.filter(s => s.status === 'sucateamento')?.length || 0
   };
 
   useEffect(() => {

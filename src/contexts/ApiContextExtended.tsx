@@ -12,6 +12,7 @@ export type ApiContextExtendedType = ApiServiceType & {
     photoUrl: string,
     type: 'before' | 'after'
   ) => Promise<boolean>;
+  isLoading: boolean; // Adicionado isLoading
 };
 
 // Create the extended context
@@ -25,7 +26,8 @@ const useApiExtendedInternal = () => {
   // Use useMemo to prevent unnecessary re-renders
   return useMemo(() => ({
     ...baseApi,
-    updateServicePhotos: photoService.updateServicePhotos
+    updateServicePhotos: photoService.updateServicePhotos,
+    isLoading: baseApi.isLoading // Passando isLoading do baseApi
   }), [baseApi, photoService]);
 };
 
