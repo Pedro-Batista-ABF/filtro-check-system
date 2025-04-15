@@ -1,5 +1,5 @@
 
-import { Route, Routes, Outlet } from "react-router-dom";
+import { Route, Routes, Outlet, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 
 import Header from "@/components/layout/Header";
@@ -16,6 +16,7 @@ import SectorReport from "@/pages/SectorReport";
 import ScrapValidation from "@/pages/ScrapValidation";
 import ScrapValidationForm from "@/pages/ScrapValidationForm";
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ConsolidatedReport from "@/pages/ConsolidatedReport";
 import UserInfo from "@/components/auth/UserInfo";
@@ -27,6 +28,7 @@ const App = () => {
     <>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         
         <Route path="/" element={
           <ProtectedRoute>

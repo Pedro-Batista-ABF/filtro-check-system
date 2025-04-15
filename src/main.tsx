@@ -6,6 +6,7 @@ import './index.css'
 import { ApiProvider as ApiProviderOriginal } from './contexts/ApiContext'
 import { ApiProvider } from './contexts/ApiContextExtended'
 import { AuthProvider } from './contexts/AuthContext'
+import { Toaster } from "sonner";
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
@@ -13,6 +14,7 @@ createRoot(document.getElementById("root")!).render(
       <ApiProviderOriginal>
         <ApiProvider>
           <App />
+          <Toaster richColors position="top-right" />
         </ApiProvider>
       </ApiProviderOriginal>
     </AuthProvider>
