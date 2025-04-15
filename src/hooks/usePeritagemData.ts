@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Sector } from "@/types";
 import { useSectorFetch } from "./useSectorFetch";
 import { useServicesManagement } from "./useServicesManagement";
+import { toast } from "sonner";
 
 export function usePeritagemData(id?: string) {
   const [loading, setLoading] = useState(true);
@@ -15,9 +16,11 @@ export function usePeritagemData(id?: string) {
     const loadData = async () => {
       try {
         setLoading(true);
+        // First load the default services
         const defaultServices = await fetchDefaultServices();
         
-        if (isEditing) {
+        if (isEditing && id) {
+          // If editing, fetch the sector data
           await fetchSector();
         }
         
@@ -25,6 +28,9 @@ export function usePeritagemData(id?: string) {
       } catch (error) {
         console.error("Error loading peritagem data:", error);
         setErrorMessage("Erro ao carregar dados. Tente novamente mais tarde.");
+        toast.error("Erro ao carregar dados", {
+          description: "Ocorreu um erro ao carregar os dados. Tente novamente."
+        });
         setLoading(false);
       }
     };
@@ -32,7 +38,8 @@ export function usePeritagemData(id?: string) {
     loadData();
   }, [id, isEditing, fetchSector, fetchDefaultServices]);
 
-  const defaultSector = getDefaultSector(services);
+  // Get the default sector with default services
+  const defaultSector = getDefaultSector(services || []);
 
   return {
     sector,

@@ -82,9 +82,16 @@ export const useMockReports = () => {
     },
   ], []);
 
+  // Validate reports to ensure they have all required fields
+  const validatedReports = useMemo(() => {
+    return mockReports.filter(report => 
+      report && report.id && report.title && report.date && typeof report.sectorCount === 'number'
+    );
+  }, [mockReports]);
+
   // Organizar relatórios por ano e mês
   const reportsByDate: ReportsByDate = useMemo(() => {
-    return mockReports.reduce((acc: ReportsByDate, report) => {
+    return validatedReports.reduce((acc: ReportsByDate, report) => {
       const date = new Date(report.date);
       const year = date.getFullYear().toString();
       const month = format(date, 'MMMM'); // Nome do mês
@@ -101,14 +108,14 @@ export const useMockReports = () => {
       
       return acc;
     }, {});
-  }, [mockReports]);
+  }, [validatedReports]);
 
   // Ordenar relatórios por data (mais recentes primeiro)
   const sortedReports = useMemo(() => {
-    return [...mockReports].sort((a, b) => 
+    return [...validatedReports].sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [mockReports]);
+  }, [validatedReports]);
 
   return {
     reports: sortedReports,

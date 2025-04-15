@@ -17,7 +17,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, SendHorizontal, Calendar } from "lucide-react";
+import { ArrowRight, SendHorizontal, Calendar, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from 'date-fns';
 import { useMockReports } from '@/hooks/useMockReports';
@@ -43,6 +43,11 @@ const ReportList = () => {
   const paginatedReports = reports.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
 
+  // Check if a report has required data
+  const isValidReport = (report: any) => {
+    return report && report.id && report.title && report.date;
+  };
+
   return (
     <div className="space-y-8">
       {/* Relatórios organizados por data */}
@@ -54,58 +59,70 @@ const ReportList = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {Object.entries(reportsByDate).length > 0 ? (
-              Object.entries(reportsByDate).map(([year, months]) => (
+          {Object.entries(reportsByDate).length > 0 ? (
+            <div className="space-y-4">
+              {Object.entries(reportsByDate).map(([year, months]) => (
                 <div key={year} className="space-y-2">
                   <h3 className="text-lg font-semibold">{year}</h3>
                   <div className="pl-4 space-y-2">
-                    {Object.entries(months).map(([month, reports]) => (
-                      <div key={`${year}-${month}`} className="space-y-1">
-                        <h4 className="text-md font-medium">{month}</h4>
-                        <div className="pl-4 grid gap-1">
-                          {reports.map(report => (
-                            <div 
-                              key={report.id} 
-                              className="flex justify-between items-center hover:bg-gray-50 p-1 rounded"
-                            >
-                              <div className="flex items-center">
-                                <span className="text-sm">{format(new Date(report.date), 'dd/MM/yyyy')}</span>
-                                <span className="mx-2 text-gray-400">•</span>
-                                <span className="text-sm font-medium">{report.title}</span>
+                    {Object.entries(months).map(([month, reports]) => {
+                      // Filter out invalid reports
+                      const validReports = reports.filter(isValidReport);
+                      
+                      if (validReports.length === 0) {
+                        return null; // Skip empty months
+                      }
+                      
+                      return (
+                        <div key={`${year}-${month}`} className="space-y-1">
+                          <h4 className="text-md font-medium">{month}</h4>
+                          <div className="pl-4 grid gap-1">
+                            {validReports.map(report => (
+                              <div 
+                                key={report.id} 
+                                className="flex justify-between items-center hover:bg-gray-50 p-1 rounded"
+                              >
+                                <div className="flex items-center">
+                                  <span className="text-sm">{format(new Date(report.date), 'dd/MM/yyyy')}</span>
+                                  <span className="mx-2 text-gray-400">•</span>
+                                  <span className="text-sm font-medium">{report.title}</span>
+                                </div>
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleViewReport(report.id)}
+                                    className="flex items-center"
+                                  >
+                                    <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Ver</span>
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleResendReport(report.id)}
+                                    className="flex items-center"
+                                  >
+                                    <SendHorizontal className="h-3.5 w-3.5 mr-1" />
+                                    <span className="text-xs">Reenviar</span>
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex space-x-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleViewReport(report.id)}
-                                  className="flex items-center"
-                                >
-                                  <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                                  <span className="text-xs">Ver</span>
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleResendReport(report.id)}
-                                  className="flex items-center"
-                                >
-                                  <SendHorizontal className="h-3.5 w-3.5 mr-1" />
-                                  <span className="text-xs">Reenviar</span>
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-center py-3 text-gray-500">Nenhum relatório encontrado</p>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">Nenhum relatório encontrado</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -126,7 +143,7 @@ const ReportList = () => {
             </TableHeader>
             <TableBody>
               {paginatedReports.length > 0 ? (
-                paginatedReports.map((report) => (
+                paginatedReports.filter(isValidReport).map((report) => (
                   <TableRow key={report.id}>
                     <TableCell>{format(new Date(report.date), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="font-medium">{report.title}</TableCell>
@@ -156,7 +173,10 @@ const ReportList = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-4">
-                    Nenhum relatório encontrado
+                    <div className="py-4 flex flex-col items-center">
+                      <AlertCircle className="h-6 w-6 text-gray-400 mb-2" />
+                      <span className="text-gray-500">Nenhum relatório encontrado</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

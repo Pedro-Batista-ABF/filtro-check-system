@@ -1,21 +1,23 @@
 
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext'; // Use AuthContext instead of ApiContext
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 const Login = () => {
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [error, setError] = React.useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth(); // Use useAuth instead of useApi
+  const { login, isAuthenticated } = useAuth();
 
   // Redirect if already authenticated
-  React.useEffect(() => {
+  useEffect(() => {
     if (isAuthenticated) {
       navigate('/');
     }
@@ -24,6 +26,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     try {
       await login(email, password);
@@ -31,6 +34,8 @@ const Login = () => {
     } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
       console.error('Login error:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -71,11 +76,23 @@ const Login = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Entrar
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Entrando..." : "Entrar"}
             </Button>
           </form>
         </CardContent>
+        <CardFooter className="flex justify-center">
+          <div className="text-sm text-center">
+            Não possui uma conta?{" "}
+            <Link to="/register" className="text-blue-600 hover:underline font-medium">
+              Cadastre-se
+            </Link>
+          </div>
+        </CardFooter>
       </Card>
     </div>
   );
