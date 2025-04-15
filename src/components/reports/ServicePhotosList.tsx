@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Sector, Photo } from '@/types';
+import { Sector } from '@/types';
 
 interface ServicePhotosListProps {
   sector: Sector;
@@ -119,7 +119,10 @@ export default function ServicePhotosList({ sector }: ServicePhotosListProps) {
 }
 
 interface PhotoThumbnailProps {
-  photo: Photo;
+  photo: {
+    id: string;
+    url: string;
+  };
 }
 
 function PhotoThumbnail({ photo }: PhotoThumbnailProps) {

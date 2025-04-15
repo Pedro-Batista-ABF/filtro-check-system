@@ -1,98 +1,72 @@
 
 import React from 'react';
 import { Sector } from '@/types';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 interface ReportHeaderProps {
   sector: Sector;
 }
 
 export default function ReportHeader({ sector }: ReportHeaderProps) {
-  // Format date function
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "Não definida";
+    if (!dateString) return "N/A";
     try {
-      return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+      return new Date(dateString).toLocaleDateString();
     } catch (e) {
       return dateString;
     }
   };
 
   return (
-    <div className="border-b pb-4 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="border-b pb-4">
+      <div className="flex justify-between items-start">
+        <h2 className="text-xl font-bold">TAG: {sector.tagNumber}</h2>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+          sector.status === 'concluido' ? 'bg-green-100 text-green-800' : 
+          sector.status === 'sucateado' ? 'bg-red-100 text-red-800' :
+          'bg-blue-100 text-blue-800'
+        }`}>
+          {sector.status === 'concluido' ? 'Concluído' : 
+           sector.status === 'sucateado' ? 'Sucateado' :
+           sector.status === 'emExecucao' ? 'Em Execução' :
+           sector.status === 'peritagemPendente' ? 'Peritagem Pendente' :
+           sector.status === 'sucateadoPendente' ? 'Sucateamento Pendente' :
+           sector.status}
+        </span>
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
         <div>
-          <h1 className="text-2xl font-bold">Relatório de Setor</h1>
-          <p className="text-gray-500">Gerado em {formatDate(new Date().toISOString())}</p>
+          <p className="text-sm text-gray-500">NF Entrada</p>
+          <p className="font-medium">{sector.entryInvoice || "N/A"}</p>
         </div>
-        <div className="text-right">
-          <p className="text-lg font-bold">TAG: {sector.tagNumber}</p>
-          <p className="text-sm">Status: {getStatusText(sector.status)}</p>
+        <div>
+          <p className="text-sm text-gray-500">Data Entrada</p>
+          <p className="font-medium">{formatDate(sector.entryDate)}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">NF Saída</p>
+          <p className="font-medium">{sector.exitInvoice || "N/A"}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">Data Saída</p>
+          <p className="font-medium">{formatDate(sector.exitDate)}</p>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mt-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
         <div>
-          <h3 className="font-medium text-gray-600">Informações de Entrada</h3>
-          <ul className="mt-1">
-            <li><span className="font-medium">NF de Entrada:</span> {sector.entryInvoice || "Não informada"}</li>
-            <li><span className="font-medium">Data de Entrada:</span> {formatDate(sector.entryDate)}</li>
-            <li><span className="font-medium">Data de Peritagem:</span> {formatDate(sector.peritagemDate)}</li>
-          </ul>
+          <p className="text-sm text-gray-500">Data da Peritagem</p>
+          <p className="font-medium">{formatDate(sector.peritagemDate)}</p>
         </div>
-        
-        {sector.status === 'concluido' && (
-          <div>
-            <h3 className="font-medium text-gray-600">Informações de Saída</h3>
-            <ul className="mt-1">
-              <li><span className="font-medium">NF de Saída:</span> {sector.exitInvoice || "Não informada"}</li>
-              <li><span className="font-medium">Data de Saída:</span> {formatDate(sector.exitDate)}</li>
-              <li><span className="font-medium">Data de Checagem:</span> {formatDate(sector.checagemDate)}</li>
-            </ul>
-          </div>
-        )}
-        
-        {(sector.status === 'sucateadoPendente' || sector.status === 'sucateado') && (
-          <div>
-            <h3 className="font-medium text-gray-600 text-red-600">Informações de Sucateamento</h3>
-            <ul className="mt-1">
-              <li><span className="font-medium">Observações:</span> {sector.scrapObservations || "Não informadas"}</li>
-              {sector.scrapReturnDate && (
-                <li><span className="font-medium">Data de Devolução:</span> {formatDate(sector.scrapReturnDate.toString())}</li>
-              )}
-              {sector.scrapReturnInvoice && (
-                <li><span className="font-medium">NF de Devolução:</span> {sector.scrapReturnInvoice}</li>
-              )}
-            </ul>
-          </div>
-        )}
+        <div>
+          <p className="text-sm text-gray-500">Data da Checagem</p>
+          <p className="font-medium">{formatDate(sector.checagemDate)}</p>
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">Ciclo</p>
+          <p className="font-medium">{sector.cycleCount || 1}</p>
+        </div>
       </div>
-      
-      {(sector.entryObservations || sector.exitObservations) && (
-        <div className="mt-4">
-          <h3 className="font-medium text-gray-600">Observações</h3>
-          {sector.entryObservations && (
-            <p className="mt-1"><span className="font-medium">Entrada:</span> {sector.entryObservations}</p>
-          )}
-          {sector.exitObservations && (
-            <p className="mt-1"><span className="font-medium">Saída:</span> {sector.exitObservations}</p>
-          )}
-        </div>
-      )}
     </div>
   );
-}
-
-// Helper function to get formatted status text
-function getStatusText(status: string): string {
-  switch(status) {
-    case 'peritagemPendente': return 'Peritagem Pendente';
-    case 'emExecucao': return 'Em Execução';
-    case 'checagemFinalPendente': return 'Checagem Pendente';
-    case 'concluido': return 'Concluído';
-    case 'sucateadoPendente': return 'Sucateamento Pendente';
-    case 'sucateado': return 'Sucateado';
-    default: return status;
-  }
 }

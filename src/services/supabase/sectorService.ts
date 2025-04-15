@@ -50,7 +50,7 @@ export const sectorService = {
             .eq('sector_id', sector.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
             
           if (cyclesError) {
             console.error(`Erro ao buscar ciclo para o setor ${sector.id}:`, cyclesError);
@@ -205,7 +205,7 @@ export const sectorService = {
         .eq('sector_id', id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
         
       if (cycleError) throw cycleError;
       
