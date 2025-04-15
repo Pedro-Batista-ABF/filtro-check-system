@@ -1,5 +1,5 @@
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { useApi as useApiBase } from './ApiContext';
 import { usePhotoService } from '@/services/photoService';
 import { ApiServiceType } from './ApiContext';
@@ -18,14 +18,15 @@ export type ApiContextExtendedType = ApiServiceType & {
 export const ApiContextExtended = createContext<ApiContextExtendedType | null>(null);
 
 // This hook combines the base API with extended functionality
-const useApiExtendedOriginal = () => {
+const useApiExtendedInternal = () => {
   const baseApi = useApiBase();
   const photoService = usePhotoService();
   
-  return {
+  // Use useMemo to prevent unnecessary re-renders
+  return useMemo(() => ({
     ...baseApi,
     updateServicePhotos: photoService.updateServicePhotos
-  };
+  }), [baseApi, photoService]);
 };
 
 // This is the hook that components will use
@@ -39,7 +40,7 @@ export const useApi = () => {
 
 // The provider component
 export const ApiContextExtendedProvider = ({ children }: { children: React.ReactNode }) => {
-  const api = useApiExtendedOriginal();
+  const api = useApiExtendedInternal();
   
   return (
     <ApiContextExtended.Provider value={api}>

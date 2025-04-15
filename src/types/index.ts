@@ -1,3 +1,4 @@
+
 export type SectorStatus =
   | "peritagemPendente"
   | "emExecucao"
@@ -9,7 +10,9 @@ export type SectorStatus =
 export type CycleOutcome =
   | "Aprovado"
   | "Reprovado"
-  | "EmAndamento";
+  | "EmAndamento"
+  | "recovered"
+  | "scrapped";
 
 export type Sector = {
   id: string;

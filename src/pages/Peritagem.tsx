@@ -7,20 +7,21 @@ import { Plus } from "lucide-react";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SectorStatus } from "@/types";
 
 export default function Peritagem() {
   const navigate = useNavigate();
   const { sectors, isLoading, refreshData } = useApi();
   const [hasRefreshed, setHasRefreshed] = useState(false);
   
-  // Calculate sector counts by status
+  // Calculate sector counts by status with appropriate type checking
   const statusCounts = {
-    peritagemPendente: sectors.filter(s => s.status === 'peritagemPendente').length,
-    emExecucao: sectors.filter(s => s.status === 'emExecucao').length,
-    checagemFinalPendente: sectors.filter(s => s.status === 'checagemFinalPendente').length,
-    concluido: sectors.filter(s => s.status === 'concluido').length,
-    sucateado: sectors.filter(s => s.status === 'sucateado').length,
-    sucateadoPendente: sectors.filter(s => s.status === 'sucateadoPendente').length
+    peritagemPendente: sectors?.filter(s => s.status === 'peritagemPendente')?.length || 0,
+    emExecucao: sectors?.filter(s => s.status === 'emExecucao')?.length || 0,
+    checagemPendente: sectors?.filter(s => s.status === 'checagemPendente')?.length || 0,
+    finalizado: sectors?.filter(s => s.status === 'finalizado')?.length || 0,
+    sucateado: sectors?.filter(s => s.status === 'sucateado')?.length || 0,
+    sucateamentoPendente: sectors?.filter(s => s.status === 'sucateamentoPendente')?.length || 0
   };
 
   useEffect(() => {
@@ -35,8 +36,8 @@ export default function Peritagem() {
         console.log("Dados de setores na tela Peritagem:", sectors);
         console.log("Contagem de setores por status:", statusCounts);
         
-        // Verificar se há setores com status sucateadoPendente
-        const pendingScraps = sectors.filter(s => s.status === 'sucateadoPendente');
+        // Verificar se há setores com status sucateamentoPendente
+        const pendingScraps = sectors?.filter(s => s.status === 'sucateamentoPendente') || [];
         if (pendingScraps.length > 0) {
           console.log("Setores aguardando validação de sucateamento:", pendingScraps);
         }
@@ -50,7 +51,7 @@ export default function Peritagem() {
       .join(', ');
       
     toast.info("Diagnóstico de Setores", {
-      description: `Total: ${sectors.length} setores. ${statusBreakdown}`
+      description: `Total: ${sectors?.length || 0} setores. ${statusBreakdown}`
     });
   };
 
@@ -89,23 +90,23 @@ export default function Peritagem() {
             />
             
             <SectorStatusCard
-              title="Checagem Final Pendente"
-              status="checagemFinalPendente"
-              count={statusCounts.checagemFinalPendente}
+              title="Checagem Pendente"
+              status="checagemPendente"
+              count={statusCounts.checagemPendente}
               onClick={() => navigate('/checagem')}
             />
             
             <SectorStatusCard
-              title="Concluído"
-              status="concluido"
-              count={statusCounts.concluido}
+              title="Finalizado"
+              status="finalizado"
+              count={statusCounts.finalizado}
               onClick={() => navigate('/concluidos')}
             />
             
             <SectorStatusCard
               title="Sucateamento Pendente"
-              status="sucateadoPendente"
-              count={statusCounts.sucateadoPendente}
+              status="sucateamentoPendente"
+              count={statusCounts.sucateamentoPendente}
               onClick={() => navigate('/sucateamento')}
             />
             

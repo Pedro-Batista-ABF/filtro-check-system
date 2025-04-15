@@ -1,7 +1,7 @@
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseServices } from "@/services/supabase";
-import { Sector, Photo } from '@/types';
+import { Sector, Photo, Service } from '@/types';
 
 // Define the API service type explicitly
 export type ApiServiceType = {
@@ -10,10 +10,11 @@ export type ApiServiceType = {
   addSector: (sectorData: Omit<Sector, 'id'>) => Promise<Sector>;
   updateSector: (sectorId: string, sectorData: Partial<Sector>) => Promise<Sector>;
   deleteSector: (id: string) => Promise<void>;
-  getDefaultServices: () => Promise<any[]>;
+  getDefaultServices: () => Promise<Service[]>;
   uploadPhoto: (file: File, folder: string) => Promise<string>;
   refreshData: () => Promise<void>;
-  // Add other methods as needed
+  sectors: Sector[];
+  isLoading: boolean;
 };
 
 // Create a context for the API functionality
@@ -30,7 +31,46 @@ export const useApi = () => {
 
 // The provider component
 export const ApiProvider = ({ children }: { children: React.ReactNode }) => {
-  const api = supabaseServices as ApiServiceType;
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Define the refreshData function
+  const refreshData = async () => {
+    setIsLoading(true);
+    try {
+      const data = await supabaseServices.getAllSectors();
+      setSectors(data);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  // Get default services implementation
+  const getDefaultServices = async (): Promise<Service[]> => {
+    try {
+      // This would typically come from your service, but for now we'll return an empty array
+      // or could be implemented in supabaseServices later
+      return [];
+    } catch (error) {
+      console.error("Error getting default services:", error);
+      return [];
+    }
+  };
+  
+  const api: ApiServiceType = {
+    ...supabaseServices,
+    getDefaultServices,
+    refreshData,
+    sectors,
+    isLoading
+  };
   
   return (
     <ApiContext.Provider value={api}>
