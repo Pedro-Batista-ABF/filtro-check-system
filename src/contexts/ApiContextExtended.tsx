@@ -1,6 +1,6 @@
 
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
-import { Sector, Photo } from "@/types";
+import { Sector } from "@/types";
 import { useApiOriginal, ApiContextType } from "./ApiContext";
 import { supabaseService } from "@/services/supabase";
 import { useSectorService } from "@/services/sectorService";
@@ -225,5 +225,4 @@ export function useApi() {
   return useContext(ApiContextExtended);
 }
 
-// Export the context only once
 export { ApiContextExtended };
