@@ -3,18 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContextExtended';
 import PageLayout from '@/components/layout/PageLayout';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search } from 'lucide-react';
 import { Sector } from '@/types';
 import SectorGrid from '@/components/sectors/SectorGrid';
-
-// Let's define the props that SectorGrid expects
-interface SectorGridProps {
-  sectors: Sector[];
-  onSectorClick?: (sector: Sector) => void;
-}
 
 export default function Sucateamento() {
   const navigate = useNavigate();

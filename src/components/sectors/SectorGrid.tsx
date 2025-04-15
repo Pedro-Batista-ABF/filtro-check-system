@@ -7,9 +7,10 @@ import { toast } from "sonner";
 interface SectorGridProps {
   sectors: Sector[];
   onSelect?: (sector: Sector) => void;
+  onSectorClick?: (sector: Sector) => void;
 }
 
-export default function SectorGrid({ sectors, onSelect }: SectorGridProps) {
+export default function SectorGrid({ sectors, onSelect, onSectorClick }: SectorGridProps) {
   if (!sectors || sectors.length === 0) {
     return (
       <div className="min-h-[200px] flex items-center justify-center bg-gray-50 rounded-lg">
@@ -28,6 +29,14 @@ export default function SectorGrid({ sectors, onSelect }: SectorGridProps) {
         toast.error("Erro ao selecionar setor", {
           description: "Não foi possível abrir este setor."
         });
+      }
+    }
+    // Se existir onSectorClick, chama esta função também
+    if (onSectorClick) {
+      try {
+        onSectorClick(sector);
+      } catch (error) {
+        console.error("Erro ao clicar no setor:", error);
       }
     }
   };

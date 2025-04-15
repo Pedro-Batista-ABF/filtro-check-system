@@ -2,7 +2,7 @@
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
 import { Sector, Photo, PhotoWithFile } from "@/types";
 import { useApiOriginal, ApiContextType } from "./ApiContext";
-import { supabaseService } from "@/services/supabaseService";
+import { supabaseService } from "@/services/supabase";
 import { useSectorService } from "@/services/sectorService";
 import { usePhotoService } from "@/services/photoService";
 import { toast } from "sonner";
@@ -115,7 +115,12 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
   // Get sectors by tag number
   const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
     try {
-      return await supabaseService.getSectorsByTag(tagNumber);
+      if (supabaseService.getSectorsByTag) {
+        return await supabaseService.getSectorsByTag(tagNumber);
+      } else {
+        console.error('Método getSectorsByTag não implementado');
+        return [];
+      }
     } catch (error) {
       console.error(`Error fetching sectors with tag ${tagNumber}:`, error);
       return [];
@@ -125,7 +130,12 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
   // Upload a photo
   const uploadPhoto = async (file: File, folder: string = 'general'): Promise<string> => {
     try {
-      return await supabaseService.uploadPhoto(file, folder);
+      if (supabaseService.uploadPhoto) {
+        return await supabaseService.uploadPhoto(file, folder);
+      } else {
+        console.error('Método uploadPhoto não implementado');
+        throw new Error('Método uploadPhoto não implementado');
+      }
     } catch (error) {
       console.error("Error uploading photo:", error);
       throw error;

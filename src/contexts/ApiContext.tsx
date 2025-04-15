@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Sector, Service } from '@/types';
-import { supabaseService } from '@/services/supabaseService';
+import { supabaseService } from '@/services/supabase';
 import { toast } from 'sonner';
 import { useAuth } from './AuthContext';
 
@@ -63,7 +62,12 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
     try {
-      return await supabaseService.getSectorsByTag(tagNumber);
+      if (supabaseService.getSectorsByTag) {
+        return await supabaseService.getSectorsByTag(tagNumber);
+      } else {
+        console.error('Método getSectorsByTag não implementado');
+        return [];
+      }
     } catch (err) {
       console.error('Erro ao buscar setores por TAG:', err);
       return [];
@@ -158,7 +162,13 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const getDefaultServices = async (): Promise<Service[]> => {
     try {
-      return await supabaseService.getServiceTypes();
+      if (supabaseService.getServiceTypes) {
+        return await supabaseService.getServiceTypes();
+      } else {
+        console.error('Método getServiceTypes não implementado');
+        toast.error('Não foi possível carregar os serviços disponíveis');
+        return [];
+      }
     } catch (err) {
       console.error('Erro ao buscar serviços:', err);
       toast.error('Não foi possível carregar os serviços disponíveis');
@@ -168,7 +178,13 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const uploadPhoto = async (file: File, folder?: string): Promise<string> => {
     try {
-      return await supabaseService.uploadPhoto(file, folder);
+      if (supabaseService.uploadPhoto) {
+        return await supabaseService.uploadPhoto(file, folder);
+      } else {
+        console.error('Método uploadPhoto não implementado');
+        toast.error('Não foi possível fazer upload da foto');
+        throw new Error('Método uploadPhoto não implementado');
+      }
     } catch (err) {
       console.error('Erro ao fazer upload de foto:', err);
       toast.error('Não foi possível fazer upload da foto');
@@ -182,9 +198,9 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     error,
     getSectorById,
     getSectorsByTag,
-    createSector,
-    updateSector,
-    deleteSector,
+    createSector: supabaseService.addSector,
+    updateSector: supabaseService.updateSector,
+    deleteSector: supabaseService.deleteSector,
     getDefaultServices,
     uploadPhoto
   };

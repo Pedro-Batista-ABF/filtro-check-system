@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Filter, FileText, Settings, Package } from 'lucide-react';
+import { Filter, FileText, Settings, Package, AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -54,6 +54,20 @@ export default function Home() {
               <CardContent>
                 <CardDescription>
                   Verifique e confirme os serviços executados nos setores
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/sucateamento">
+            <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-lg font-medium">Sucateamento</CardTitle>
+                <AlertTriangle className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Gerencie setores que precisam ser sucateados
                 </CardDescription>
               </CardContent>
             </Card>
