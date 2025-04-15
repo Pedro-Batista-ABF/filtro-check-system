@@ -1,13 +1,17 @@
 
 import React from 'react';
-import { Service } from '@/types';
+import { Photo, PhotoWithFile } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Camera } from 'lucide-react';
 import PhotoUpload from '../PhotoUpload';
 
 interface ServicePhotosProps {
-  service: Service;
+  service: {
+    id: string;
+    photos?: (Photo | PhotoWithFile)[];
+    selected: boolean;
+  };
   photoType: "before" | "after";
   required: boolean;
   onPhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
@@ -24,6 +28,17 @@ export default function ServicePhotos({
   const handlePhotoUpload = (files: FileList) => {
     onPhotoUpload(service.id, files, photoType);
   };
+
+  // Convert the photos to PhotoWithFile[] to match PhotoUpload component's expectations
+  const photoWithFiles = service.photos 
+    ? service.photos.map(photo => {
+        if ('file' in photo) {
+          return photo as PhotoWithFile;
+        }
+        // Add a default empty file property to photos that don't have it
+        return { ...photo, file: null } as PhotoWithFile;
+      })
+    : [];
 
   return (
     <div className="space-y-1">
@@ -48,7 +63,7 @@ export default function ServicePhotos({
       </Label>
       
       <PhotoUpload
-        photos={service.photos || []}
+        photos={photoWithFiles}
         onChange={handlePhotoUpload}
         disabled={!service.selected}
         title={`Adicionar fotos ${photoType === "before" ? "do defeito" : "da execução"}`}

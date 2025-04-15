@@ -209,6 +209,24 @@ export default function SectorForm({
       onSubmit(formData);
     }
   };
+  
+  const handleCameraCapture = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'environment';
+    
+    fileInput.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        handleTagPhotoUpload(target.files);
+      }
+    });
+    
+    fileInput.click();
+  };
 
   // Se estamos em modo de criação, usar o ReviewForm que tem todos os elementos necessários
   if (mode === 'create') {
