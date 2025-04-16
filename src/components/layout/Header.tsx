@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Filter, ClipboardCheck, CheckSquare, Home, FileText, AlertTriangle } from "lucide-react";
@@ -27,9 +26,6 @@ export default function Header({ HeaderExtra }: HeaderProps) {
         
         {/* Mobile menu button */}
         <div className="flex items-center gap-2">
-          {HeaderExtra && (
-            <div className="hidden md:block">{HeaderExtra}</div>
-          )}
           <button 
             className="md:hidden bg-primary-foreground/10 rounded p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
