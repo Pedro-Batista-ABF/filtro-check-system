@@ -18,6 +18,7 @@ import TimeoutError from "@/components/peritagem/TimeoutError";
 import OfflineWarning from "@/components/peritagem/OfflineWarning";
 
 export default function PeritagemForm() {
+  console.log("🔄 PeritagemForm render start", Date.now());
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [mountTime] = useState(Date.now());
@@ -51,10 +52,12 @@ export default function PeritagemForm() {
   const [forceRefreshingState, setForceRefreshingState] = useState(false);
 
   useEffect(() => {
+    console.log("🕒 PeritagemForm - Configurando timeout de carregamento", Date.now());
     const timer = setTimeout(() => {
       if (loading || !formSector) {
         console.warn(`PeritagemForm: Timeout máximo de ${maxLoadTime/1000}s atingido`);
         if (!formSector && validDefaultSector) {
+          console.log("⚠️ PeritagemForm - Timeout: Forçando formSector com validDefaultSector", Date.now());
           setFormSector(validDefaultSector);
         }
         updateDataReady(true);
@@ -70,8 +73,10 @@ export default function PeritagemForm() {
   }, [loading, formSector, validDefaultSector, maxLoadTime, updateDataReady]);
 
   useEffect(() => {
+    console.log("⏱️ PeritagemForm - Configurando timeout longo", Date.now());
     const timer = setTimeout(() => {
       if (loading) {
+        console.log("⏱️ PeritagemForm - Timeout longo atingido, setando hasTimeout", Date.now());
         setHasTimeout(true);
       }
     }, 15000);
@@ -80,13 +85,18 @@ export default function PeritagemForm() {
   }, [loading]);
 
   useEffect(() => {
-    if (!loading) {
-      if (validDefaultSector) {
-        // Log diagnóstico justo antes de definir o formSector
-        console.log("⚠️ Renderizando formulário com:", validDefaultSector, defaultServices);
-        setFormSector(validDefaultSector);
-        updateDataReady(true);
-      }
+    console.log("📋 PeritagemForm useEffect - Atualizando formSector", Date.now());
+    console.log("📋 loading:", loading);
+    console.log("📋 validDefaultSector:", validDefaultSector?.id || "não definido");
+    console.log("📋 defaultServices length:", defaultServices?.length || 0);
+    console.log("📋 dataReady:", dataReady);
+    
+    if (!loading && validDefaultSector && defaultServices.length > 0) {
+      // Log diagnóstico justo antes de definir o formSector
+      console.log("⚠️ Renderizando formulário com:", validDefaultSector, defaultServices);
+      console.log("⚠️ Timestamp de definição do formSector:", Date.now());
+      setFormSector(validDefaultSector);
+      updateDataReady(true);
     }
   }, [validDefaultSector, defaultServices, loading, updateDataReady]);
 
@@ -95,8 +105,18 @@ export default function PeritagemForm() {
     handleForceRefresh();
   };
 
+  console.log("📊 PeritagemForm - Estado para decisão de render:", {
+    loading,
+    formSector: !!formSector,
+    dataReady,
+    defaultServicesLength: defaultServices?.length || 0,
+    validDefaultSector: !!validDefaultSector,
+    hasTimeout
+  });
+
   // Critério de renderização melhorado conforme solicitado
-  if (!loading && formSector && dataReady && defaultServices.length > 0) {
+  if (!loading && formSector && dataReady && defaultServices.length > 0 && validDefaultSector) {
+    console.log("✅ PeritagemForm - Renderizando formulário", Date.now());
     return (
       <PageLayoutWrapper>
         <div className="space-y-6">
@@ -114,7 +134,7 @@ export default function PeritagemForm() {
               <SectorForm 
                 sector={formSector}
                 onSubmit={(data) => handleSubmit(data, isEditing, id)}
-                mode="create"
+                mode="review"
                 photoRequired={true}
                 isLoading={isSaving}
               />
@@ -126,6 +146,7 @@ export default function PeritagemForm() {
   }
 
   if (loading && !hasTimeout) {
+    console.log("⏳ PeritagemForm - Renderizando loading", Date.now());
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
@@ -146,6 +167,7 @@ export default function PeritagemForm() {
   }
 
   if (hasTimeout || forceRefreshingState) {
+    console.log("⚠️ PeritagemForm - Renderizando timeout error", Date.now());
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
@@ -170,6 +192,7 @@ export default function PeritagemForm() {
     );
   }
 
+  console.log("⏳ PeritagemForm - Renderizando fallback loading", Date.now());
   return (
     <PageLayoutWrapper>
       <div className="space-y-4">

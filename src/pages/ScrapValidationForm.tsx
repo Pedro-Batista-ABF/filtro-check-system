@@ -1,6 +1,7 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Sector } from "@/types";
+import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
 
 import SectorForm from "@/components/sectors/SectorForm";
@@ -52,8 +53,11 @@ export default function ScrapValidationForm() {
 
     setSaving(true);
     try {
-      // Ensure that the status is set to 'sucateado'
-      const updatedData = { ...data, status: 'sucateado' };
+      // Ensure that the status is set to 'sucateado' with proper type
+      const updatedData = { 
+        ...data, 
+        status: 'sucateado' as SectorStatus 
+      };
       await updateSector(sector.id, updatedData);
       toast.success("Setor atualizado e sucateado com sucesso!");
       navigate('/sucateamento');
@@ -88,7 +92,7 @@ export default function ScrapValidationForm() {
             <SectorForm 
               sector={sector}
               onSubmit={handleSubmit}
-              mode="edit"
+              mode="scrap"
               photoRequired={false}
               isLoading={saving}
             />

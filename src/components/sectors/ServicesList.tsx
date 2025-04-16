@@ -28,6 +28,10 @@ export default function ServicesList({
   onObservationChange,
   onServicePhotoUpload
 }: ServicesListProps) {
+  console.log("🔄 ServicesList render", Date.now());
+  console.log("🔄 services:", services?.length || 0);
+  console.log("🔄 error:", error);
+  
   // Mostrar todos os serviços disponíveis
   if (!services || services.length === 0) {
     return <p className="text-gray-500">Nenhum serviço disponível</p>;

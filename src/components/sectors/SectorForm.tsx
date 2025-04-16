@@ -17,7 +17,7 @@ import FormActions from '@/components/sectors/forms/FormActions';
 interface SectorFormProps {
   sector: Sector;
   onSubmit: (data: Partial<Sector>) => void;
-  mode?: 'create' | 'edit';
+  mode?: 'review' | 'production' | 'quality' | 'scrap';
   photoRequired?: boolean;
   isLoading?: boolean;
 }
@@ -25,7 +25,7 @@ interface SectorFormProps {
 const SectorForm: React.FC<SectorFormProps> = ({
   sector,
   onSubmit,
-  mode = 'create',
+  mode = 'review',
   photoRequired = true,
   isLoading = false,
 }) => {
@@ -69,6 +69,10 @@ const SectorForm: React.FC<SectorFormProps> = ({
 
   // Initialize services from sector if available
   useEffect(() => {
+    console.log("🔄 SectorForm useEffect - Atualizando services do sector", Date.now());
+    console.log("🔄 sector:", sector?.id || "não definido");
+    console.log("🔄 services length:", sector?.services?.length || 0);
+    
     if (sector && Array.isArray(sector.services)) {
       setServices(sector.services);
     }
@@ -76,6 +80,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("📝 SectorForm handleSubmitForm - Iniciando submissão", Date.now());
 
     const formData = {
       tagNumber,
@@ -95,12 +100,15 @@ const SectorForm: React.FC<SectorFormProps> = ({
 
     const hasErrors = Object.values(errors).some(error => error);
     if (hasErrors) {
+      console.log("❌ SectorForm - Erros de validação encontrados:", errors);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
+    console.log("✅ SectorForm - Validação passou, preparando dados", Date.now());
     // Update sector with form data
-    const updatedSector = prepareFormData(formData, mode === 'edit', sector?.id);
+    const updatedSector = prepareFormData(formData, mode !== 'review', sector?.id);
+    console.log("✅ SectorForm - Enviando dados para onSubmit", Date.now());
     onSubmit(updatedSector);
   };
 
@@ -127,6 +135,11 @@ const SectorForm: React.FC<SectorFormProps> = ({
     }
   };
 
+  console.log("🖥️ SectorForm render - Estado atual", Date.now());
+  console.log("🖥️ sector:", sector?.id || "não definido");
+  console.log("🖥️ services:", services?.length || 0);
+  console.log("🖥️ formErrors:", formErrors);
+
   return (
     <form onSubmit={handleSubmitForm} className="space-y-8">
       {Object.values(formErrors).some(error => error) && (
@@ -152,10 +165,10 @@ const SectorForm: React.FC<SectorFormProps> = ({
         entryObservations={entryObservations}
         setEntryObservations={setEntryObservations}
         errors={{
-          tagNumber: formErrors.tagNumber,
-          tagPhoto: formErrors.tagPhoto,
-          entryInvoice: formErrors.entryInvoice,
-          entryDate: formErrors.entryDate
+          tagNumber: formErrors.tagNumber || false,
+          tagPhoto: formErrors.tagPhoto || false,
+          entryInvoice: formErrors.entryInvoice || false,
+          entryDate: formErrors.entryDate || false
         }}
         photoRequired={photoRequired}
       />
@@ -164,7 +177,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
         <h2 className="text-xl font-semibold mb-4">Serviços a Executar</h2>
         <ServicesList
           services={services}
-          error={formErrors.services || formErrors.photos}
+          error={formErrors.services || formErrors.photos || false}
           photoRequired={photoRequired}
           onServiceChange={onServiceChange}
           onQuantityChange={onQuantityChange}
@@ -175,7 +188,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
 
       <FormActions
         loading={isLoading}
-        mode={mode === 'edit' ? 'edit' : 'create'}
+        mode={mode}
       />
     </form>
   );

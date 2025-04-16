@@ -22,19 +22,25 @@ export const FormValidationAlert: React.FC<FormValidationAlertProps> = ({
   photos,
   ...otherErrors
 }) => {
+  console.log("🔄 FormValidationAlert render", Date.now());
+  console.log("🔄 Erros recebidos:", { tagNumber, tagPhoto, entryInvoice, entryDate, services, photos, ...otherErrors });
+  
   const errors = {
-    tagNumber,
-    tagPhoto,
-    entryInvoice,
-    entryDate,
-    services,
-    photos,
+    tagNumber: tagNumber || false,
+    tagPhoto: tagPhoto || false,
+    entryInvoice: entryInvoice || false,
+    entryDate: entryDate || false,
+    services: services || false,
+    photos: photos || false,
     ...otherErrors
   };
 
-  const hasErrors = Object.values(errors).some(error => error);
+  const hasErrors = Object.values(errors).some(error => error === true);
 
-  if (!hasErrors) return null;
+  if (!hasErrors) {
+    console.log("🔄 FormValidationAlert - Sem erros, não renderizando", Date.now());
+    return null;
+  }
 
   const errorMessages: Record<string, string> = {
     tagNumber: 'O número da TAG é obrigatório',
@@ -50,6 +56,8 @@ export const FormValidationAlert: React.FC<FormValidationAlertProps> = ({
     .filter(([key, value]) => value === true)
     .map(([key]) => errorMessages[key] || `Erro no campo ${key}`);
 
+  console.log("🔄 FormValidationAlert - Erros ativos:", activeErrorMessages);
+  
   return (
     <Alert variant="destructive" className="mb-6">
       <AlertCircle className="h-4 w-4" />

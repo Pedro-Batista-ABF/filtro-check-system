@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sector } from "@/types";
@@ -13,7 +14,7 @@ import { ArrowLeft } from "lucide-react";
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSector, updateSector } = useApi();
+  const { getSectorById, updateSector } = useApi();
   const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,7 +28,7 @@ export default function CheckagemForm() {
 
       try {
         setLoading(true);
-        const fetchedSector = await getSector(id);
+        const fetchedSector = await getSectorById(id);
         setSector(fetchedSector);
       } catch (error) {
         console.error("Erro ao buscar setor:", error);
@@ -38,7 +39,7 @@ export default function CheckagemForm() {
     };
 
     fetchSector();
-  }, [id, getSector]);
+  }, [id, getSectorById]);
 
   const handleSubmit = async (data: Partial<Sector>) => {
     if (!sector?.id) {
@@ -83,7 +84,7 @@ export default function CheckagemForm() {
             <SectorForm 
               sector={sector}
               onSubmit={handleSubmit}
-              mode="edit"
+              mode="quality"
               photoRequired={true}
               isLoading={saving}
             />
