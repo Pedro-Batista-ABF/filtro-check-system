@@ -1,4 +1,4 @@
-import { supabase, refreshAuthSession } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Verificar se a conexão com o servidor Supabase está funcionando
@@ -444,4 +444,70 @@ export const performFullConnectivityTest = async () => {
     authenticated: true,
     tokenValid: true
   };
+};
+
+// Also add the missing functions that are being imported elsewhere
+export const checkSupabaseStatus = async (): Promise<boolean> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return false;
+    
+    // Fazer uma requisição simples para verificar se o token é válido
+    const { error } = await supabase.from('profiles').select('id').limit(1);
+    return !error;
+  } catch (error) {
+    console.error("Erro ao verificar status do Supabase:", error);
+    return false;
+  }
+};
+
+export const logAuthStatus = async (): Promise<string | null> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
+    
+    if (userId) {
+      console.log(`✅ Usuário autenticado: ${userId.substring(0, 8)}...`);
+      return userId;
+    } else {
+      console.warn("⚠️ Nenhum usuário autenticado!");
+      return null;
+    }
+  } catch (error) {
+    console.error("❌ Erro ao verificar autenticação:", error);
+    return null;
+  }
+};
+
+export const refreshAuthSession = async (): Promise<boolean> => {
+  try {
+    console.log("Tentando atualizar a sessão do usuário...");
+    
+    // Verificar se há sessão atual
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.log("Sem sessão para atualizar");
+      return false;
+    }
+    
+    // Tentar atualizar a sessão
+    const { data, error } = await supabase.auth.refreshSession();
+    
+    if (error) {
+      console.error("Falha ao atualizar sessão:", error);
+      return false;
+    }
+    
+    if (!data.session) {
+      console.error("Sessão atualizada, mas sem dados de sessão retornados");
+      return false;
+    }
+    
+    console.log("Sessão atualizada com sucesso:", data.session.user?.id);
+    return true;
+    
+  } catch (error) {
+    console.error("Erro crítico ao atualizar sessão:", error);
+    return false;
+  }
 };

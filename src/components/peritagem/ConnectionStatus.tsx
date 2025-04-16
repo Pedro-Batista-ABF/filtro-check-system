@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { checkSupabaseStatus, logAuthStatus, refreshAuthSession, performFullConnectivityTest } from "@/utils/connectionUtils";
+import { 
+  checkSupabaseStatus, 
+  logAuthStatus, 
+  refreshAuthSession,
+  performFullConnectivityTest 
+} from "@/utils/connectionUtils";
 import { toast } from "sonner";
 
 interface ConnectionStatusProps {
@@ -20,7 +25,7 @@ export default function ConnectionStatus({
 }: ConnectionStatusProps) {
   const [lastStatusChange, setLastStatusChange] = useState(Date.now());
   const [pingTime, setPingTime] = useState<number | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<'checking' | 'valid' | 'invalid' | 'expiring'>('checking');
+  const [sessionStatus, setSessionStatus<'checking' | 'valid' | 'invalid' | 'expiring'>>('checking');
   const [isRunningDiagnostic, setIsRunningDiagnostic] = useState(false);
   const navigate = useNavigate();
   
