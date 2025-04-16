@@ -104,6 +104,7 @@ supabase.auth.getSession().then(async ({ data, error }) => {
 });
 
 // Import and re-export the utility functions
+// Make sure to get all the functions from connectionUtils, including the ones causing errors
 import {
   checkSupabaseConnection,
   checkSupabaseStatus,

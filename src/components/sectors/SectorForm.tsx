@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from "react";
-import { Sector, Service, PhotoWithFile } from "@/types";
+import { Sector, Service, PhotoWithFile, SectorStatus, CycleOutcome } from "@/types";
 import { toast } from "sonner";
 import ServicesList from "./ServicesList";
 import ScrapToggle from "./forms/ScrapToggle";
 import { Card } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import SectorInfoSection from "./forms/review/SectorInfoSection";
@@ -46,10 +45,11 @@ export default function SectorForm({
     entryInvoice: false,
     entryDate: false,
   });
+  // Adicionando campos para sucateamento que estavam faltando no tipo Sector
   const [scrapDate, setScrapDate] = useState<Date | undefined>(
-    initialSector.scrapDate ? new Date(initialSector.scrapDate) : undefined
+    initialSector.scrapReturnDate ? new Date(initialSector.scrapReturnDate) : undefined
   );
-  const [scrapInvoice, setScrapInvoice] = useState(initialSector.scrapInvoice || "");
+  const [scrapInvoice, setScrapInvoice] = useState(initialSector.scrapReturnInvoice || "");
   const [scrapPhotos, setScrapPhotos] = useState<PhotoWithFile[]>(
     initialSector.scrapPhotos?.map(photo => ({ ...photo, file: null })) || []
   );
@@ -78,8 +78,9 @@ export default function SectorForm({
     setServices(initialSector.services || []);
     setIsScrap(initialSector.status === "sucateadoPendente");
     setScrapObservations(initialSector.scrapObservations || "");
-    setScrapDate(initialSector.scrapDate ? new Date(initialSector.scrapDate) : undefined);
-    setScrapInvoice(initialSector.scrapInvoice || "");
+    // Atualizando os campos de sucateamento
+    setScrapDate(initialSector.scrapReturnDate ? new Date(initialSector.scrapReturnDate) : undefined);
+    setScrapInvoice(initialSector.scrapReturnInvoice || "");
     setScrapPhotos(initialSector.scrapPhotos?.map(photo => ({ ...photo, file: null })) || []);
   }, [initialSector]);
 
@@ -195,6 +196,7 @@ export default function SectorForm({
       return;
     }
     
+    // Construindo o objeto de setor com os campos corretos para evitar erros de tipo
     const updatedSector: Sector = {
       ...sector,
       tagNumber,
@@ -203,11 +205,13 @@ export default function SectorForm({
       tagPhotoUrl,
       entryObservations,
       services,
-      status: isScrap ? "sucateadoPendente" : sector.status,
+      status: isScrap ? "sucateadoPendente" as SectorStatus : sector.status,
       scrapObservations: isScrap ? scrapObservations : "",
-      scrapDate: isScrap && scrapDate ? scrapDate.toISOString() : undefined,
-      scrapInvoice: isScrap ? scrapInvoice : "",
-      scrapPhotos: isScrap ? scrapPhotos : []
+      // Mapeando os campos específicos para sucateamento para os campos do tipo Sector
+      scrapReturnDate: isScrap && scrapDate ? scrapDate.toISOString() : undefined,
+      scrapReturnInvoice: isScrap ? scrapInvoice : "",
+      scrapPhotos: isScrap ? scrapPhotos : [],
+      outcome: isScrap ? "Sucateado" as CycleOutcome : sector.outcome
     };
     
     onSubmit(updatedSector);
@@ -216,7 +220,7 @@ export default function SectorForm({
   // Render para modo de sucateamento
   if (mode === "scrap") {
     return (
-      <Form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <ScrapForm
             tagNumber={tagNumber}
@@ -250,13 +254,13 @@ export default function SectorForm({
             </Button>
           </div>
         </div>
-      </Form>
+      </form>
     );
   }
 
   // Render padrão para peritagem
   return (
-    <Form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit}>
       <div className="space-y-6">
         <SectorInfoSection
           tagNumber={tagNumber}
@@ -315,6 +319,6 @@ export default function SectorForm({
           </Button>
         </div>
       </div>
-    </Form>
+    </form>
   );
 }

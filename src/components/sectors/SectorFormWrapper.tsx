@@ -1,37 +1,32 @@
 
-import React from 'react';
-import { Sector } from '@/types';
-import SectorForm from './SectorForm';
+import React from "react";
+import { Sector } from "@/types";
+import SectorForm from "./SectorForm";
+import { FormMode } from "@/types";
 
 interface SectorFormWrapperProps {
   initialSector: Sector;
-  onSubmit: (data: Partial<Sector>) => Promise<void>;
-  mode: 'peritagem' | 'production' | 'quality' | 'scrap';
-  photoRequired: boolean;
-  isLoading: boolean;
-  disableEntryFields: boolean;
+  onSubmit: (data: Sector) => void;
+  mode?: FormMode;
+  photoRequired?: boolean;
+  isLoading?: boolean;
+  disableEntryFields?: boolean;
 }
 
-/**
- * Wrapper para o componente SectorForm 
- * Esta camada resolve problemas de tipagem na passagem de props
- */
 const SectorFormWrapper: React.FC<SectorFormWrapperProps> = ({
   initialSector,
   onSubmit,
-  mode,
-  photoRequired,
-  isLoading,
-  disableEntryFields
+  mode = "peritagem",
+  photoRequired = true,
+  isLoading = false,
+  disableEntryFields = false
 }) => {
   return (
     <SectorForm
       initialSector={initialSector}
       onSubmit={onSubmit}
-      mode={mode}
-      photoRequired={photoRequired}
+      mode={mode as "peritagem" | "sucateamento" | "scrap" | "quality"}
       isLoading={isLoading}
-      disableEntryFields={disableEntryFields}
     />
   );
 };

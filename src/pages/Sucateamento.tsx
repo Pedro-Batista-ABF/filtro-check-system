@@ -2,22 +2,56 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContextExtended';
-import PageLayout from '@/components/layout/PageLayout';
+import PageLayoutWrapper from '@/components/layout/PageLayoutWrapper';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search } from 'lucide-react';
 import { Sector } from '@/types';
 import SectorGrid from '@/components/sectors/SectorGrid';
+import { toast } from 'sonner';
+import { checkSupabaseConnection, refreshAuthSession } from "@/utils/connectionUtils";
 
 export default function Sucateamento() {
   const navigate = useNavigate();
   const { sectors, isLoading, refreshData } = useApi();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
+  const [loadingStatus, setLoadingStatus] = useState<'loading' | 'error' | 'success'>('loading');
   
   useEffect(() => {
     document.title = "Sucateamento - Gestão de Recuperação";
-    refreshData();
+    
+    const initPage = async () => {
+      try {
+        setLoadingStatus('loading');
+        
+        // Verificar conexão e tentar atualizar sessão
+        const isConnected = await checkSupabaseConnection();
+        if (!isConnected) {
+          console.error("Sem conexão com o Supabase");
+          setLoadingStatus('error');
+          toast.error("Falha de conexão", {
+            description: "Não foi possível conectar ao servidor. Verifique sua conexão."
+          });
+          return;
+        }
+        
+        // Renovar sessão antes de buscar dados
+        await refreshAuthSession();
+        
+        // Carregar dados
+        await refreshData();
+        setLoadingStatus('success');
+      } catch (error) {
+        console.error("Erro ao inicializar página:", error);
+        setLoadingStatus('error');
+        toast.error("Erro ao carregar página", {
+          description: "Não foi possível carregar os dados. Tente novamente."
+        });
+      }
+    };
+    
+    initPage();
   }, [refreshData]);
   
   // Filter sectors based on status and search term
@@ -35,8 +69,61 @@ export default function Sucateamento() {
     navigate(`/sucateamento/${sector.id}`);
   };
 
+  // Função para tentar reconectar
+  const handleRetry = async () => {
+    try {
+      setLoadingStatus('loading');
+      toast.info("Tentando reconectar...");
+      
+      const isConnected = await checkSupabaseConnection();
+      if (isConnected) {
+        await refreshAuthSession();
+        await refreshData();
+        setLoadingStatus('success');
+        toast.success("Conexão restaurada!");
+      } else {
+        setLoadingStatus('error');
+        toast.error("Falha na reconexão");
+      }
+    } catch (error) {
+      console.error("Erro ao tentar reconectar:", error);
+      setLoadingStatus('error');
+      toast.error("Erro ao reconectar");
+    }
+  };
+
+  if (loadingStatus === 'loading' || isLoading) {
+    return (
+      <PageLayoutWrapper>
+        <div className="flex flex-col items-center justify-center h-[70vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground">Carregando setores de sucateamento...</p>
+        </div>
+      </PageLayoutWrapper>
+    );
+  }
+
+  if (loadingStatus === 'error') {
+    return (
+      <PageLayoutWrapper>
+        <div className="flex flex-col items-center justify-center h-[70vh]">
+          <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-4 text-center">
+            <p className="font-bold mb-2">Erro ao carregar dados</p>
+            <p className="text-sm">Não foi possível carregar os setores para sucateamento.</p>
+          </div>
+          <button 
+            onClick={handleRetry}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </PageLayoutWrapper>
+    );
+  }
+
   return (
-    <PageLayout>
+    <PageLayoutWrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Sucateamento</h1>
@@ -62,12 +149,10 @@ export default function Sucateamento() {
           </TabsList>
           
           <TabsContent value="pending" className="mt-4">
-            {isLoading ? (
-              <p>Carregando...</p>
-            ) : pendingScraps.length > 0 ? (
+            {pendingScraps.length > 0 ? (
               <SectorGrid
                 sectors={pendingScraps}
-                onSectorClick={handleSectorClick}
+                onSelect={handleSectorClick}
               />
             ) : (
               <div className="text-center py-8">
@@ -77,12 +162,10 @@ export default function Sucateamento() {
           </TabsContent>
           
           <TabsContent value="completed" className="mt-4">
-            {isLoading ? (
-              <p>Carregando...</p>
-            ) : completedScraps.length > 0 ? (
+            {completedScraps.length > 0 ? (
               <SectorGrid
                 sectors={completedScraps}
-                onSectorClick={handleSectorClick}
+                onSelect={handleSectorClick}
               />
             ) : (
               <div className="text-center py-8">
@@ -92,6 +175,6 @@ export default function Sucateamento() {
           </TabsContent>
         </Tabs>
       </div>
-    </PageLayout>
+    </PageLayoutWrapper>
   );
 }

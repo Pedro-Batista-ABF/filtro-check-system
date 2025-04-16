@@ -23,6 +23,19 @@ export function SummaryCards() {
         setLoading(true);
         setError(null);
 
+        // Usando estrutura de tipo explícita para evitar erros de tipo
+        type StatusTypes = 'peritagemPendente' | 'emExecucao' | 'execucaoConcluida' | 'emChecagem' | 'concluido';
+        type CountsResult = Record<StatusTypes | 'total', number>;
+        
+        const result: CountsResult = {
+          peritagemPendente: 0,
+          emExecucao: 0,
+          execucaoConcluida: 0,
+          emChecagem: 0,
+          concluido: 0,
+          total: 0
+        };
+
         // Buscar contagem de setores com status "peritagemPendente"
         const { count: peritagemCount, error: peritagemError } = await supabase
           .from('sectors')
@@ -62,14 +75,14 @@ export function SummaryCards() {
           throw new Error("Erro ao buscar contagens");
         }
 
-        setCounts({
-          peritagemPendente: peritagemCount || 0,
-          emExecucao: execucaoCount || 0,
-          execucaoConcluida: concluidaCount || 0,
-          emChecagem: checagemCount || 0,
-          concluido: concluidoCount || 0,
-          total: totalCount || 0
-        });
+        result.peritagemPendente = peritagemCount || 0;
+        result.emExecucao = execucaoCount || 0;
+        result.execucaoConcluida = concluidaCount || 0;
+        result.emChecagem = checagemCount || 0;
+        result.concluido = concluidoCount || 0;
+        result.total = totalCount || 0;
+
+        setCounts(result);
       } catch (err) {
         console.error("Erro ao buscar contagens:", err);
         setError("Falha ao carregar dados do dashboard");

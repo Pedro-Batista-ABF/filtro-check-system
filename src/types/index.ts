@@ -1,114 +1,87 @@
 
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'user';
-  created_at?: string;
-  updated_at?: string;
-}
+export type SectorStatus = 
+  | 'peritagemPendente' 
+  | 'emExecucao' 
+  | 'execucaoConcluida' 
+  | 'checagemFinalPendente' 
+  | 'emChecagem' 
+  | 'concluido' 
+  | 'sucateadoPendente' 
+  | 'sucateado';
 
-export interface ServiceType {
-  id: string;
-  name: string;
-  description?: string;
-  price?: number;
-  created_at?: string;
-  updated_at?: string;
-}
+export type CycleOutcome = 
+  | 'EmAndamento' 
+  | 'Concluido' 
+  | 'Sucateado';
 
-export interface Service {
-  id: string;
-  name: string;
-  description?: string;
-  price?: number;
-  selected: boolean;
-  quantity?: number;
-  observations?: string;
-  photos?: (Photo | PhotoWithFile)[];
-  type?: ServiceType | string;
-  created_at?: string;
-  updated_at?: string;
-  completed?: boolean;
-}
+export type FormMode = 'peritagem' | 'sucateamento' | 'scrap' | 'quality' | 'production';
 
 export interface Photo {
   id: string;
   url: string;
-  type: 'before' | 'after' | 'service' | 'tag' | 'scrap';
+  type: string;
   serviceId?: string;
   metadata?: any;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface PhotoWithFile extends Photo {
   file: File | null;
 }
 
-export interface Cycle {
+export interface Service {
   id: string;
-  sector_id: string;
-  tag_number: string;
-  entry_invoice: string;
-  entry_date: string;
-  peritagem_date?: string;
-  entry_observations?: string;
-  production_completed: boolean;
-  exit_date?: string;
-  exit_invoice?: string;
-  checagem_date?: string;
-  exit_observations?: string;
-  scrap_observations?: string;
-  scrap_validated: boolean;
-  scrap_return_date?: string;
-  scrap_return_invoice?: string;
-  status: SectorStatus;
-  outcome: CycleOutcome;
-  created_at?: string;
-  updated_at?: string;
-  comments?: string;
-  technician_id?: string;
+  name: string;
+  type: string;
+  selected: boolean;
+  quantity?: number;
+  observations?: string;
+  photos?: Photo[];
+  stage?: string;
+  completed?: boolean;
 }
-
-export type SectorStatus = 
-  | 'peritagemPendente' 
-  | 'emExecucao' 
-  | 'checagemFinalPendente' 
-  | 'concluido'
-  | 'sucateadoPendente'
-  | 'sucateado';
-
-export type CycleOutcome = 'recovered' | 'scrapped' | 'redirected' | 'EmAndamento';
 
 export interface Sector {
   id: string;
   tagNumber: string;
   tagPhotoUrl?: string;
   entryInvoice: string;
-  entryDate: string;
-  peritagemDate: string;
-  services: Service[];
-  beforePhotos: Photo[];
-  afterPhotos: Photo[];
-  scrapPhotos: Photo[];
-  productionCompleted: boolean;
-  status: SectorStatus;
-  outcome: CycleOutcome;
-  cycleCount: number;
-  updated_at?: string;
+  entryDate?: string;
+  peritagemDate?: string;
   entryObservations?: string;
+  services: Service[];
+  productionCompleted?: boolean;
   exitDate?: string;
   exitInvoice?: string;
   checagemDate?: string;
+  afterPhotos?: Photo[];
+  beforePhotos?: Photo[];
   exitObservations?: string;
   scrapObservations?: string;
+  scrapPhotos?: PhotoWithFile[];
   scrapValidated?: boolean;
+  // Adicionando campos específicos de sucateamento
   scrapReturnDate?: string;
   scrapReturnInvoice?: string;
+  status: SectorStatus;
+  outcome?: CycleOutcome;
+  cycleCount?: number;
   cycles?: Cycle[];
-  nf_entrada?: string;
-  nf_saida?: string;
-  data_entrada?: string;
-  data_saida?: string;
+  updated_at?: string;
+}
+
+export interface Cycle {
+  id: string;
+  sectorId: string;
+  status: SectorStatus;
+  createdAt: string;
+  updatedAt: string;
+  services?: Service[];
+  photos?: Photo[];
+}
+
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  role: 'admin' | 'producao' | 'peritagem' | 'qualidade';
 }

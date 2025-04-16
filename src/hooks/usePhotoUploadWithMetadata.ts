@@ -1,54 +1,89 @@
 
-import { Sector } from "@/types";
-import { useTagPhotoUpload } from "./useTagPhotoUpload";
-import { useServicePhotoUpload } from "./useServicePhotoUpload";
 import { supabase } from "@/integrations/supabase/client";
+import { Sector, PhotoWithFile } from "@/types";
 
 export function usePhotoUploadWithMetadata() {
-  const { handleTagPhoto } = useTagPhotoUpload();
-  const { uploadServicePhotos } = useServicePhotoUpload();
-
   const uploadPhotosWithMetadata = async (sectorId: string, data: Partial<Sector>) => {
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        console.error("Usuário não autenticado:", userError);
-        throw new Error("Usuário não autenticado");
+      // Verificar se há foto da TAG
+      if (data.tagPhotoUrl && data.tagPhotoUrl.startsWith('blob:')) {
+        await uploadTagPhoto(sectorId, data.tagPhotoUrl);
       }
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao fazer upload das fotos com metadados:", error);
+      return false;
+    }
+  };
 
-      // Buscar o ciclo atual para o setor
-      const { data: cyclesData, error: cycleError } = await supabase
+  const uploadTagPhoto = async (sectorId: string, tagPhotoUrl: string) => {
+    try {
+      // Buscar dados do ciclo para o setor
+      const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId)
+        .eq('sector_id', sectorId as unknown as string)
         .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (cycleError || !cyclesData || cyclesData.length === 0) {
-        console.error("Erro ao buscar ciclo para salvar fotos:", cycleError || "Nenhum ciclo encontrado");
-        throw new Error("Erro ao buscar ciclo");
+        .limit(1)
+        .single();
+
+      if (cycleError) {
+        throw cycleError;
       }
 
-      const cycleId = cyclesData[0].id;
-      console.log(`Ciclo encontrado: ${cycleId} para o setor ${sectorId}`);
-
-      // Array para armazenar promessas de uploads
-      const uploadPromises = [];
-
-      // Upload da foto da TAG
-      if (data.tagPhotoUrl) {
-        uploadPromises.push(handleTagPhoto(data.tagPhotoUrl, cycleId, sectorId, userData.user.id));
+      const cycleId = cycleData?.id;
+      if (!cycleId) {
+        throw new Error("ID do ciclo não encontrado");
       }
 
-      // Upload das fotos dos serviços
-      uploadPromises.push(uploadServicePhotos(cycleId, sectorId, data));
-      
-      // Aguardar conclusão de todos os uploads
-      await Promise.allSettled(uploadPromises);
-      
-      console.log("Upload de fotos com metadados concluído com sucesso");
+      // Converter blob para File
+      const response = await fetch(tagPhotoUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `tag-${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+      // Fazer upload da foto para o storage
+      const filePath = `tag-photos/${sectorId}/${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('sector_photos')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Obter URL pública da foto
+      const { data: publicUrlData } = await supabase.storage
+        .from('sector_photos')
+        .getPublicUrl(filePath);
+
+      const url = publicUrlData.publicUrl;
+
+      // Adicionar metadados da foto no banco de dados
+      const photoData = {
+        cycle_id: cycleId,
+        type: 'tag' as string,
+        url: url,
+        service_id: null,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        metadata: {
+          sector_id: sectorId,
+          stage: 'peritagem',
+          type: 'tag'
+        }
+      };
+
+      const { error: photoError } = await supabase
+        .from('photos')
+        .insert(photoData);
+
+      if (photoError) {
+        throw photoError;
+      }
+
+      return url;
     } catch (error) {
-      console.error("Erro ao fazer upload de fotos com metadados:", error);
+      console.error("Erro ao fazer upload de foto da TAG:", error);
       throw error;
     }
   };
