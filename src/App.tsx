@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
@@ -56,151 +55,149 @@ export default function App() {
   return (
     <ConsoleProvider console={systemConsole}>
       <TooltipProvider>
-        <Router>
-          <AuthProvider setStatus={setStatus}>
-            <ApiContextExtendedProvider>
-              <Toaster position="top-right" />
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+        <AuthProvider>
+          <ApiContextExtendedProvider>
+            <Toaster position="top-right" />
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-                {/* Rotas protegidas */}
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <HomePage />
-                    </ProtectedRoute>
-                  }
-                />
+              {/* Rotas protegidas */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <SettingsPage />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/peritagem"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <PeritagemPage />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/peritagem"
+                element={
+                  <ProtectedRoute>
+                    <PeritagemPage />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/peritagem/novo"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <PeritagemForm />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/peritagem/novo"
+                element={
+                  <ProtectedRoute>
+                    <PeritagemForm />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/peritagem/:id"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <PeritagemForm />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/peritagem/:id"
+                element={
+                  <ProtectedRoute>
+                    <PeritagemForm />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/execucao"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <ExecucaoPage />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/execucao"
+                element={
+                  <ProtectedRoute>
+                    <ExecucaoPage />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/execucao/:id"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <ExecucaoForm />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/execucao/:id"
+                element={
+                  <ProtectedRoute>
+                    <ExecucaoForm />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/checagem"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <CheckagemPage />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/checagem"
+                element={
+                  <ProtectedRoute>
+                    <CheckagemPage />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/checagem-final"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <CheckagemFinal />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/checagem-final"
+                element={
+                  <ProtectedRoute>
+                    <CheckagemFinal />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/checagem/:id"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <CheckagemForm />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/checagem/:id"
+                element={
+                  <ProtectedRoute>
+                    <CheckagemForm />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/sucateamento"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <SucateamentoPage />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/sucateamento"
+                element={
+                  <ProtectedRoute>
+                    <SucateamentoPage />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/sucateamento/:id"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <ScrapValidationForm />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/sucateamento/:id"
+                element={
+                  <ProtectedRoute>
+                    <ScrapValidationForm />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/relatorio"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <ConsolidatedReport />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/relatorio"
+                element={
+                  <ProtectedRoute>
+                    <ConsolidatedReport />
+                  </ProtectedRoute>
+                }
+              />
 
-                <Route
-                  path="/relatorio-preview"
-                  element={
-                    <ProtectedRoute status={status}>
-                      <ReportPreview />
-                    </ProtectedRoute>
-                  }
-                />
+              <Route
+                path="/relatorio-preview"
+                element={
+                  <ProtectedRoute>
+                    <ReportPreview />
+                  </ProtectedRoute>
+                }
+              />
 
-                {/* Redirecionamento e Rota 404 */}
-                <Route
-                  path="*"
-                  element={<NotFound />}
-                />
-              </Routes>
-            </ApiContextExtendedProvider>
-          </AuthProvider>
-        </Router>
+              {/* Redirecionamento e Rota 404 */}
+              <Route
+                path="*"
+                element={<NotFound />}
+              />
+            </Routes>
+          </ApiContextExtendedProvider>
+        </AuthProvider>
       </TooltipProvider>
     </ConsoleProvider>
   );
