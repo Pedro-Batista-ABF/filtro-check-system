@@ -89,11 +89,6 @@ export default function PeritagemForm() {
     }
   }, [validDefaultSector, defaultServices, loading, updateDataReady]);
 
-  const handleForceRefresh = () => {
-    setForceRefreshingState(true);
-    window.location.reload();
-  };
-
   if (!loading && formSector) {
     return (
       <PageLayoutWrapper>
@@ -143,7 +138,7 @@ export default function PeritagemForm() {
     );
   }
 
-  if (hasTimeout || forceRefreshingState) {
+  if (hasTimeout) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
