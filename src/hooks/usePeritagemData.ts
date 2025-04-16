@@ -34,6 +34,21 @@ export function usePeritagemData(id?: string) {
       try {
         const newDefaultSector = getDefaultSector(services);
         console.log("Default sector criado com sucesso", newDefaultSector);
+        
+        // Validar que o defaultSector tem todos os campos obrigatórios
+        if (!newDefaultSector.tagNumber && newDefaultSector.tagNumber !== '') {
+          console.error("defaultSector: tagNumber ausente");
+        }
+        if (!newDefaultSector.entryInvoice && newDefaultSector.entryInvoice !== '') {
+          console.error("defaultSector: entryInvoice ausente");
+        }
+        if (!newDefaultSector.entryDate) {
+          console.error("defaultSector: entryDate ausente");
+        }
+        if (!Array.isArray(newDefaultSector.services)) {
+          console.error("defaultSector: services não é um array");
+        }
+        
         setDefaultSector(newDefaultSector);
       } catch (error) {
         console.error("Erro ao criar setor padrão:", error);
@@ -66,8 +81,8 @@ export function usePeritagemData(id?: string) {
         console.log("Iniciando carregamento de serviços padrão");
         
         // Verificar sessão explicitamente por redundância
-        const { data: session } = await supabase.auth.getSession();
-        if (!session || !session.user) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session?.user?.id) {
           console.error("Usuário não autenticado - verificação explícita");
           setErrorMessage("Você precisa estar logado para acessar esta página");
           setLoading(false);
@@ -78,9 +93,10 @@ export function usePeritagemData(id?: string) {
         const loadedServices = await fetchDefaultServices();
         console.log("Serviços carregados:", loadedServices?.length || 0);
         
-        if (!loadedServices || loadedServices.length === 0) {
-          console.error("Nenhum serviço disponível");
-          setErrorMessage("Não foram encontrados serviços disponíveis. Entre em contato com o suporte.");
+        // Verificar se loadedServices é um array válido
+        if (!Array.isArray(loadedServices) || loadedServices.length === 0) {
+          console.warn("Serviços não encontrados ou array vazio");
+          setErrorMessage("Não foram encontrados serviços disponíveis. Verifique a tabela 'service_types'.");
           setLoading(false);
           clearTimeout(timeoutId);
           return;
@@ -94,6 +110,7 @@ export function usePeritagemData(id?: string) {
         setDataReady(true);
         clearTimeout(timeoutId);
         setLoading(false);
+        console.log("🔥 Finalizado carregamento de dados com sucesso.");
       } catch (error) {
         console.error("Error loading peritagem data:", error);
         setErrorMessage(error instanceof Error 
@@ -106,7 +123,10 @@ export function usePeritagemData(id?: string) {
         clearTimeout(timeoutId);
       } finally {
         clearTimeout(timeoutId);
-        if (loading) setLoading(false);
+        if (loading) {
+          setLoading(false);
+          console.log("🔥 Finalizado carregamento em finally.");
+        }
       }
     };
 
@@ -119,7 +139,7 @@ export function usePeritagemData(id?: string) {
   }, [id, isEditing, fetchSector, fetchDefaultServices, isAuthenticated, authLoading, loading]);
 
   // Garantir que temos dados válidos antes de prosseguir
-  const hasValidServices = services && services.length > 0;
+  const hasValidServices = services && Array.isArray(services) && services.length > 0;
   const validDefaultSector = defaultSector || 
     (hasValidServices ? getDefaultSector(services) : null);
 

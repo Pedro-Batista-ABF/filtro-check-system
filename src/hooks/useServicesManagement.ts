@@ -17,8 +17,8 @@ export function useServicesManagement() {
       setLoading(true);
       
       // Verifica autenticação explicitamente
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) {
         console.error("Usuário não autenticado ao buscar serviços");
         setError("Você precisa estar logado para acessar esta página");
         setServices([]);
@@ -31,7 +31,7 @@ export function useServicesManagement() {
         const serviceTypes = await serviceTypeService.getServiceTypes();
         console.log(`${serviceTypes.length} tipos de serviço encontrados:`, serviceTypes);
         
-        if (!serviceTypes || serviceTypes.length === 0) {
+        if (!Array.isArray(serviceTypes) || serviceTypes.length === 0) {
           console.warn("Nenhum tipo de serviço encontrado");
           setError("Não foram encontrados serviços disponíveis");
           setServices([]);
@@ -49,8 +49,10 @@ export function useServicesManagement() {
           quantity: 1  // Adicionar quantidade padrão para evitar erros
         }));
         
+        console.log("Serviços processados com sucesso:", processedServices.length);
         setServices(processedServices);
         setLoading(false);
+        console.log("🔥 Finalizado carregamento de serviços com sucesso.");
         return processedServices;
       } catch (serviceError) {
         console.error("Erro específico ao buscar serviços:", serviceError);
@@ -65,6 +67,11 @@ export function useServicesManagement() {
       setServices([]);
       setLoading(false);
       return [];
+    } finally {
+      if (loading) {
+        setLoading(false);
+        console.log("🔥 Finalizado carregamento de serviços em finally.");
+      }
     }
   };
 

@@ -56,7 +56,7 @@ export default function PeritagemForm() {
     console.log("PeritagemForm - Estado atual:", { 
       loading, 
       errorMessage, 
-      hasServiços: services?.length || 0,
+      hasServicos: services?.length || 0,
       temDefaultSector: !!defaultSector,
       temSector: !!sector,
       isEditing,
@@ -90,7 +90,7 @@ export default function PeritagemForm() {
   }
 
   // Caso o carregamento esteja demorando muito
-  if (hasTimeout && loading) {
+  if (hasTimeout) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
@@ -137,7 +137,7 @@ export default function PeritagemForm() {
   }
 
   // Verificação adicional para garantir que temos dados válidos
-  if (!formSector || (formSector.services && formSector.services.length === 0)) {
+  if (!formSector || !services || !Array.isArray(services) || services.length === 0) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
@@ -168,6 +168,10 @@ export default function PeritagemForm() {
       </PageLayoutWrapper>
     );
   }
+
+  // Log explícito antes de renderização final
+  console.log("🔥 Renderizando formulário completo. Dados carregados com sucesso.");
+  console.log("Services:", services.length, "FormSector:", formSector !== null);
 
   return (
     <PageLayoutWrapper>

@@ -15,7 +15,7 @@ export const serviceTypeService = {
     try {
       // Verificar autenticação primeiro
       const { data: session } = await supabase.auth.getSession();
-      if (!session || !session.user) {
+      if (!session || !session.session?.user) {
         console.error("serviceTypeService: Usuário não autenticado");
         throw new Error("Usuário não autenticado ao buscar tipos de serviço");
       }
