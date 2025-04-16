@@ -18,6 +18,7 @@ const options = {
   global: {
     headers: {
       'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Content-Type': 'application/json'
     },
   },
   realtime: {
@@ -71,12 +72,19 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
     
+    const headers: Record<string, string> = {
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar token de autorização se disponível
+    if (sessionData?.session?.access_token) {
+      headers['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+    }
+    
     const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: 'HEAD',
-      headers: {
-        'apikey': SUPABASE_PUBLISHABLE_KEY,
-        'Content-Type': 'application/json',
-      },
+      headers,
       signal: controller.signal,
     });
     

@@ -16,8 +16,24 @@ interface SectorFormWrapperProps {
  * Wrapper para o componente SectorForm 
  * Esta camada resolve problemas de tipagem na passagem de props
  */
-const SectorFormWrapper: React.FC<SectorFormWrapperProps> = (props) => {
-  return <SectorForm {...props} />;
+const SectorFormWrapper: React.FC<SectorFormWrapperProps> = ({
+  initialSector,
+  onSubmit,
+  mode,
+  photoRequired,
+  isLoading,
+  disableEntryFields
+}) => {
+  return (
+    <SectorForm
+      initialSector={initialSector}
+      onSubmit={onSubmit}
+      mode={mode}
+      photoRequired={photoRequired}
+      isLoading={isLoading}
+      disableEntryFields={disableEntryFields}
+    />
+  );
 };
 
 export default SectorFormWrapper;

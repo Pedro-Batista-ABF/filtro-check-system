@@ -96,8 +96,8 @@ export const useAuthRefreshOnRequest = () => {
       
       // Verifica se é um erro de autenticação (401/403)
       const isAuthError = 
-        error.status === 401 || 
-        error.status === 403 || 
+        error.message?.includes('401') || 
+        error.message?.includes('403') || 
         error.code === 'PGRST301' ||
         (error.message && (
           error.message.includes('JWT') || 
