@@ -1,3 +1,4 @@
+
 import { Wifi, WifiOff, Loader2, RefreshCw, AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -12,8 +13,6 @@ import {
 } from "@/utils/connectionUtils";
 import { toast } from "sonner";
 
-type SessionStatus = 'checking' | 'valid' | 'invalid' | 'expiring';
-
 interface ConnectionStatusProps {
   status: 'checking' | 'online' | 'offline';
   onRetryConnection?: () => void;
@@ -27,7 +26,7 @@ export default function ConnectionStatus({
 }: ConnectionStatusProps) {
   const [lastStatusChange, setLastStatusChange] = useState(Date.now());
   const [pingTime, setPingTime] = useState<number | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus>('checking');
+  const [sessionStatus, setSessionStatus] = useState<'checking' | 'valid' | 'invalid' | 'expiring'>('checking');
   const [isRunningDiagnostic, setIsRunningDiagnostic] = useState(false);
   const navigate = useNavigate();
   
@@ -276,4 +275,4 @@ export default function ConnectionStatus({
       )}
     </div>
   );
-};
+}
