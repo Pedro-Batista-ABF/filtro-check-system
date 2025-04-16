@@ -6,14 +6,14 @@ import { Button } from './ui/button';
 import { RefreshCw, Home, AlertTriangle, Database, Wifi } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { checkSupabaseConnection, checkInternetConnection } from '@/utils/connectionUtils';
+import { checkSupabaseConnection, checkInternetConnection, runConnectionDiagnostics } from '@/utils/connectionUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FallbackRootProps {
   children: React.ReactNode;
 }
 
 const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
-  const { connectionStatus, handleRetryConnection } = useConnectionAuth();
   const navigate = useNavigate();
   const [retryCount, setRetryCount] = useState(0);
   const [showingManualFallback, setShowingManualFallback] = useState(false);
@@ -22,6 +22,49 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
     internet: false,
     supabase: false
   });
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [isCheckingConnection, setIsCheckingConnection] = useState(false);
+  
+  // Verificar conexão ao carregar o componente
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (isCheckingConnection) return;
+      
+      setIsCheckingConnection(true);
+      setConnectionStatus('checking');
+      
+      try {
+        // Primeiro testar conexão com internet
+        const hasInternet = await checkInternetConnection();
+        if (!hasInternet) {
+          setConnectionStatus('offline');
+          setIsCheckingConnection(false);
+          return;
+        }
+        
+        // Depois testar conexão com Supabase usando URL pública (sem autenticação)
+        const isConnected = await checkSupabaseConnection();
+        setConnectionStatus(isConnected ? 'online' : 'offline');
+        
+        // Em caso de falha, registrar diagnóstico no console
+        if (!isConnected) {
+          console.warn("FallbackRoot: Falha na conexão com Supabase");
+          await runConnectionDiagnostics();
+        }
+      } catch (error) {
+        console.error("FallbackRoot: Erro ao verificar conexão:", error);
+        setConnectionStatus('offline');
+      } finally {
+        setIsCheckingConnection(false);
+      }
+    };
+    
+    checkConnection();
+    
+    // Verificar conexão periodicamente
+    const connectionInterval = setInterval(checkConnection, 30000);
+    return () => clearInterval(connectionInterval);
+  }, []);
   
   // Monitor para detectar se a aplicação está funcionando corretamente
   useEffect(() => {
@@ -46,10 +89,51 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
     };
   }, [connectionStatus, retryCount, showingManualFallback]);
   
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setRetryCount(prev => prev + 1);
-    handleRetryConnection();
+    setConnectionStatus('checking');
+    
     toast.info("Tentando restabelecer conexão...");
+    
+    try {
+      // Verificar internet primeiro
+      const hasInternet = await checkInternetConnection();
+      if (!hasInternet) {
+        toast.error("Sem conexão com a internet", {
+          description: "Verifique sua conexão de rede e tente novamente."
+        });
+        setConnectionStatus('offline');
+        return;
+      }
+      
+      // Tentar conexão com Supabase
+      const isConnected = await checkSupabaseConnection();
+      
+      if (isConnected) {
+        toast.success("Conexão estabelecida", {
+          description: "A conexão com o servidor foi restaurada."
+        });
+        setConnectionStatus('online');
+        
+        // Verificar se há sessão ativa
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          // Redirecionar para login se não houver sessão
+          navigate('/login');
+        }
+      } else {
+        toast.error("Falha na conexão", {
+          description: "Não foi possível estabelecer conexão com o servidor."
+        });
+        setConnectionStatus('offline');
+      }
+    } catch (error) {
+      console.error("Erro ao tentar reconectar:", error);
+      toast.error("Erro na reconexão", {
+        description: "Ocorreu um erro inesperado ao tentar reconectar."
+      });
+      setConnectionStatus('offline');
+    }
   };
   
   const handleForceReload = () => {
@@ -106,8 +190,12 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
       toast.success("Diagnóstico concluído", {
         description: "Todas as conexões estão funcionando. Tentando reconectar..."
       });
-      handleRetryConnection();
+      handleRetry();
     }
+  };
+  
+  const handleGoToLogin = () => {
+    navigate('/login');
   };
   
   if (connectionStatus === 'offline') {
@@ -172,12 +260,11 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
                 Limpar cache local
               </Button>
               <Button 
-                variant="outline" 
-                onClick={() => navigate('/')}
-                className="border-amber-300 hover:bg-amber-100 sm:col-span-2"
+                variant="secondary"
+                onClick={handleGoToLogin}
+                className="sm:col-span-2"
               >
-                <Home className="h-4 w-4 mr-2" />
-                Voltar para a página inicial
+                Ir para o login
               </Button>
             </div>
           </div>

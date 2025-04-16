@@ -3,45 +3,25 @@ import { supabase, refreshAuthSession } from "@/integrations/supabase/client";
 
 /**
  * Verificar se a conexão com o servidor Supabase está funcionando
+ * usando apenas verificação básica sem autenticação
  */
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
-    // Primeiro, tentar atualizar a sessão para garantir token válido
-    await refreshAuthSession();
-    
-    // Obter a sessão para extrair o token de autenticação
-    const { data: sessionData } = await supabase.auth.getSession();
-    const authHeader = sessionData?.session ? 
-      `Bearer ${sessionData.session.access_token}` : 
-      `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4"}`;
-    
-    // Verificar status da conexão com timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+    // Usando apenas verificação básica sem autenticação, apenas para testar se o servidor está online
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL || "https://yjcyebiahnwfwrcgqlcm.supabase.co"}/rest/v1/`,
       {
         method: 'HEAD',
         headers: {
-          'Authorization': authHeader,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4",
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4"
         },
-        signal: controller.signal,
+        signal: AbortSignal.timeout(5000), // Limitar tempo de espera para 5 segundos
+        cache: 'no-store' // Evitar cache
       }
     );
     
-    clearTimeout(timeoutId);
-    
-    if (response.status === 401) {
-      console.warn("Erro de autenticação (401) detectado na verificação de conexão");
-      // Tentar refresh da sessão automaticamente
-      await refreshAuthSession();
-      return false;
-    }
-    
-    return response.ok;
+    return response.status >= 200 && response.status < 500; // Aceitar inclusive 401, pois estamos apenas verificando se o servidor está online
   } catch (error) {
     console.error("Erro ao verificar conexão com Supabase:", error);
     return false;
@@ -56,15 +36,35 @@ export const checkInternetConnection = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    // Verificar conexão com internet usando um serviço confiável
-    const response = await fetch("https://www.google.com", {
-      method: 'HEAD',
-      mode: 'no-cors', // Importante para evitar problemas de CORS
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    return true; // Se chegou aqui, há conexão
+    try {
+      // Verificar conexão com internet usando um serviço confiável
+      await fetch("https://www.google.com", {
+        method: 'HEAD',
+        mode: 'no-cors', // Importante para evitar problemas de CORS
+        signal: controller.signal,
+        cache: 'no-store' // Evitar cache
+      });
+      
+      clearTimeout(timeoutId);
+      return true; // Se chegou aqui, há conexão
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.warn("Primeira tentativa de verificação de internet falhou:", error);
+      
+      // Segunda tentativa com outro domínio
+      try {
+        await fetch("https://www.cloudflare.com", {
+          method: 'HEAD',
+          mode: 'no-cors',
+          signal: AbortSignal.timeout(3000),
+          cache: 'no-store'
+        });
+        return true;
+      } catch (secondError) {
+        console.error("Segunda tentativa de verificação de internet falhou:", secondError);
+        return false;
+      }
+    }
   } catch (error) {
     console.error("Erro ao verificar conexão com internet:", error);
     return false;
@@ -103,4 +103,52 @@ export const runConnectionDiagnostics = async () => {
     session: hasSession,
     sessionDetails: hasSession ? data.session : null
   };
+};
+
+/**
+ * Verifica a saúde geral da conexão e autenticação
+ */
+export const checkConnectionHealth = async () => {
+  // Verificar internet
+  const hasInternet = await checkInternetConnection();
+  if (!hasInternet) {
+    return { status: 'offline', reason: 'no-internet' };
+  }
+  
+  // Verificar Supabase
+  const hasSupabase = await checkSupabaseConnection();
+  if (!hasSupabase) {
+    return { status: 'offline', reason: 'supabase-unavailable' };
+  }
+  
+  // Verificar sessão
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      return { status: 'online', reason: 'no-session' };
+    }
+    
+    // Verificar se o token está próximo de expirar
+    const expiresAt = data.session.expires_at * 1000;
+    const now = Date.now();
+    const timeToExpire = expiresAt - now;
+    
+    if (timeToExpire < 300000) { // 5 minutos
+      try {
+        // Tentar atualizar o token
+        const refreshed = await refreshAuthSession();
+        if (!refreshed) {
+          return { status: 'online', reason: 'session-expiring' };
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar sessão:", error);
+        return { status: 'online', reason: 'refresh-failed' };
+      }
+    }
+    
+    return { status: 'online', reason: 'healthy' };
+  } catch (error) {
+    console.error("Erro ao verificar sessão:", error);
+    return { status: 'online', reason: 'session-error' };
+  }
 };

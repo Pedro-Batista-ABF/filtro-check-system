@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { checkSupabaseConnection } from '@/utils/connectionUtils';
+import { checkConnectionHealth, checkSupabaseConnection } from '@/utils/connectionUtils';
 import { toast } from 'sonner';
 
 export function useConnectionAuth() {
@@ -18,43 +18,39 @@ export function useConnectionAuth() {
     try {
       console.log("useConnectionAuth: Verificando autenticação...");
       
-      // Adicionado um timeout para a verificação de autenticação
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Timeout ao verificar autenticação")), 8000);
-      });
+      // Verificar a saúde da conexão
+      const healthResult = await checkConnectionHealth();
       
-      const authPromise = supabase.auth.getSession();
-      
-      // Race entre o timeout e a chamada de autenticação
-      const { data } = await Promise.race([authPromise, timeoutPromise]) as any;
-      const isAuth = !!data?.session?.user;
-      
-      if (!isAuth) {
-        console.error("useConnectionAuth: Usuário não autenticado na verificação direta");
-        // Comentado temporariamente para evitar redirecionamentos constantes
-        // toast.error("Sessão expirada", {
-        //   description: "Faça login novamente para continuar"
-        // });
-        // navigate('/login');
-        // return false;
-      }
-      
-      console.log("useConnectionAuth: Autenticação verificada:", data?.session?.user?.id || "não encontrada");
-      setAuthVerified(true);
-      
-      const isConnected = await checkSupabaseStatus();
-      setConnectionStatus(isConnected ? 'online' : 'offline');
-      
-      if (isConnected) {
-        // Reset retry attempts on successful connection
-        setRetryAttempts(0);
-      } else {
-        console.warn("useConnectionAuth: Não foi possível estabelecer conexão com o servidor");
-        // Increment retry attempts on failure
-        setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
+      if (healthResult.status === 'offline') {
+        console.warn(`useConnectionAuth: Conexão offline - Motivo: ${healthResult.reason}`);
+        setConnectionStatus('offline');
         return false;
       }
       
+      setConnectionStatus('online');
+      
+      // Verificar a sessão
+      const { data } = await supabase.auth.getSession();
+      const isAuth = !!data?.session?.user;
+      
+      if (!isAuth) {
+        console.warn("useConnectionAuth: Usuário não autenticado");
+        
+        // Se estiver em uma rota protegida, redirecionar para login
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          console.log("useConnectionAuth: Redirecionando para página de login");
+          toast.info("Sessão expirada", {
+            description: "Por favor, faça login novamente"
+          });
+          navigate('/login');
+        }
+      } else {
+        console.log(`useConnectionAuth: Usuário autenticado: ${data.session.user.id.substring(0, 8)}...`);
+      }
+      
+      setAuthVerified(true);
+      setRetryAttempts(0);
       return true;
     } catch (error) {
       console.error("useConnectionAuth: Erro ao verificar autenticação:", error);
@@ -66,6 +62,9 @@ export function useConnectionAuth() {
   
   useEffect(() => {
     checkAuth();
+    // Verificar periodicamente
+    const interval = setInterval(checkAuth, 60000);
+    return () => clearInterval(interval);
   }, [checkAuth]);
 
   useEffect(() => {
@@ -85,7 +84,8 @@ export function useConnectionAuth() {
         setLastConnectionAttempt(now);
         console.log(`useConnectionAuth: Tentando reconectar... Tentativa ${retryAttempts + 1} (Backoff: ${backoffTime}ms)`, new Date().toISOString());
         
-        const isConnected = await checkSupabaseStatus();
+        // Verificar se há conexão com a internet primeiro
+        const isConnected = await checkSupabaseConnection();
         if (isConnected) {
           setConnectionStatus('online');
           toast.success("Conexão estabelecida", {
@@ -117,25 +117,14 @@ export function useConnectionAuth() {
     });
     
     try {
-      // Adicionar um timeout para a tentativa de reconexão
-      const timeoutPromise = new Promise<boolean>((_, reject) => {
-        setTimeout(() => reject(new Error("Timeout ao verificar conexão")), 8000);
-      });
+      // Verificar conexão e autenticação
+      const result = await checkAuth();
       
-      const connectionPromise = checkSupabaseStatus();
-      
-      // Race entre o timeout e a verificação de conexão
-      const isConnected = await Promise.race([connectionPromise, timeoutPromise]);
-      
-      setConnectionStatus(isConnected ? 'online' : 'offline');
-      
-      if (isConnected) {
+      if (result) {
         setRetryAttempts(0);
         toast.success("Conexão estabelecida", {
           description: "A conexão com o servidor foi restaurada"
         });
-        // Revalidar autenticação
-        await checkAuth();
       } else {
         setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
         toast.error("Falha na conexão", {
@@ -151,25 +140,6 @@ export function useConnectionAuth() {
       });
     }
   };
-
-  async function checkSupabaseStatus() {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://yjcyebiahnwfwrcgqlcm.supabase.co"}/rest/v1/`,
-        {
-          method: 'HEAD',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: AbortSignal.timeout(8000),
-        }
-      );
-      return response.ok;
-    } catch (error) {
-      console.error("Erro ao verificar status do Supabase:", error);
-      return false;
-    }
-  }
 
   return {
     connectionStatus,

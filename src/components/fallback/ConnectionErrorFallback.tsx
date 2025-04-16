@@ -25,7 +25,7 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
   const [showTechnicalInfo, setShowTechnicalInfo] = useState(false);
   
   return (
-    <div className="flex items-center justify-center min-h-[70vh]">
+    <div className="flex items-center justify-center min-h-[70vh] p-4">
       <Card className="w-full max-w-md border-red-100 shadow-lg">
         <CardHeader className="pb-2 border-b border-red-100">
           <CardTitle className="flex items-center text-lg text-red-700">
@@ -81,7 +81,7 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
           )}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2">
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {showBackButton && (
               <Button 
                 variant="outline" 
@@ -106,7 +106,7 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
             )}
           </div>
           {onRetry && (
-            <Button onClick={onRetry} size="sm" className="flex-1">
+            <Button onClick={onRetry} size="sm" className="w-full sm:w-auto">
               <RefreshCw className="h-4 w-4 mr-1" />
               Tentar Novamente
             </Button>
