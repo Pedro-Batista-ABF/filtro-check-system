@@ -1,7 +1,7 @@
 
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Sector, Service } from "@/types";
+import { Sector, Service, SectorStatus } from "@/types";
 import { toast } from "sonner";
 
 import SectorForm from "@/components/sectors/SectorForm";
@@ -111,7 +111,7 @@ export default function CheckagemForm() {
       // Garantir que o status é atualizado para "concluido"
       const updatedData = {
         ...data,
-        status: 'concluido'
+        status: 'concluido' as SectorStatus
       };
       
       await updateSector(sector.id, updatedData);
@@ -159,7 +159,7 @@ export default function CheckagemForm() {
         </div>
 
         {connectionStatus === 'offline' && (
-          <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
+          <Alert className="bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-800" />
             <AlertTitle>Sem conexão</AlertTitle>
             <AlertDescription>

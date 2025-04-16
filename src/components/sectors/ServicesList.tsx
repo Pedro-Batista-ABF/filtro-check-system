@@ -52,14 +52,13 @@ const ServicesList: React.FC<ServicesListProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <ServiceCheckbox
                     service={service}
-                    onChange={onServiceChange}
+                    onServiceChange={onServiceChange}
                     disabled={disabled}
                   />
                   
                   <ServiceQuantity
-                    serviceId={service.id}
-                    quantity={service.quantity}
-                    onChange={onQuantityChange}
+                    service={service}
+                    onQuantityChange={onQuantityChange}
                     enabled={service.selected}
                     disabled={disabled}
                   />

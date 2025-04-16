@@ -1,5 +1,5 @@
 
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,6 @@ import { toast } from "sonner";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
 
@@ -73,7 +72,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Redirect to login if not authenticated
   if (!isAuthenticated && !isUserAuthenticated) {
     console.log("Usuário não autenticado, redirecionando para login");
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/login" replace />;
   }
 
   // Return children if authenticated

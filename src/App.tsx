@@ -1,6 +1,6 @@
 
 import { Route, Routes, Outlet, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "sonner";
 
 import Header from "@/components/layout/Header";
 import Index from "@/pages/Index";

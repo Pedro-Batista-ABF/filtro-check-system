@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAuthenticated: boolean;
-  loading: boolean; // Adicionando a propriedade loading
+  loading: boolean; 
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   registerUser: (userData: { email: string; password: string; fullName: string; }) => Promise<boolean>;
@@ -23,9 +23,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("AuthProvider: Inicializando provider");
+    
     // Configura o listener de mudança de estado de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("AuthProvider: Evento de autenticação:", event);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -34,12 +37,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Verifica sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("AuthProvider: Verificando sessão existente:", session ? "Encontrada" : "Não encontrada");
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("AuthProvider: Limpando subscription");
+      subscription.unsubscribe();
+    }
   }, []);
 
   const getUserMetadata = () => {
@@ -116,16 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     isAuthenticated: !!user,
-    loading,  // Adicionando loading ao objeto value
+    loading,
     login,
     logout,
     registerUser,
     getUserMetadata,
   };
-
-  if (loading) {
-    return <div>Carregando...</div>;
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

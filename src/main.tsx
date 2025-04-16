@@ -8,7 +8,9 @@ import { ApiProvider } from './contexts/ApiContext'
 import { ApiContextExtendedProvider } from './contexts/ApiContextExtended'
 import { Toaster } from "sonner";
 
-createRoot(document.getElementById("root")!).render(
+const root = createRoot(document.getElementById("root")!);
+
+root.render(
   <BrowserRouter>
     <AuthProvider>
       <ApiProvider>
