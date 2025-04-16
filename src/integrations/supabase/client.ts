@@ -32,6 +32,33 @@ const options = {
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, options);
 
+// Log inicial para verificar a inicialização do cliente Supabase
+console.log("Cliente Supabase inicializado");
+
+// Verificar sessão inicial
+supabase.auth.getSession().then(({ data, error }) => {
+  if (error) {
+    console.error("Erro ao obter sessão inicial:", error);
+  } else if (data.session) {
+    console.log(`Sessão inicial encontrada: ${data.session.user.id}`);
+    
+    // Verificar quando o token expira
+    const expiresAt = data.session.expires_at * 1000;
+    const now = Date.now();
+    const timeToExpire = expiresAt - now;
+    console.log(`Token expira em: ${Math.floor(timeToExpire / 60000)} minutos`);
+    
+    if (timeToExpire < 300000) { // menos de 5 minutos
+      console.log("Token próximo de expirar, renovando...");
+      refreshAuthSession().then(refreshed => {
+        console.log(`Renovação automática do token: ${refreshed ? 'SUCESSO' : 'FALHA'}`);
+      });
+    }
+  } else {
+    console.log("Nenhuma sessão inicial encontrada");
+  }
+});
+
 // Função para verificar se o Supabase está acessível
 export const checkSupabaseStatus = async (): Promise<boolean> => {
   try {
@@ -79,14 +106,47 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
 export const refreshAuthSession = async (): Promise<boolean> => {
   try {
     console.log("Tentando atualizar a sessão do usuário...");
+    
+    // Verificar se há sessão atual
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.log("Sem sessão para atualizar");
+      return false;
+    }
+    
+    // Tentar atualizar a sessão
     const { data, error } = await supabase.auth.refreshSession();
     
-    if (error || !data.session) {
+    if (error) {
       console.error("Falha ao atualizar sessão:", error);
+      
+      // Se for erro de expiração, tentar fazer logout e sugerir novo login
+      if (error.message.includes("expired")) {
+        console.log("Token completamente expirado, logout necessário");
+        try {
+          await supabase.auth.signOut();
+          console.log("Logout realizado devido a token expirado");
+        } catch (logoutError) {
+          console.error("Erro ao fazer logout:", logoutError);
+        }
+      }
+      
+      return false;
+    }
+    
+    if (!data.session) {
+      console.error("Sessão atualizada, mas sem dados de sessão retornados");
       return false;
     }
     
     console.log("Sessão atualizada com sucesso:", data.session.user?.id);
+    
+    // Verificar quando o token atualizado expira
+    const expiresAt = data.session.expires_at * 1000;
+    const now = Date.now();
+    const timeToExpire = expiresAt - now;
+    console.log(`Novo token expira em: ${Math.floor(timeToExpire / 60000)} minutos`);
+    
     return true;
   } catch (error) {
     console.error("Erro crítico ao atualizar sessão:", error);
@@ -161,3 +221,22 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     },
   });
 };
+
+// Verificar eventos de autenticação
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log(`Evento de autenticação: ${event}`);
+  
+  if (event === 'SIGNED_IN') {
+    console.log('Usuário autenticado com sucesso');
+  } else if (event === 'SIGNED_OUT') {
+    console.log('Usuário desconectado');
+  } else if (event === 'TOKEN_REFRESHED') {
+    console.log('Token atualizado automaticamente');
+    if (session) {
+      const expiresAt = session.expires_at * 1000;
+      const now = Date.now();
+      const timeToExpire = expiresAt - now;
+      console.log(`Token atualizado expira em: ${Math.floor(timeToExpire / 60000)} minutos`);
+    }
+  }
+});

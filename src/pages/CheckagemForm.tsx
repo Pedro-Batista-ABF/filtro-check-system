@@ -11,7 +11,6 @@ import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
-import { checkSupabaseConnection } from "@/utils/connectionUtils";
 import { refreshAuthSession } from "@/integrations/supabase/client";
 import { validateSession } from "@/utils/sessionUtils";
 
@@ -24,21 +23,21 @@ export default function CheckagemForm() {
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
-  // Verificar conexão
+  // Verificar status da conexão periodicamente
   useEffect(() => {
-    const checkConnection = async () => {
+    const checkConnectionStatus = async () => {
       try {
-        setConnectionStatus('checking');
-        const isConnected = await checkSupabaseConnection();
-        setConnectionStatus(isConnected ? 'online' : 'offline');
+        // Primeiro tentar atualizar a sessão
+        await refreshAuthSession();
+        setConnectionStatus('online');
       } catch (error) {
-        console.error("Erro ao verificar conexão:", error);
+        console.error("Erro ao verificar status da conexão:", error);
         setConnectionStatus('offline');
       }
     };
     
-    checkConnection();
-    const interval = setInterval(checkConnection, 30000);
+    checkConnectionStatus();
+    const interval = setInterval(checkConnectionStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -46,6 +45,7 @@ export default function CheckagemForm() {
     const fetchSector = async () => {
       if (!id) {
         toast.error("ID do setor não fornecido.");
+        navigate("/checagem");
         return;
       }
 
@@ -57,14 +57,19 @@ export default function CheckagemForm() {
         // Verificar se a sessão é válida
         const userId = await validateSession();
         if (!userId) {
-          throw new Error("Sessão inválida");
+          toast.error("Sessão inválida", { 
+            description: "Por favor, faça login novamente." 
+          });
+          navigate('/login');
+          return;
         }
         
-        // Buscar o setor
         const sectorData = await getSectorById(id);
         
         if (!sectorData) {
-          throw new Error("Setor não encontrado");
+          toast.error("Setor não encontrado.");
+          navigate("/checagem");
+          return;
         }
         
         setSector(sectorData);
@@ -77,7 +82,7 @@ export default function CheckagemForm() {
     };
 
     fetchSector();
-  }, [id, getSectorById]);
+  }, [id, navigate, getSectorById]);
 
   const handleSubmit = async (data: Partial<Sector>) => {
     if (!sector?.id) {
@@ -96,14 +101,14 @@ export default function CheckagemForm() {
         throw new Error("Sessão inválida");
       }
       
-      // Ensure that the status is set to 'concluido' with proper type
+      // Ensure that the status is correctly set
       const updatedData = { 
         ...data, 
-        status: 'concluido' as SectorStatus 
+        status: 'checado' as SectorStatus 
       };
       await updateSector(sector.id, updatedData);
-      toast.success("Checagem concluída com sucesso!");
-      navigate('/checagem');
+      toast.success("Setor atualizado com sucesso!");
+      navigate('/concluidos');
     } catch (error) {
       console.error("Erro ao atualizar setor:", error);
       toast.error("Erro ao atualizar o setor.");
@@ -112,11 +117,31 @@ export default function CheckagemForm() {
     }
   };
 
+  const handleRetryConnection = async () => {
+    setConnectionStatus('checking');
+    try {
+      await refreshAuthSession();
+      setConnectionStatus('online');
+      // Atualizar os dados do setor após reconexão
+      if (id) {
+        const sectorData = await getSectorById(id);
+        if (sectorData) {
+          setSector(sectorData);
+          toast.success("Conexão restaurada!");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao reconectar:", error);
+      setConnectionStatus('offline');
+      toast.error("Falha ao reconectar.");
+    }
+  };
+
   if (loading || !sector) {
     return (
       <PageLayoutWrapper>
         <div className="p-6 flex justify-center items-center">
-          <p>Carregando informações do setor...</p>
+          <p className="text-lg">Carregando informações do setor...</p>
         </div>
       </PageLayoutWrapper>
     );
@@ -126,11 +151,11 @@ export default function CheckagemForm() {
     <PageLayoutWrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="page-title">Checagem de Qualidade</h1>
+          <h1 className="page-title">Checagem Final</h1>
           <div className="flex items-center gap-2">
             <ConnectionStatus 
               status={connectionStatus} 
-              onRetryConnection={() => setConnectionStatus('checking')}
+              onRetryConnection={handleRetryConnection}
             />
             <Button variant="outline" onClick={() => navigate('/checagem')}>
               <ArrowLeft className="mr-2 h-4 w-4" />

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,14 +10,14 @@ interface AuthContextProps {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  signIn: (email: string, password?: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  login: (email: string, password?: string) => Promise<void>;
-  registerUser: (email: string, password?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  registerUser: (email: string, password: string) => Promise<void>; // Updated return type
   getUserMetadata: () => Record<string, any> | null;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
-  signUp: (email: string, password?: string) => Promise<any>;
+  signUp: (email: string, password: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextProps>({} as AuthContextProps);
@@ -217,6 +218,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update registerUser to match the Promise<void> return type in the interface
+  const registerUser = async (email: string, password: string): Promise<void> => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Cadastro realizado com sucesso');
+    } catch (error: any) {
+      setError(error.message);
+      toast.error('Erro ao criar conta', {
+        description: error.message
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     session,
     user,
@@ -227,7 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     signUp,
     login: signIn,
-    registerUser: signUp,
+    registerUser,
     getUserMetadata: () => user?.user_metadata || null,
     logout: signOut,
     refreshSession,

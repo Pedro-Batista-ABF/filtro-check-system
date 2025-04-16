@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { checkConnectionHealth, checkSupabaseConnection } from '@/utils/connectionUtils';
+import { checkConnectionHealth, checkSupabaseConnection, checkSupabaseAuth, ensureValidAuthentication } from '@/utils/connectionUtils';
 import { toast } from 'sonner';
 
 export function useConnectionAuth() {
@@ -29,12 +29,11 @@ export function useConnectionAuth() {
       
       setConnectionStatus('online');
       
-      // Verificar a sessão
-      const { data } = await supabase.auth.getSession();
-      const isAuth = !!data?.session?.user;
+      // Verificar a autenticação
+      const isAuth = await ensureValidAuthentication();
       
       if (!isAuth) {
-        console.warn("useConnectionAuth: Usuário não autenticado");
+        console.warn("useConnectionAuth: Usuário não autenticado ou token expirado");
         
         // Se estiver em uma rota protegida, redirecionar para login
         const currentPath = window.location.pathname;
@@ -45,10 +44,10 @@ export function useConnectionAuth() {
           });
           navigate('/login');
         }
-      } else {
-        console.log(`useConnectionAuth: Usuário autenticado: ${data.session.user.id.substring(0, 8)}...`);
+        return false;
       }
       
+      console.log("useConnectionAuth: Usuário autenticado com sucesso");
       setAuthVerified(true);
       setRetryAttempts(0);
       return true;
@@ -87,13 +86,29 @@ export function useConnectionAuth() {
         // Verificar se há conexão com a internet primeiro
         const isConnected = await checkSupabaseConnection();
         if (isConnected) {
-          setConnectionStatus('online');
-          toast.success("Conexão estabelecida", {
-            description: "A conexão com o servidor foi restaurada"
-          });
-          clearInterval(interval);
-          // Verificar autenticação após reconexão bem-sucedida
-          await checkAuth();
+          // Se conectou com Supabase, verificar autenticação
+          const isAuth = await checkSupabaseAuth();
+          
+          if (isAuth) {
+            setConnectionStatus('online');
+            toast.success("Conexão estabelecida", {
+              description: "A conexão com o servidor foi restaurada."
+            });
+            clearInterval(interval);
+            setAuthVerified(true);
+          } else {
+            console.log("Conexão restaurada, mas autenticação falhou");
+            setConnectionStatus('online'); // Pelo menos a conexão foi restaurada
+            // Verificar se está em uma página protegida
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/login' && currentPath !== '/register') {
+              toast.warning("Sessão expirada", {
+                description: "Por favor, faça login novamente."
+              });
+              navigate('/login'); // Redirecionar para login
+            }
+            clearInterval(interval);
+          }
         }
       }, backoffTime);
     }
@@ -101,7 +116,7 @@ export function useConnectionAuth() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [connectionStatus, lastConnectionAttempt, retryAttempts, checkAuth]);
+  }, [connectionStatus, lastConnectionAttempt, retryAttempts, navigate]);
 
   const handleForceRefresh = () => {
     setForceRefreshing(true);
@@ -127,9 +142,19 @@ export function useConnectionAuth() {
         });
       } else {
         setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
-        toast.error("Falha na conexão", {
-          description: "Não foi possível estabelecer conexão com o servidor"
-        });
+        
+        // Verificar se a conexão está ok, mas a autenticação falhou
+        const isConnected = await checkSupabaseConnection();
+        if (isConnected) {
+          toast.warning("Sessão expirada", {
+            description: "Por favor, faça login novamente"
+          });
+          navigate('/login');
+        } else {
+          toast.error("Falha na conexão", {
+            description: "Não foi possível estabelecer conexão com o servidor"
+          });
+        }
       }
     } catch (error) {
       console.error("useConnectionAuth: Erro ao tentar reconectar:", error);

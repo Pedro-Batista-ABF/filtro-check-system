@@ -29,8 +29,16 @@ export default function ScrapValidationForm() {
     const checkConnection = async () => {
       try {
         setConnectionStatus('checking');
+        // Primeiro verificar se há conexão com Supabase
         const isConnected = await checkSupabaseConnection();
-        setConnectionStatus(isConnected ? 'online' : 'offline');
+        
+        if (isConnected) {
+          // Depois verificar se há sessão válida
+          await refreshAuthSession();
+          setConnectionStatus('online');
+        } else {
+          setConnectionStatus('offline');
+        }
       } catch (error) {
         console.error("Erro ao verificar conexão:", error);
         setConnectionStatus('offline');
@@ -57,7 +65,11 @@ export default function ScrapValidationForm() {
         // Verificar se a sessão é válida
         const userId = await validateSession();
         if (!userId) {
-          throw new Error("Sessão inválida");
+          toast.error("Sessão inválida", {
+            description: "Por favor, faça login novamente."
+          });
+          navigate('/login');
+          return;
         }
         
         // Buscar o setor
@@ -77,7 +89,7 @@ export default function ScrapValidationForm() {
     };
 
     fetchSector();
-  }, [id, getSectorById]);
+  }, [id, getSectorById, navigate]);
 
   const handleSubmit = async (data: Partial<Sector>) => {
     if (!sector?.id) {
@@ -112,6 +124,33 @@ export default function ScrapValidationForm() {
     }
   };
 
+  const handleRetryConnection = async () => {
+    setConnectionStatus('checking');
+    try {
+      const isConnected = await checkSupabaseConnection();
+      if (isConnected) {
+        await refreshAuthSession();
+        setConnectionStatus('online');
+        
+        // Recarregar dados após reconexão bem-sucedida
+        if (id) {
+          const sectorData = await getSectorById(id);
+          if (sectorData) {
+            setSector(sectorData);
+            toast.success("Conexão restaurada!");
+          }
+        }
+      } else {
+        setConnectionStatus('offline');
+        toast.error("Servidor não disponível");
+      }
+    } catch (error) {
+      console.error("Erro ao reconectar:", error);
+      setConnectionStatus('offline');
+      toast.error("Falha ao reconectar");
+    }
+  };
+
   if (loading || !sector) {
     return (
       <PageLayoutWrapper>
@@ -130,7 +169,7 @@ export default function ScrapValidationForm() {
           <div className="flex items-center gap-2">
             <ConnectionStatus 
               status={connectionStatus} 
-              onRetryConnection={() => setConnectionStatus('checking')}
+              onRetryConnection={handleRetryConnection}
             />
             <Button variant="outline" onClick={() => navigate('/sucateamento')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
