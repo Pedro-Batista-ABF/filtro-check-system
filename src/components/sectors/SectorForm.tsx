@@ -130,7 +130,14 @@ const SectorForm: React.FC<SectorFormProps> = ({
   return (
     <form onSubmit={handleSubmitForm} className="space-y-8">
       {Object.values(formErrors).some(error => error) && (
-        <FormValidationAlert errors={formErrors} />
+        <FormValidationAlert 
+          tagNumber={formErrors.tagNumber}
+          tagPhoto={formErrors.tagPhoto}
+          entryInvoice={formErrors.entryInvoice}
+          entryDate={formErrors.entryDate}
+          services={formErrors.services}
+          photos={formErrors.photos}
+        />
       )}
 
       <EntryFormSection
@@ -159,12 +166,16 @@ const SectorForm: React.FC<SectorFormProps> = ({
           services={services}
           error={formErrors.services || formErrors.photos}
           photoRequired={photoRequired}
+          onServiceChange={onServiceChange}
+          onQuantityChange={onQuantityChange}
+          onObservationChange={onObservationChange}
+          onServicePhotoUpload={onServicePhotoUpload}
         />
       </Card>
 
       <FormActions
         loading={isLoading}
-        mode="review"
+        mode={mode === 'edit' ? 'edit' : 'create'}
       />
     </form>
   );

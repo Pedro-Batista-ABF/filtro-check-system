@@ -43,8 +43,10 @@ export function usePeritagemData(id?: string) {
     verifyConnection
   } = useServiceDataFetching();
 
-  // Novo efeito para garantir que defaultSector ou sector tenha valores válidos
+  // Improved effect to ensure synchronization between defaultSector and validDefaultSector
   useEffect(() => {
+    if (!dataReady) return;
+
     if (defaultSector && !isEditing) {
       setValidDefaultSector(defaultSector);
       // Garantir que services é um array válido
@@ -57,7 +59,7 @@ export function usePeritagemData(id?: string) {
         sector.services : [];
       setDefaultServices(safeServices);
     }
-  }, [defaultSector, sector, isEditing]);
+  }, [defaultSector, sector, isEditing, dataReady]);
 
   const loadData = useCallback(async () => {
     if (authLoading || !isAuthenticated || loadingTimeout) {
@@ -103,22 +105,23 @@ export function usePeritagemData(id?: string) {
     }
   }, [authLoading, isAuthenticated, loadData, servicesFetched, loadingTimeout]);
 
-  // Logs solicitados
+  // Logs para diagnóstico
   console.log('✅ validDefaultSector:', validDefaultSector);
   console.log('✅ services:', defaultServices);
   console.log('✅ loading:', loading);
+  console.log('✅ dataReady:', dataReady);
 
   return {
     sector,
-    defaultSector: validDefaultSector, // Substituindo defaultSector por validDefaultSector
+    defaultSector: validDefaultSector || defaultSector || null, // Adicionando fallback direto
     loading,
     errorMessage,
     isEditing,
-    services: defaultServices, // Usando defaultServices validado
+    services: defaultServices.length > 0 ? defaultServices : [],
     hasValidData: (!loading && servicesFetched && (!!validDefaultSector || !!sector)) || !!validDefaultSector,
     dataReady,
     setDataReady,
-    validDefaultSector, // Exportando explicitamente
-    defaultServices // Exportando explicitamente
+    validDefaultSector: validDefaultSector || defaultSector || null, // Adicionando fallback direto
+    defaultServices: defaultServices.length > 0 ? defaultServices : []
   };
 }

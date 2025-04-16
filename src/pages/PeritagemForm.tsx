@@ -95,7 +95,8 @@ export default function PeritagemForm() {
     handleForceRefresh();
   };
 
-  if (!loading && formSector) {
+  // Critério de renderização melhorado conforme solicitado
+  if (!loading && formSector && dataReady && defaultServices.length > 0) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-6">

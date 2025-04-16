@@ -1,168 +1,95 @@
-
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContextExtended";
-import PageLayout from "@/components/layout/PageLayout";
+import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Sector } from "@/types";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
-import CheckagemFormContent from "@/components/checagem/CheckagemFormContent";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SectorSummary from "@/components/sectors/SectorSummary";
+
 import SectorForm from "@/components/sectors/SectorForm";
+import { Card } from "@/components/ui/card";
+import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
+import { useApi } from "@/contexts/ApiContextExtended";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getSectorById, updateSector } = useApi();
+  const { getSector, updateSector } = useApi();
   const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("checagem");
 
   useEffect(() => {
-    document.title = "Checagem Final - Gestão de Recuperação";
-    
     const fetchSector = async () => {
       if (!id) {
-        navigate('/checagem');
+        toast.error("ID do setor não fornecido.");
         return;
       }
-      
+
       try {
-        const sectorData = await getSectorById(id);
-        
-        if (!sectorData) {
-          toast.error("Setor não encontrado");
-          navigate('/checagem');
-          return;
-        }
-        
-        // Verifica se o setor está pronto para checagem
-        if (sectorData.status !== 'checagemFinalPendente') {
-          toast.error(
-            "Status inválido para checagem", 
-            { description: `Este setor está com status "${sectorData.status}" e não pode ser checado.` }
-          );
-          navigate('/checagem');
-          return;
-        }
-        
-        setSector(sectorData);
+        setLoading(true);
+        const fetchedSector = await getSector(id);
+        setSector(fetchedSector);
       } catch (error) {
-        console.error("Erro ao carregar setor:", error);
-        toast.error("Erro ao carregar dados do setor");
-        navigate('/checagem');
+        console.error("Erro ao buscar setor:", error);
+        toast.error("Erro ao buscar detalhes do setor.");
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchSector();
-  }, [id, getSectorById, navigate]);
+  }, [id, getSector]);
 
   const handleSubmit = async (data: Partial<Sector>) => {
-    if (!sector || !id) return;
-    
+    if (!sector?.id) {
+      toast.error("ID do setor inválido.");
+      return;
+    }
+
     try {
       setSaving(true);
-      
-      // Preparar dados para atualização
-      const updateData = {
-        ...data,
-        id: sector.id,
-        status: 'concluido' as const,
-        // Manter os dados originais que não foram alterados
-        tagNumber: sector.tagNumber,
-        entryInvoice: sector.entryInvoice,
-        entryDate: sector.entryDate,
-        peritagemDate: sector.peritagemDate,
-        services: sector.services,
-        beforePhotos: sector.beforePhotos,
-        scrapPhotos: sector.scrapPhotos
-      };
-      
-      // Atualizar o setor
-      await updateSector(sector.id, updateData);
-      
-      toast.success("Checagem concluída com sucesso!");
+      await updateSector(sector.id, data);
+      toast.success("Setor atualizado com sucesso!");
       navigate('/checagem');
     } catch (error) {
-      console.error("Erro ao salvar checagem:", error);
-      toast.error("Erro ao salvar checagem");
+      console.error("Erro ao atualizar setor:", error);
+      toast.error("Erro ao atualizar o setor.");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
+  if (loading || !sector) {
     return (
-      <PageLayout>
-        <div className="p-6 text-center">
-          <h2>Carregando dados do setor...</h2>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  if (!sector) {
-    return (
-      <PageLayout>
-        <div className="p-6 text-center">
-          <h2 className="text-red-500">Setor não encontrado</h2>
-          <Button 
-            onClick={() => navigate('/checagem')} 
-            className="mt-4"
-            variant="outline"
-          >
-            Voltar para lista de checagem
-          </Button>
-        </div>
-      </PageLayout>
+      <PageLayoutWrapper>
+        <p>Carregando detalhes do setor...</p>
+      </PageLayoutWrapper>
     );
   }
 
   return (
-    <PageLayout>
+    <PageLayoutWrapper>
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => navigate('/checagem')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-between">
           <h1 className="page-title">Checagem Final</h1>
+          <Button variant="outline" size="sm" onClick={() => navigate('/checagem')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
         </div>
-        
-        <Tabs defaultValue="checagem" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="checagem">Checagem</TabsTrigger>
-            <TabsTrigger value="detalhes">Detalhes do Setor</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="checagem" className="space-y-6 mt-4">
-            <Card className="border-none shadow-lg">
-              <div className="p-6">
-                <SectorForm 
-                  sector={sector}
-                  onSubmit={handleSubmit}
-                  mode="checagem"
-                  isLoading={saving}
-                  photoRequired={true}
-                />
-              </div>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="detalhes" className="space-y-6 mt-4">
-            <SectorSummary sector={sector} />
-          </TabsContent>
-        </Tabs>
+
+        <Card className="border-none shadow-lg">
+          <div className="p-6">
+            <SectorForm 
+              sector={sector}
+              onSubmit={handleSubmit}
+              mode="edit"
+              photoRequired={true}
+              isLoading={saving}
+            />
+          </div>
+        </Card>
       </div>
-    </PageLayout>
+    </PageLayoutWrapper>
   );
 }
