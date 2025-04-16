@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 interface FormActionsProps {
   loading: boolean;
-  mode: 'review' | 'production' | 'quality' | 'scrap';
+  mode: 'peritagem' | 'production' | 'quality' | 'scrap';
   isScrap?: boolean;
   qualityCompleted?: boolean;
 }

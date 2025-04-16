@@ -12,12 +12,12 @@ import ScrapToggle from './forms/ScrapToggle';
 import ScrapForm from './forms/ScrapForm';
 import ReviewForm from './forms/ReviewForm';
 import FormActions from './forms/FormActions';
-import FormValidationAlert from './form-parts/FormValidationAlert';
+import { FormValidationAlert } from './form-parts/FormValidationAlert';
 
 interface SectorFormProps {
   initialSector: Sector;
   onSubmit: (data: Partial<Sector>) => Promise<void>;
-  mode: string;
+  mode: 'peritagem' | 'production' | 'quality' | 'scrap';
   photoRequired: boolean;
   isLoading: boolean;
   disableEntryFields: boolean;
@@ -131,6 +131,8 @@ const SectorForm: React.FC<SectorFormProps> = ({
         <ScrapToggle
           isScrap={sectorState.isScrap}
           setIsScrap={sectorState.setIsScrap}
+          scrapObservations={sectorState.scrapObservations}
+          setScrapObservations={sectorState.setScrapObservations}
         />
       )}
       
@@ -243,7 +245,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
       
       {/* Botões de ação */}
       <FormActions 
-        isSubmitting={isLoading || isTagPhotoUploading} 
+        loading={isLoading || isTagPhotoUploading} 
         mode={mode} 
         isScrap={sectorState.isScrap}
       />

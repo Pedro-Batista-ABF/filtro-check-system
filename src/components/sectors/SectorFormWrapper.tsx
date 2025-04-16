@@ -6,7 +6,7 @@ import SectorForm from './SectorForm';
 interface SectorFormWrapperProps {
   initialSector: Sector;
   onSubmit: (data: Partial<Sector>) => Promise<void>;
-  mode: string;
+  mode: 'peritagem' | 'production' | 'quality' | 'scrap';
   photoRequired: boolean;
   isLoading: boolean;
   disableEntryFields: boolean;
