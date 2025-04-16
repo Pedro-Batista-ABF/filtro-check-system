@@ -12,6 +12,8 @@ import {
 } from "@/utils/connectionUtils";
 import { toast } from "sonner";
 
+type SessionStatus = 'checking' | 'valid' | 'invalid' | 'expiring';
+
 interface ConnectionStatusProps {
   status: 'checking' | 'online' | 'offline';
   onRetryConnection?: () => void;
@@ -25,7 +27,7 @@ export default function ConnectionStatus({
 }: ConnectionStatusProps) {
   const [lastStatusChange, setLastStatusChange] = useState(Date.now());
   const [pingTime, setPingTime] = useState<number | null>(null);
-  const [sessionStatus, setSessionStatus<'checking' | 'valid' | 'invalid' | 'expiring'>>('checking');
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>('checking');
   const [isRunningDiagnostic, setIsRunningDiagnostic] = useState(false);
   const navigate = useNavigate();
   
