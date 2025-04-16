@@ -7,7 +7,7 @@ import { FormMode } from "@/types";
 interface SectorFormWrapperProps {
   initialSector: Sector;
   onSubmit: (data: Sector) => void;
-  mode?: FormMode;
+  mode?: "peritagem" | "sucateamento" | "scrap" | "quality" | "production";
   photoRequired?: boolean;
   isLoading?: boolean;
   disableEntryFields?: boolean;

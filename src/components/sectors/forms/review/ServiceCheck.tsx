@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import ServicePhotos from "@/components/sectors/photos/ServicePhotos";
 
 interface ServiceCheckProps {
   service: Service;
@@ -51,6 +50,31 @@ const ServiceCheck: React.FC<ServiceCheckProps> = ({
     onCompletedChange?.(service.id, checked);
   };
 
+  // Renderizar fotos
+  const renderPhotos = (photos: any[], emptyText: string, className: string = "h-40") => {
+    if (!photos || photos.length === 0) {
+      return (
+        <div className={`flex items-center justify-center bg-gray-100 rounded-md ${className} text-gray-400`}>
+          {emptyText}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`grid grid-cols-2 gap-2 ${className} overflow-auto p-1`}>
+        {photos.map((photo, index) => (
+          <div key={photo.id || index} className="relative aspect-square">
+            <img 
+              src={photo.url} 
+              alt={`Foto ${index + 1}`} 
+              className="w-full h-full object-cover rounded-md border border-gray-200"
+            />
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Card className="mb-4">
       <CardContent className="p-4">
@@ -91,11 +115,7 @@ const ServiceCheck: React.FC<ServiceCheckProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm mb-1 block">Fotos do Defeito</Label>
-                <ServicePhotos
-                  photos={beforePhotos}
-                  emptyText="Sem fotos de defeito"
-                  className="h-40"
-                />
+                {renderPhotos(beforePhotos, "Sem fotos de defeito", "h-40")}
               </div>
 
               {quality && (
@@ -141,11 +161,7 @@ const ServiceCheck: React.FC<ServiceCheckProps> = ({
                     disabled={readOnly}
                   />
                   
-                  <ServicePhotos
-                    photos={afterPhotos}
-                    emptyText="Sem fotos de execução"
-                    className="h-40"
-                  />
+                  {renderPhotos(afterPhotos, "Sem fotos de execução", "h-40")}
                 </div>
               )}
             </div>
