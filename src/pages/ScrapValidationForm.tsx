@@ -12,14 +12,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 
-interface SectorFormProps {
-  sector: Sector;
-  onSubmit: (data: Partial<Sector>) => void;
-  mode: string;
-  photoRequired: boolean;
-  isLoading: boolean;
-}
-
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -133,6 +125,8 @@ export default function ScrapValidationForm() {
                 mode="scrap"
                 photoRequired={false}
                 isLoading={saving}
+                disableEntryFields={true}
+                hasAfterPhotosForAllServices={false}
               />
             )}
           </div>

@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { checkSupabaseConnection } from '@/utils/serviceUtils';
+import { checkSupabaseConnection } from '@/utils/connectionUtils';
 import { toast } from 'sonner';
 
 export function useConnectionAuth() {

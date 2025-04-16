@@ -7,33 +7,45 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     const startTime = Date.now();
     console.log("ConnectionUtils: Verificando conexão com Supabase...");
     
-    const timeoutMs = 5000;
+    const timeoutMs = 8000;
     
-    const timeout = new Promise<null>((_, reject) => 
-      setTimeout(() => reject(new Error("Timeout de conexão")), timeoutMs)
-    );
-    
-    const fetchPromise = supabase
-      .from('service_types')
-      .select('count(*)', { count: 'exact', head: true })
-      .abortSignal(AbortSignal.timeout(timeoutMs));
-      
+    // Primeiro, tentar uma conexão mais leve
     try {
-      const result = await Promise.race([fetchPromise, timeout]) as any;
+      const response = await fetch(
+        `https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/`,
+        {
+          method: 'HEAD',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(timeoutMs),
+        }
+      );
       
-      if (!result) {
-        const elapsedTime = Date.now() - startTime;
-        console.error(`ConnectionUtils: Timeout de conexão com Supabase após ${elapsedTime}ms`);
+      if (!response.ok) {
+        console.error(`ConnectionUtils: Falha na conexão HTTP simples: ${response.status}`);
         return false;
       }
       
-      const { error, count } = result;
+      console.log(`ConnectionUtils: Conexão HTTP simples OK após ${Date.now() - startTime}ms`);
+    } catch (error) {
+      console.error("ConnectionUtils: Erro na verificação HTTP simples:", error);
+      return false;
+    }
+    
+    // Se a verificação HTTP passou, tentar uma query real
+    try {
+      const { error, count } = await supabase
+        .from('service_types')
+        .select('count(*)', { count: 'exact', head: true })
+        .abortSignal(AbortSignal.timeout(timeoutMs));
+      
       const elapsedTime = Date.now() - startTime;
       
       if (error) {
         console.error(`ConnectionUtils: Erro de conexão com Supabase após ${elapsedTime}ms:`, error);
         toast.error("Erro de conexão", {
-          description: `Não foi possível conectar ao servidor: ${error.message || "Erro desconhecido"}`
+          description: `Não foi possível conectar ao banco de dados: ${error.message || "Erro desconhecido"}`
         });
         return false;
       }
@@ -42,12 +54,18 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
       return true;
     } catch (error) {
       const elapsedTime = Date.now() - startTime;
-      console.error(`ConnectionUtils: Falha na corrida de promises após ${elapsedTime}ms:`, error);
+      console.error(`ConnectionUtils: Falha na query do Supabase após ${elapsedTime}ms:`, error);
       
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error("Erro de conexão", {
-        description: `Falha ao comunicar com o servidor: ${errorMessage}`
-      });
+      if (errorMessage.includes("timeout") || errorMessage.includes("abort")) {
+        toast.error("Tempo limite excedido", {
+          description: "O servidor está demorando muito para responder. Tente novamente mais tarde."
+        });
+      } else {
+        toast.error("Erro de conexão", {
+          description: `Falha ao comunicar com o servidor: ${errorMessage}`
+        });
+      }
       
       return false;
     }
@@ -56,6 +74,24 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     toast.error("Erro crítico de conexão", {
       description: "Ocorreu um erro interno ao verificar a conexão com o servidor."
     });
+    return false;
+  }
+};
+
+// Função adicional para verificar conexão com internet (sem depender do Supabase)
+export const checkInternetConnection = async (): Promise<boolean> => {
+  try {
+    // Usar um serviço confiável e rápido para verificar conexão
+    const response = await fetch('https://www.google.com/generate_204', {
+      method: 'HEAD',
+      mode: 'no-cors',
+      cache: 'no-cache',
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    return true; // Se não lançou exceção, temos conexão
+  } catch (error) {
+    console.error("Erro ao verificar conexão com internet:", error);
     return false;
   }
 };

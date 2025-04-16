@@ -1,6 +1,7 @@
 
 import { Wifi, WifiOff, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
 interface ConnectionStatusProps {
   status: 'checking' | 'online' | 'offline';
@@ -8,9 +9,16 @@ interface ConnectionStatusProps {
 }
 
 export default function ConnectionStatus({ status, onRetryConnection }: ConnectionStatusProps) {
+  const [lastStatusChange, setLastStatusChange] = useState(Date.now());
+  
+  // Rastrear mudanças de status para animar a transição
+  useEffect(() => {
+    setLastStatusChange(Date.now());
+  }, [status]);
+  
   return (
     <div className="flex items-center gap-2">
-      <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+      <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
         status === 'online' ? 'bg-green-100 text-green-800' : 
         status === 'offline' ? 'bg-red-100 text-red-800' : 
         'bg-yellow-100 text-yellow-800'
@@ -33,7 +41,7 @@ export default function ConnectionStatus({ status, onRetryConnection }: Connecti
         )}
       </div>
       
-      {status === 'offline' && onRetryConnection && (
+      {(status === 'offline' || (status === 'checking' && Date.now() - lastStatusChange > 5000)) && onRetryConnection && (
         <Button 
           variant="outline" 
           size="sm" 

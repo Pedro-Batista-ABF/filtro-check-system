@@ -13,7 +13,7 @@ const root = createRoot(document.getElementById("root")!);
 // Configuração global para fazer fetch timeouts
 const originalFetch = window.fetch;
 window.fetch = function timeoutFetch(url, options = {}) {
-  const timeout = 10000; // 10 segundos timeout global
+  const timeout = 15000; // 15 segundos timeout global (aumentado para redes mais lentas)
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -71,6 +71,34 @@ function setupConnectionMonitoring() {
   
   // Verificar status inicial
   updateOnlineStatus();
+  
+  // Verificar mudanças de latência
+  let lastPingTime = 0;
+  setInterval(() => {
+    if (!navigator.onLine) return;
+    
+    const startTime = Date.now();
+    // Só fazer o ping se a última verificação foi há mais de 30s
+    if (startTime - lastPingTime > 30000) {
+      lastPingTime = startTime;
+      
+      // Fazer um ping leve para verificar latência
+      fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
+        method: 'HEAD',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5000)
+      })
+      .then(() => {
+        const latency = Date.now() - startTime;
+        if (latency > 2000) {
+          console.warn(`⚠️ Alta latência detectada: ${latency}ms`);
+        }
+      })
+      .catch(() => {
+        // Ignorar erros de ping
+      });
+    }
+  }, 60000); // Verificar a cada minuto
 }
 
 // Interceptar erros não capturados na aplicação
