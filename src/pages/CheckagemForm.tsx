@@ -13,6 +13,7 @@ import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import { checkSupabaseConnection } from "@/utils/connectionUtils";
 import { refreshAuthSession } from "@/integrations/supabase/client";
+import { validateSession } from "@/utils/sessionUtils";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function CheckagemForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  
+
   // Verificar conexão
   useEffect(() => {
     const checkConnection = async () => {
@@ -52,6 +53,12 @@ export default function CheckagemForm() {
       try {
         // Forçar refresh da sessão antes de buscar o setor
         await refreshAuthSession();
+        
+        // Verificar se a sessão é válida
+        const userId = await validateSession();
+        if (!userId) {
+          throw new Error("Sessão inválida");
+        }
         
         // Buscar o setor
         const sectorData = await getSectorById(id);
@@ -83,17 +90,23 @@ export default function CheckagemForm() {
       // Forçar refresh da sessão antes de atualizar o setor
       await refreshAuthSession();
       
-      // Ensure that the status is set to 'checagemFinalConcluida' with proper type
+      // Verificar se a sessão é válida
+      const userId = await validateSession();
+      if (!userId) {
+        throw new Error("Sessão inválida");
+      }
+      
+      // Ensure that the status is set to 'concluido' with proper type
       const updatedData = { 
         ...data, 
-        status: 'checagemFinalConcluida' as SectorStatus 
+        status: 'concluido' as SectorStatus 
       };
       await updateSector(sector.id, updatedData);
-      toast.success("Checagem final registrada com sucesso!");
+      toast.success("Checagem concluída com sucesso!");
       navigate('/checagem');
     } catch (error) {
       console.error("Erro ao atualizar setor:", error);
-      toast.error("Erro ao registrar checagem final.");
+      toast.error("Erro ao atualizar o setor.");
     } finally {
       setSaving(false);
     }
@@ -113,7 +126,7 @@ export default function CheckagemForm() {
     <PageLayoutWrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="page-title">Checagem Final</h1>
+          <h1 className="page-title">Checagem de Qualidade</h1>
           <div className="flex items-center gap-2">
             <ConnectionStatus 
               status={connectionStatus} 
@@ -135,7 +148,6 @@ export default function CheckagemForm() {
                 photoRequired={true}
                 isLoading={saving}
                 disableEntryFields={true}
-                hasAfterPhotosForAllServices={false}
               />
             )}
           </div>

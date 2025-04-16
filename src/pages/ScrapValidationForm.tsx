@@ -13,6 +13,7 @@ import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import { checkSupabaseConnection } from "@/utils/connectionUtils";
 import { refreshAuthSession } from "@/integrations/supabase/client";
+import { validateSession } from "@/utils/sessionUtils";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +54,12 @@ export default function ScrapValidationForm() {
         // Forçar refresh da sessão antes de buscar o setor
         await refreshAuthSession();
         
+        // Verificar se a sessão é válida
+        const userId = await validateSession();
+        if (!userId) {
+          throw new Error("Sessão inválida");
+        }
+        
         // Buscar o setor
         const sectorData = await getSectorById(id);
         
@@ -82,6 +89,12 @@ export default function ScrapValidationForm() {
     try {
       // Forçar refresh da sessão antes de atualizar o setor
       await refreshAuthSession();
+      
+      // Verificar se a sessão é válida
+      const userId = await validateSession();
+      if (!userId) {
+        throw new Error("Sessão inválida");
+      }
       
       // Ensure that the status is set to 'sucateado' with proper type
       const updatedData = { 
@@ -135,7 +148,6 @@ export default function ScrapValidationForm() {
                 photoRequired={false}
                 isLoading={saving}
                 disableEntryFields={true}
-                hasAfterPhotosForAllServices={false}
               />
             )}
           </div>
