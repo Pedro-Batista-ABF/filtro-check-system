@@ -1,385 +1,241 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { v4 as uuidv4 } from 'uuid';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from "@/hooks/use-toast";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Calendar } from "@/components/ui/calendar"
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from "zod";
+import { useApi } from '@/contexts/ApiContextExtended';
+import { Sector, Service, Photo, SectorStatus, CycleOutcome } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
-import ServicesList from './ServicesList';
-import {
-  Service,
-  ServiceType,
-  Sector,
-  SectorFormValues,
-  CycleOutcome,
-  Photo,
-  ServicePhotoType
-} from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { loadServicesOptimized } from '@/utils/serviceUtils';
-import ErrorMessage from '../peritagem/ErrorMessage';
-import PhotoUpload from './PhotoUpload';
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { type SectorFormValues } from '@/types/forms';
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "O nome do setor deve ter pelo menos 2 caracteres.",
+  tagNumber: z.string().min(2, {
+    message: "Número da TAG deve ter pelo menos 2 caracteres.",
   }),
-  description: z.string().optional(),
-  cycle: z.enum(['interno', 'externo']),
-  cycle_outcome: z.enum(['Aprovado', 'Reprovado', 'Garantia', 'Sucateado']).optional(),
-  date: z.date().optional(),
-  location: z.string().optional(),
-  responsible: z.string().optional(),
+  entryInvoice: z.string().min(2, {
+    message: "NF de entrada deve ter pelo menos 2 caracteres.",
+  }),
+  entryDate: z.string().min(1, {
+    message: "Data de entrada é obrigatória.",
+  }),
+  peritagemDate: z.string().optional(),
   services: z.array(z.object({
     id: z.string(),
     name: z.string(),
     selected: z.boolean(),
+    quantity: z.number().optional(),
+    observations: z.string().optional(),
+  })),
+  beforePhotos: z.array(z.object({
+    id: z.string().optional(),
+    url: z.string(),
     type: z.string(),
-    photos: z.array(z.object({
-      id: z.string(),
-      url: z.string(),
-      type: z.enum(['before', 'after']),
-    })),
-    quantity: z.number(),
-    observation: z.string().optional(),
-  })).optional(),
+    serviceId: z.string().optional(),
+  })),
+  productionCompleted: z.boolean().default(false),
+  status: z.enum(['peritagemPendente', 'emExecucao', 'checagemFinalPendente', 'concluido', 'sucateadoPendente', 'sucateado']),
+  outcome: z.enum(['recovered', 'scrapped', 'redirected', 'EmAndamento']).optional(),
+  entryObservations: z.string().optional(),
+  exitDate: z.string().optional(),
+  exitInvoice: z.string().optional(),
+  checagemDate: z.string().optional(),
+  exitObservations: z.string().optional(),
+  scrapObservations: z.string().optional(),
+  scrapValidated: z.boolean().optional(),
+  scrapReturnDate: z.string().optional(),
+  scrapReturnInvoice: z.string().optional(),
 });
 
-interface SectorFormProps {
-  formType: 'create' | 'edit' | 'quality';
-}
-
-export default function SectorForm({ formType }: SectorFormProps) {
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+const SectorForm: React.FC = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const [sectorId, setSectorId] = useState(id || uuidv4());
+  const { 
+    addSector, 
+    updateSector, 
+    getSectorById, 
+    isLoading, 
+    error, 
+    getDefaultServices 
+  } = useApi();
+  const [sector, setSector] = useState<Sector | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingServices, setLoadingServices] = useState(false);
-  const [photoRequired, setPhotoRequired] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [date, setDate] = useState<Date>();
+  const isEditing = !!id;
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<SectorFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      cycle: 'interno',
-      cycle_outcome: undefined,
-      date: undefined,
-      location: undefined,
-      responsible: undefined,
+      tagNumber: '',
+      entryInvoice: '',
+      entryDate: '',
+      peritagemDate: '',
       services: [],
-    },
-    mode: "onChange"
-  });
-
-  const { isLoading: isSectorLoading, data: sectorData } = useQuery({
-    queryKey: ['sector', sectorId],
-    queryFn: async () => {
-      if (formType === 'create') return null;
-      if (!sectorId) throw new Error("ID do setor não fornecido");
-
-      const { data, error } = await supabase
-        .from('sectors')
-        .select('*')
-        .eq('id', sectorId)
-        .single();
-
-      if (error) {
-        console.error("Erro ao carregar dados do setor:", error);
-        throw new Error(`Erro ao carregar setor: ${error.message}`);
-      }
-
-      return data as Sector;
-    },
-    enabled: formType !== 'create' && !!sectorId,
-    onError: (err: any) => {
-      setError(err.message || 'Erro ao carregar dados do setor.');
-    }
-  });
-
-  const { mutate: saveSector } = useMutation({
-    mutationFn: async (data: SectorFormValues) => {
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const sectorData = {
-        ...data,
-        id: sectorId,
-        user_id: user.id,
-      };
-
-      const { data: responseData, error } = await supabase
-        .from('sectors')
-        .upsert([sectorData], { onConflict: 'id' })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Erro ao salvar setor:", error);
-        throw new Error(`Erro ao salvar setor: ${error.message}`);
-      }
-
-      return responseData as Sector;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sectors'] });
-      toast({
-        title: "Sucesso",
-        description: "Setor salvo com sucesso!",
-      });
-      navigate('/peritagem');
-    },
-    onError: (err: any) => {
-      setError(err.message || 'Erro ao salvar o setor.');
-    },
-    onSettled: () => {
-      setIsSaving(false);
+      beforePhotos: [],
+      productionCompleted: false,
+      status: 'peritagemPendente',
+      outcome: 'EmAndamento',
+      entryObservations: '',
+      exitDate: '',
+      exitInvoice: '',
+      checagemDate: '',
+      exitObservations: '',
+      scrapObservations: '',
+      scrapValidated: false,
+      scrapReturnDate: '',
+      scrapReturnInvoice: '',
     }
   });
 
   useEffect(() => {
-    const loadInitialServices = async () => {
-      setLoadingServices(true);
-      try {
-        const loadedServices = await loadServicesOptimized();
-        setServices(loadedServices);
-        form.setValue("services", loadedServices);
-      } catch (err: any) {
-        setError(err.message || 'Erro ao carregar serviços.');
-      } finally {
-        setLoadingServices(false);
+    const loadSector = async () => {
+      if (id) {
+        const existingSector = await getSectorById(id);
+        if (existingSector) {
+          setSector(existingSector);
+          form.reset({
+            tagNumber: existingSector.tagNumber,
+            entryInvoice: existingSector.entryInvoice,
+            entryDate: existingSector.entryDate,
+            peritagemDate: existingSector.peritagemDate || '',
+            services: existingSector.services,
+            beforePhotos: existingSector.beforePhotos,
+            productionCompleted: existingSector.productionCompleted,
+            status: existingSector.status,
+            outcome: existingSector.outcome || 'EmAndamento',
+            entryObservations: existingSector.entryObservations || '',
+            exitDate: existingSector.exitDate || '',
+            exitInvoice: existingSector.exitInvoice || '',
+            checagemDate: existingSector.checagemDate || '',
+            exitObservations: existingSector.exitObservations || '',
+            scrapObservations: existingSector.scrapObservations || '',
+            scrapValidated: existingSector.scrapValidated || false,
+            scrapReturnDate: existingSector.scrapReturnDate || '',
+            scrapReturnInvoice: existingSector.scrapReturnInvoice || '',
+          });
+        }
+      } else {
+        const defaultServices = await getDefaultServices();
+        setServices(defaultServices);
+        form.setValue("services", defaultServices);
       }
     };
 
-    loadInitialServices();
-  }, []);
+    loadSector();
+  }, [id, getSectorById, getDefaultServices, form]);
 
-  useEffect(() => {
-    if (sectorData) {
-      form.reset({
-        name: sectorData.name,
-        description: sectorData.description,
-        cycle: sectorData.cycle,
-        cycle_outcome: sectorData.cycle_outcome,
-        date: sectorData.date ? new Date(sectorData.date) : undefined,
-        location: sectorData.location,
-        responsible: sectorData.responsible,
-        services: sectorData.services,
-      });
-      setServices(sectorData.services || []);
+  const handleSubmit = async (data: SectorFormValues) => {
+    try {
+      // Map form data to Sector type
+      const sectorData: Sector = {
+        id: sector?.id || '',
+        tagNumber: data.tagNumber,
+        entryInvoice: data.entryInvoice,
+        entryDate: data.entryDate,
+        peritagemDate: data.peritagemDate,
+        services: data.services,
+        beforePhotos: data.beforePhotos,
+        afterPhotos: [],
+        scrapPhotos: [],
+        productionCompleted: data.productionCompleted,
+        status: data.status,
+        outcome: data.outcome || 'EmAndamento',
+        cycleCount: sector?.cycleCount || 1,
+        entryObservations: data.entryObservations,
+        exitDate: data.exitDate,
+        exitInvoice: data.exitInvoice,
+        checagemDate: data.checagemDate,
+        exitObservations: data.exitObservations,
+        scrapObservations: data.scrapObservations,
+        scrapValidated: data.scrapValidated,
+        scrapReturnDate: data.scrapReturnDate,
+        scrapReturnInvoice: data.scrapReturnInvoice
+      };
+
+      if (isEditing && sector?.id) {
+        await updateSector(sector.id, sectorData);
+        navigate('/peritagem');
+      } else {
+        await addSector(sectorData);
+        navigate('/peritagem');
+      }
+    } catch (error) {
+      console.error("Erro ao salvar setor:", error);
     }
-  }, [sectorData, form]);
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    setIsSaving(true);
-    const outcome: CycleOutcome = "Sucateado"; // Use the correct enum value
-
-    saveSector({
-      ...values,
-      id: sectorId,
-      cycle_outcome: values.cycle_outcome || outcome,
-      services: services
-    });
-  };
-
-  const handleServiceSelect = (serviceId: string, selected: boolean) => {
-    setServices(prevServices => {
-      return prevServices.map(service => {
-        if (service.id === serviceId) {
-          return { ...service, selected: selected };
-        }
-        return service;
-      });
-    });
-  };
-
-  const handleQuantityChange = (serviceId: string, quantity: number) => {
-    setServices(prevServices => {
-      return prevServices.map(service => {
-        if (service.id === serviceId) {
-          return { ...service, quantity: quantity };
-        }
-        return service;
-      });
-    });
-  };
-
-  const handleObservationChange = (serviceId: string, observation: string) => {
-    setServices(prevServices => {
-      return prevServices.map(service => {
-        if (service.id === serviceId) {
-          return { ...service, observation: observation };
-        }
-        return service;
-      });
-    });
-  };
-
-  const handlePhotoUpload = async (
-    serviceId: string,
-    photoUrl: string,
-    photoType: ServicePhotoType
-  ) => {
-    setServices(prevServices => {
-      return prevServices.map(service => {
-        if (service.id === serviceId) {
-          const newPhoto: Photo = {
-            id: uuidv4(),
-            url: photoUrl,
-            type: photoType,
-          };
-          return {
-            ...service,
-            photos: [...service.photos, newPhoto],
-          };
-        }
-        return service;
-      });
-    });
-  };
-
-  const handleDeletePhoto = (serviceId: string, photoId: string) => {
-    setServices(prevServices => {
-      return prevServices.map(service => {
-        if (service.id === serviceId) {
-          return {
-            ...service,
-            photos: service.photos.filter(photo => photo.id !== photoId),
-          };
-        }
-        return service;
-      });
-    });
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>{formType === 'create' ? 'Criar Setor' : formType === 'edit' ? 'Editar Setor' : 'Visualizar Setor'}</CardTitle>
-        <CardDescription>Preencha os detalhes do setor.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ErrorMessage message={error} />
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Setor</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome" {...field} disabled={formType === 'quality'} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Descrição" {...field} disabled={formType === 'quality'} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">
+            {isEditing ? "Editar Setor" : "Novo Setor"}
+          </CardTitle>
+          <CardDescription className="text-center">
+            Preencha os dados do setor para {isEditing ? "atualizar" : "cadastrar"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+              <p className="text-red-700">{error}</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          )}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="cycle"
+                name="tagNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ciclo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formType === 'quality'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o ciclo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="interno">Interno</SelectItem>
-                        <SelectItem value="externo">Externo</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Número da TAG</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Número da TAG" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Este é o número de identificação do setor.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {form.watch("cycle") === "externo" && (
-                <FormField
-                  control={form.control}
-                  name="cycle_outcome"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Resultado do Ciclo</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formType === 'quality'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o resultado" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Aprovado">Aprovado</SelectItem>
-                          <SelectItem value="Reprovado">Reprovado</SelectItem>
-                          <SelectItem value="Garantia">Garantia</SelectItem>
-                          <SelectItem value="Sucateado">Sucateado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="date"
+                name="entryInvoice"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data</FormLabel>
+                  <FormItem>
+                    <FormLabel>NF de Entrada</FormLabel>
+                    <FormControl>
+                      <Input placeholder="NF de Entrada" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Número da nota fiscal de entrada.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="entryDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Entrada</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -387,14 +243,13 @@ export default function SectorForm({ formType }: SectorFormProps) {
                             variant={"outline"}
                             className={cn(
                               "w-[240px] pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value ? "text-muted-foreground" : ""
                             )}
-                            disabled={formType === 'quality'}
                           >
                             {field.value ? (
-                              format(field.value, "PPP")
+                              format(new Date(field.value), "PPP")
                             ) : (
-                              <span>Selecione a data</span>
+                              <span>Pick a date</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -403,86 +258,316 @@ export default function SectorForm({ formType }: SectorFormProps) {
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={formType === 'quality'}
+                          selected={date}
+                          onSelect={(date) => {
+                            setDate(date)
+                            field.onChange(date?.toISOString())
+                          }}
+                          disabled={(date) =>
+                            date > new Date()
+                          }
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormDescription>
+                      Data de entrada do setor.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
-                name="location"
+                name="peritagemDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Localização</FormLabel>
+                    <FormLabel>Data da Peritagem</FormLabel>
                     <FormControl>
-                      <Input placeholder="Localização" {...field} disabled={formType === 'quality'} />
+                      <Input type="date" placeholder="Data da Peritagem" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Data em que a peritagem foi realizada.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="services"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Serviços</FormLabel>
+                    {services.map((service) => (
+                      <div key={service.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`service-${service.id}`}
+                          checked={field.value?.find((s: { id: string; }) => s.id === service.id)?.selected}
+                          onCheckedChange={(checked) => {
+                            const updatedServices = field.value.map((s: { id: string; selected: any; }) =>
+                              s.id === service.id ? { ...s, selected: checked } : s
+                            );
+                            field.onChange(updatedServices);
+                          }}
+                        />
+                        <Label htmlFor={`service-${service.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          {service.name}
+                        </Label>
+                      </div>
+                    ))}
+                    <FormDescription>
+                      Selecione os serviços a serem realizados.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="productionCompleted"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel>Produção Completa</FormLabel>
+                      <FormDescription>
+                        Indica se a produção foi finalizada.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="responsible"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Responsável</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Responsável" {...field} disabled={formType === 'quality'} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
-            <div>
-              <div className="mb-4 flex items-center justify-between">
-                <Label htmlFor="services">Serviços</Label>
-                {formType !== 'quality' && (
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setPhotoRequired(!photoRequired)}>
-                    {photoRequired ? 'Remover Foto Obrigatória' : 'Tornar Foto Obrigatória'}
-                  </Button>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="peritagemPendente">Peritagem Pendente</SelectItem>
+                        <SelectItem value="emExecucao">Em Execução</SelectItem>
+                        <SelectItem value="checagemFinalPendente">Checagem Final Pendente</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
+                        <SelectItem value="sucateadoPendente">Sucateado Pendente</SelectItem>
+                        <SelectItem value="sucateado">Sucateado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Selecione o status atual do setor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
-
-              {services && services.length > 0 ? (
-                <ServicesList
-                  services={services}
-                  error={error}
-                  photoRequired={photoRequired}
-                  onServiceChange={handleServiceSelect}
-                  onQuantityChange={handleQuantityChange}
-                  onObservationChange={handleObservationChange}
-                  onPhotoUpload={handlePhotoUpload}
-                  onDeletePhoto={handleDeletePhoto}
-                  editMode={formType !== 'quality'}
-                />
-              ) : (
-                <p className="text-gray-500 text-center py-4">Nenhum serviço selecionado</p>
-              )}
-            </div>
-
-            {formType !== 'quality' && (
-              <CardFooter className="justify-end">
-                <Button type="submit" disabled={isSaving}>
-                  {isSaving ? 'Salvando...' : 'Salvar'}
-                </Button>
-              </CardFooter>
-            )}
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+              />
+              <FormField
+                control={form.control}
+                name="outcome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Resultado</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um resultado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="recovered">Recuperado</SelectItem>
+                        <SelectItem value="scrapped">Sucateado</SelectItem>
+                        <SelectItem value="redirected">Redirecionado</SelectItem>
+                        <SelectItem value="EmAndamento">Em Andamento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Selecione o resultado do ciclo.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="entryObservations"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações de Entrada</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Observações de Entrada"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Observações sobre a entrada do setor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="exitDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Saída</FormLabel>
+                    <FormControl>
+                      <Input type="date" placeholder="Data de Saída" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Data de saída do setor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="exitInvoice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>NF de Saída</FormLabel>
+                    <FormControl>
+                      <Input placeholder="NF de Saída" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Número da nota fiscal de saída.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="checagemDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data da Checagem</FormLabel>
+                    <FormControl>
+                      <Input type="date" placeholder="Data da Checagem" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Data em que a checagem foi realizada.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="exitObservations"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações de Saída</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Observações de Saída"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Observações sobre a saída do setor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="scrapObservations"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações de Sucateamento</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Observações de Sucateamento"
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Observações sobre o sucateamento do setor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="scrapValidated"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-md border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel>Sucateamento Validado</FormLabel>
+                      <FormDescription>
+                        Indica se o sucateamento foi validado.
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="scrapReturnDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Retorno de Sucata</FormLabel>
+                    <FormControl>
+                      <Input type="date" placeholder="Data de Retorno de Sucata" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Data em que a sucata foi retornada.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="scrapReturnInvoice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>NF de Retorno de Sucata</FormLabel>
+                    <FormControl>
+                      <Input placeholder="NF de Retorno de Sucata" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Número da nota fiscal de retorno de sucata.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Salvando..." : "Salvar"}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+};
+
+export default SectorForm;

@@ -1,55 +1,51 @@
+
 import React from 'react';
 import { Service } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from "@/components/ui/scroll-area"
-import ServiceCheckbox from './ServiceCheckbox';
+import { ServiceCheck } from './ServiceCheck';
+import { QuantityInput } from '../../QuantityInput';
 
-interface ServicesSectionProps {
+export interface ServicesSectionProps {
   services: Service[];
-  onChecked: (id: string, selected: boolean) => void;
-  onQuantityChange: (id: string, quantity: number) => void;
-  onObservationChange: (id: string, observation: string) => void;
-  onPhotoUpload: (id: string, photo: File, photoType: 'before' | 'after') => void;
-  editMode: boolean;
+  handleServiceChange: (id: string, checked: boolean) => void;
+  handleQuantityChange: (id: string, quantity: number) => void;
+  handleObservationChange: (id: string, observations: string) => void;
+  handlePhotoUpload: (id: string, file: File) => Promise<void>;
+  handleRemovePhoto: (id: string, photoId: string) => void;
+  readOnly?: boolean;
+  servicesWithoutPhotos: string[];
 }
 
-const ServicesSection: React.FC<ServicesSectionProps> = ({ 
-  services, 
-  onChecked, 
-  onQuantityChange,
-  onObservationChange,
-  onPhotoUpload,
-  editMode
+export const ServicesSection: React.FC<ServicesSectionProps> = ({
+  services,
+  handleServiceChange,
+  handleQuantityChange,
+  handleObservationChange,
+  handlePhotoUpload,
+  handleRemovePhoto,
+  readOnly = false,
+  servicesWithoutPhotos,
 }) => {
   return (
-    <Card className="col-span-2">
-      <CardHeader>
-        <CardTitle>Serviços</CardTitle>
-        <CardDescription>
-          Selecione os serviços realizados e adicione informações relevantes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[400px] w-full rounded-md">
-          <div className="p-4 space-y-2">
-            {services.map((service) => (
-              <ServiceCheckbox
-                key={service.id}
-                service={service}
-                selected={service.selected} // Instead of 'checked'
-                onSelect={(id, selected) => onChecked(id, selected)} // Instead of 'onChecked'
-                onQuantityChange={onQuantityChange}
-                onObservationChange={onObservationChange}
-                onPhotoUpload={onPhotoUpload}
-                photoType="before"
-                editMode={editMode}
+    <div className="space-y-4">
+      {services.map((service) => (
+        <div key={service.id} className="p-4 border rounded-lg">
+          <ServiceCheck
+            service={service}
+            onChange={(checked) => handleServiceChange(service.id, checked)}
+            checked={service.selected}
+          />
+          {service.selected && (
+            <div className="mt-2 space-y-2">
+              <QuantityInput
+                value={service.quantity || 1}
+                onChange={(value) => handleQuantityChange(service.id, value)}
+                disabled={readOnly}
               />
-            ))}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+              {/* Additional service fields as needed */}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 };
-
-export default ServicesSection;
