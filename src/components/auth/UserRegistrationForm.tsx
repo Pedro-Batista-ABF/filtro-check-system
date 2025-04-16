@@ -1,26 +1,28 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface UserRegistrationData {
   fullName: string;
   email: string;
+  password: string;
 }
 
 export default function UserRegistrationForm() {
   const [formData, setFormData] = useState<UserRegistrationData>({
     fullName: "",
     email: "",
+    password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { registerUser } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,15 +30,15 @@ export default function UserRegistrationForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate form data
-    if (!formData.fullName || !formData.email) {
-      toast({
-        title: "Erro de validação",
+    if (!formData.fullName || !formData.email || !formData.password) {
+      toast.error("Erro de validação", {
         description: "Todos os campos são obrigatórios.",
-        variant: "destructive",
       });
       return;
     }
@@ -44,10 +46,16 @@ export default function UserRegistrationForm() {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      toast({
-        title: "Email inválido",
+      toast.error("Email inválido", {
         description: "Por favor, forneça um endereço de email válido.",
-        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password strength
+    if (formData.password.length < 6) {
+      toast.error("Senha fraca", {
+        description: "A senha deve ter pelo menos 6 caracteres.",
       });
       return;
     }
@@ -55,21 +63,14 @@ export default function UserRegistrationForm() {
     setIsLoading(true);
 
     try {
-      await registerUser(formData.email);
-      toast({
-        title: "Cadastro realizado com sucesso",
-        description: "Você receberá um email com o link de acesso.",
+      await registerUser(formData.email, formData.password);
+      toast.success("Cadastro realizado com sucesso", {
+        description: "Você já pode fazer login.",
       });
-      // Reset form data
-      setFormData({
-        fullName: "",
-        email: "",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro no cadastro",
-        description: "Ocorreu um erro ao processar sua solicitação.",
-        variant: "destructive",
+      navigate('/login');
+    } catch (error: any) {
+      toast.error("Erro no cadastro", {
+        description: error.message || "Ocorreu um erro ao processar sua solicitação.",
       });
     } finally {
       setIsLoading(false);
@@ -103,6 +104,34 @@ export default function UserRegistrationForm() {
           disabled={isLoading}
           required
         />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="password">Senha</Label>
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Digite sua senha"
+            disabled={isLoading}
+            required
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={togglePasswordVisibility}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+          >
+            {showPassword ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
       
       <Button 

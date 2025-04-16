@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,13 +9,14 @@ interface AuthContextProps {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  signIn: (email: string) => Promise<void>;
+  signIn: (email: string, password?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  login: (email: string) => Promise<void>;
-  registerUser: (email: string) => Promise<void>;
+  login: (email: string, password?: string) => Promise<void>;
+  registerUser: (email: string, password?: string) => Promise<void>;
   getUserMetadata: () => Record<string, any> | null;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
+  signUp: (email: string, password?: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextProps>({} as AuthContextProps);
@@ -149,29 +149,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setupAuth();
   }, []);
 
-  // Funções de autenticação
-  const signIn = async (email: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithOtp({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Login realizado com sucesso');
+      
+    } catch (error: any) {
+      setError(error.message);
+      toast.error('Erro ao fazer login', {
+        description: error.message
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
         options: {
-          emailRedirectTo: window.location.origin,
-          shouldCreateUser: true
+          emailRedirectTo: window.location.origin
         }
       });
       
       if (error) throw error;
       
-      toast.success('Link de acesso enviado!', {
-        description: 'Verifique seu email'
-      });
+      toast.success('Cadastro realizado com sucesso');
+      return data;
       
     } catch (error: any) {
       setError(error.message);
-      toast.error('Erro ao enviar link', {
+      toast.error('Erro ao criar conta', {
         description: error.message
       });
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -203,8 +225,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated,
     signIn,
     signOut,
+    signUp,
     login: signIn,
-    registerUser: signIn,
+    registerUser: signUp,
     getUserMetadata: () => user?.user_metadata || null,
     logout: signOut,
     refreshSession,
