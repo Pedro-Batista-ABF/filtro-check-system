@@ -27,30 +27,46 @@ export default function SectorForm({
   isLoading = false,
   photoRequired = false
 }: SectorFormProps) {
-  const formState = useSectorFormState(sector);
+  // Log diagnóstico para verificar os valores recebidos
+  console.log("SectorForm - Sector recebido:", sector);
+  
+  // Garantir que sector existe e não é undefined/null
+  const safeSector: Sector = sector || {
+    id: '',
+    tagNumber: '',
+    entryInvoice: '',
+    entryDate: new Date().toISOString(),
+    services: [],
+    tagPhotoUrl: '',
+    entryObservations: ''
+  };
+  
+  const formState = useSectorFormState(safeSector);
   const { validateForm, prepareFormData } = useSectorFormSubmit();
   const { handleTagPhotoUpload, handleServicePhotoUpload } = useSectorPhotoHandling();
   const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling();
 
   // Effect para inicializar o formulário com os dados do setor
   useEffect(() => {
-    formState.setTagNumber(sector.tagNumber || '');
-    formState.setEntryInvoice(sector.entryInvoice || '');
-    formState.setEntryDate(sector.entryDate ? new Date(sector.entryDate) : new Date());
-    formState.setTagPhotoUrl(sector.tagPhotoUrl);
-    formState.setEntryObservations(sector.entryObservations || '');
+    if (!safeSector) return;
     
-    if (Array.isArray(sector.services)) {
-      formState.setServices(sector.services);
+    formState.setTagNumber(safeSector.tagNumber || '');
+    formState.setEntryInvoice(safeSector.entryInvoice || '');
+    formState.setEntryDate(safeSector.entryDate ? new Date(safeSector.entryDate) : new Date());
+    formState.setTagPhotoUrl(safeSector.tagPhotoUrl);
+    formState.setEntryObservations(safeSector.entryObservations || '');
+    
+    if (Array.isArray(safeSector.services)) {
+      formState.setServices(safeSector.services);
     } else {
-      console.warn("Services não é um array válido:", sector.services);
+      console.warn("Services não é um array válido:", safeSector.services);
       formState.setServices([]);
     }
 
     if (mode === 'scrap') {
-      formState.setIsScrap(sector.scrapValidated || false);
+      formState.setIsScrap(safeSector.scrapValidated || false);
     }
-  }, [sector, mode]);
+  }, [safeSector, mode]);
 
   const handlePhotoUploadWrapper = async (files: FileList) => {
     const url = await handleTagPhotoUpload(files);
@@ -58,22 +74,45 @@ export default function SectorForm({
   };
 
   const handleServicePhotoUploadWrapper = (id: string, files: FileList, type: "before" | "after") => {
+    if (!Array.isArray(formState.services)) {
+      console.error("handleServicePhotoUploadWrapper: services não é um array");
+      toast.error("Erro ao adicionar foto", {
+        description: "Falha ao processar serviços."
+      });
+      return;
+    }
+    
     const updatedServices = handleServicePhotoUpload(id, files, type, formState.services);
     formState.setServices(updatedServices);
     toast.success("Foto adicionada ao serviço");
   };
 
   const handleServiceChangeWrapper = (id: string, checked: boolean) => {
+    if (!Array.isArray(formState.services)) {
+      console.error("handleServiceChangeWrapper: services não é um array");
+      return;
+    }
+    
     const updatedServices = handleServiceChange(formState.services, id, checked);
     formState.setServices(updatedServices);
   };
 
   const handleQuantityChangeWrapper = (id: string, quantity: number) => {
+    if (!Array.isArray(formState.services)) {
+      console.error("handleQuantityChangeWrapper: services não é um array");
+      return;
+    }
+    
     const updatedServices = handleQuantityChange(formState.services, id, quantity);
     formState.setServices(updatedServices);
   };
 
   const handleObservationChangeWrapper = (id: string, observations: string) => {
+    if (!Array.isArray(formState.services)) {
+      console.error("handleObservationChangeWrapper: services não é um array");
+      return;
+    }
+    
     const updatedServices = handleObservationChange(formState.services, id, observations);
     formState.setServices(updatedServices);
   };
@@ -140,12 +179,19 @@ export default function SectorForm({
           scrapInvoice: formState.scrapInvoice
         },
         mode === 'edit',
-        sector.id
+        safeSector.id
       );
       
       onSubmit(formData);
     }
   };
+
+  // Renderização diagnóstica para verificar se está renderizando adequadamente
+  console.log("⚠️ SectorForm - Renderizando formulário com formState:", {
+    tagNumber: formState.tagNumber,
+    services: formState.services?.length || 0,
+    mode
+  });
 
   if (mode === 'create') {
     return (
@@ -165,7 +211,7 @@ export default function SectorForm({
           handleTagPhotoUpload={handlePhotoUploadWrapper}
           entryObservations={formState.entryObservations}
           setEntryObservations={formState.setEntryObservations}
-          services={formState.services}
+          services={formState.services || []}
           handleServiceChange={handleServiceChangeWrapper}
           handleQuantityChange={handleQuantityChangeWrapper}
           handleObservationChange={handleObservationChangeWrapper}
@@ -203,7 +249,7 @@ export default function SectorForm({
 
       {mode === 'scrap' && (
         <ScrapForm 
-          sector={sector}
+          sector={safeSector}
           isScrap={formState.isScrap}
           setIsScrap={formState.setIsScrap}
           scrapObservations={formState.scrapObservations}

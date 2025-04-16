@@ -28,12 +28,24 @@ export const serviceTypeService = {
 
       console.log("serviceTypeService: Buscando tipos de serviço da tabela");
       
-      // Buscar tipos de serviço da tabela service_types com timeout explícito
-      const { data, error } = await supabase
+      // Usando Promise.race para implementar timeout manualmente
+      const timeout = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout ao buscar serviços")), 3000)
+      );
+      
+      const fetchPromise = supabase
         .from('service_types')
         .select('*')
-        .order('name')
-        .timeout(3000);
+        .order('name');
+        
+      const result = await Promise.race([fetchPromise, timeout]) as any;
+      
+      // Se timeout vencer, result será null
+      if (!result) {
+        throw new Error("Timeout excedido ao buscar serviços");
+      }
+      
+      const { data, error } = result;
         
       if (error) {
         console.error("serviceTypeService: Erro ao buscar tipos de serviço:", error);
@@ -63,7 +75,7 @@ export const serviceTypeService = {
         name: serviceType.name,
         description: serviceType.description,
         selected: false,
-        type: serviceType.id as any,
+        type: serviceType.id as any, // Usando any para corrigir problema de tipagem
         photos: [],
         quantity: 1
       }));

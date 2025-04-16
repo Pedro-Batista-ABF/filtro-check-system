@@ -16,7 +16,7 @@ export const createProcessedService = (service: Service): Service => ({
   id: service.id,
   name: service.name,
   selected: false,
-  type: service.id as ServiceType, // Corrigindo a conversão explicita para ServiceType
+  type: service.id as any, // Usando any para corrigir problema de tipagem
   photos: [],
   quantity: 1
 });
@@ -40,11 +40,25 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     const startTime = Date.now();
     console.log("ServiceUtils: Verificando conexão com Supabase...");
     
-    // Tenta uma query simples para testar a conexão
-    const { data, error } = await supabase
+    // Tenta uma query simples para testar a conexão com promise race para timeout
+    const timeout = new Promise<null>((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout de conexão")), 3000)
+    );
+    
+    const fetchPromise = supabase
       .from('service_types')
       .select('count(*)', { count: 'exact', head: true });
       
+    const result = await Promise.race([fetchPromise, timeout]) as any;
+    
+    // Se timeout vencer, result será null
+    if (!result) {
+      const elapsedTime = Date.now() - startTime;
+      console.error(`ServiceUtils: Timeout de conexão com Supabase após ${elapsedTime}ms`);
+      return false;
+    }
+    
+    const { error } = result;
     const elapsedTime = Date.now() - startTime;
     
     if (error) {
@@ -72,12 +86,24 @@ export const loadServicesOptimized = async (): Promise<Service[]> => {
       throw new Error("Falha na conexão com o servidor Supabase");
     }
     
-    // Tentamos carregar com timeout reduzido
-    const { data, error } = await supabase
+    // Tentamos carregar com timeout implementado manualmente
+    const timeout = new Promise<null>((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout ao buscar serviços")), 5000)
+    );
+    
+    const fetchPromise = supabase
       .from('service_types')
       .select('*')
-      .order('name')
-      .timeout(5000); // Timeout explícito de 5 segundos
+      .order('name');
+      
+    const result = await Promise.race([fetchPromise, timeout]) as any;
+    
+    // Se timeout vencer, result será null
+    if (!result) {
+      throw new Error("Timeout excedido ao buscar serviços");
+    }
+    
+    const { data, error } = result;
       
     if (error) {
       console.error("ServiceUtils: Erro ao carregar serviços:", error);
@@ -89,7 +115,15 @@ export const loadServicesOptimized = async (): Promise<Service[]> => {
       return [];
     }
     
-    const processedServices = data.map(createProcessedService);
+    const processedServices = data.map((service: any) => ({
+      id: service.id,
+      name: service.name,
+      selected: false,
+      type: service.id as any, // Usando any para corrigir problema de tipagem
+      photos: [],
+      quantity: 1
+    }));
+    
     logServiceLoadTime(startTime);
     
     return processedServices;

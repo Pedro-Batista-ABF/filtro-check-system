@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { Sector } from "@/types";
+import { Sector, Service } from "@/types";
 import { useSectorFetch } from "./useSectorFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInitialSectorData } from "./useInitialSectorData";
@@ -12,6 +12,8 @@ export function usePeritagemData(id?: string) {
   const { sector, fetchSector } = useSectorFetch(id);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isEditing = !!id;
+  const [validDefaultSector, setValidDefaultSector] = useState<Sector | null>(null);
+  const [defaultServices, setDefaultServices] = useState<Service[]>([]);
 
   const {
     defaultSector,
@@ -40,6 +42,22 @@ export function usePeritagemData(id?: string) {
     servicesFetched,
     verifyConnection
   } = useServiceDataFetching();
+
+  // Novo efeito para garantir que defaultSector ou sector tenha valores válidos
+  useEffect(() => {
+    if (defaultSector && !isEditing) {
+      setValidDefaultSector(defaultSector);
+      // Garantir que services é um array válido
+      const safeServices = Array.isArray(defaultSector.services) ? 
+        defaultSector.services : [];
+      setDefaultServices(safeServices);
+    } else if (sector && isEditing) {
+      setValidDefaultSector(sector);
+      const safeServices = Array.isArray(sector.services) ? 
+        sector.services : [];
+      setDefaultServices(safeServices);
+    }
+  }, [defaultSector, sector, isEditing]);
 
   const loadData = useCallback(async () => {
     if (authLoading || !isAuthenticated || loadingTimeout) {
@@ -85,15 +103,22 @@ export function usePeritagemData(id?: string) {
     }
   }, [authLoading, isAuthenticated, loadData, servicesFetched, loadingTimeout]);
 
+  // Logs solicitados
+  console.log('✅ validDefaultSector:', validDefaultSector);
+  console.log('✅ services:', defaultServices);
+  console.log('✅ loading:', loading);
+
   return {
     sector,
-    defaultSector,
+    defaultSector: validDefaultSector, // Substituindo defaultSector por validDefaultSector
     loading,
     errorMessage,
     isEditing,
-    services: [],  // This will be filled by useServicesManagement
-    hasValidData: (!loading && servicesFetched) || !!defaultSector || !!sector,
+    services: defaultServices, // Usando defaultServices validado
+    hasValidData: (!loading && servicesFetched && (!!validDefaultSector || !!sector)) || !!validDefaultSector,
     dataReady,
-    setDataReady
+    setDataReady,
+    validDefaultSector, // Exportando explicitamente
+    defaultServices // Exportando explicitamente
   };
 }

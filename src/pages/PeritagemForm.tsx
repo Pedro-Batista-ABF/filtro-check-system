@@ -23,12 +23,11 @@ export default function PeritagemForm() {
   const navigate = useNavigate();
   
   const { 
-    sector, 
-    defaultSector, 
+    validDefaultSector, 
+    defaultServices,
     loading, 
     errorMessage, 
     isEditing,
-    services,
     hasValidData,
     dataReady,
     setDataReady: updateDataReady
@@ -107,10 +106,8 @@ export default function PeritagemForm() {
     const timer = setTimeout(() => {
       if (loading || !formSector) {
         console.warn(`PeritagemForm: Timeout máximo de ${maxLoadTime/1000}s atingido`);
-        if (!formSector && defaultSector) {
-          setFormSector(defaultSector);
-        } else if (!formSector && sector) {
-          setFormSector(sector);
+        if (!formSector && validDefaultSector) {
+          setFormSector(validDefaultSector);
         }
         updateDataReady(true);
         setHasTimeout(false);
@@ -122,7 +119,7 @@ export default function PeritagemForm() {
     }, maxLoadTime);
     
     return () => clearTimeout(timer);
-  }, [loading, formSector, defaultSector, sector, maxLoadTime, updateDataReady]);
+  }, [loading, formSector, validDefaultSector, maxLoadTime, updateDataReady]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -136,15 +133,14 @@ export default function PeritagemForm() {
 
   useEffect(() => {
     if (!loading) {
-      if (isEditing && sector) {
-        setFormSector(sector);
-        updateDataReady(true);
-      } else if (!isEditing && defaultSector) {
-        setFormSector(defaultSector);
+      if (validDefaultSector) {
+        // Log diagnóstico justo antes de definir o formSector
+        console.log("⚠️ Renderizando formulário com:", validDefaultSector, defaultServices);
+        setFormSector(validDefaultSector);
         updateDataReady(true);
       }
     }
-  }, [sector, defaultSector, isEditing, loading, updateDataReady]);
+  }, [validDefaultSector, defaultServices, loading, updateDataReady]);
 
   const handleForceRefresh = () => {
     setForceRefreshing(true);
@@ -168,7 +164,7 @@ export default function PeritagemForm() {
             <div className="p-6">
               <SectorForm 
                 sector={formSector}
-                onSubmit={(data) => handleSubmit(data, isEditing, sector?.id)}
+                onSubmit={(data) => handleSubmit(data, isEditing, id)}
                 mode="create"
                 photoRequired={true}
                 isLoading={isSaving}
@@ -212,10 +208,10 @@ export default function PeritagemForm() {
             forceRefreshing={forceRefreshing}
             mountTime={mountTime}
             authVerified={authVerified}
-            services={services}
+            services={defaultServices}
             connectionStatus={connectionStatus}
-            defaultSector={defaultSector}
-            sector={sector}
+            defaultSector={validDefaultSector}
+            sector={validDefaultSector}
             errorMessage={errorMessage}
             onRetry={handleForceRefresh}
             onBack={() => navigate('/peritagem')}
