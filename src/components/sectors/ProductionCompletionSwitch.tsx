@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Sector } from "@/types";
+import { Sector, SectorStatus } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -29,9 +29,9 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
       
       // Se estiver em execução e foi marcado como concluído, atualiza para checagemFinalPendente
       const newStatus = (sector.status === "emExecucao" && checked) 
-        ? "checagemFinalPendente" 
+        ? "checagemFinalPendente" as SectorStatus
         : (sector.status === "checagemFinalPendente" && !checked)
-          ? "emExecucao"
+          ? "emExecucao" as SectorStatus
           : sector.status;
       
       console.log(`Atualizando status do setor de ${sector.status} para ${newStatus}`);
@@ -42,8 +42,8 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
         .update({
           current_status: newStatus,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', sector.id);
+        } as any)
+        .eq('id', sector.id as any);
       
       if (error) {
         console.error("Erro ao atualizar status do setor:", error);
@@ -57,8 +57,8 @@ export default function ProductionCompletionSwitch({ sector }: ProductionComplet
           status: newStatus,
           production_completed: checked,
           updated_at: new Date().toISOString()
-        })
-        .eq('sector_id', sector.id)
+        } as any)
+        .eq('sector_id', sector.id as any)
         .order('created_at', { ascending: false })
         .limit(1);
         

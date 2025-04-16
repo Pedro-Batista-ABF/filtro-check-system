@@ -1,5 +1,5 @@
 
-import { Sector, SectorStatus } from "@/types";
+import { Sector, SectorStatus, CycleOutcome } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,8 +14,8 @@ export function useSectorStatus() {
           current_status: status,
           current_outcome: data.outcome || 'EmAndamento',
           updated_at: new Date().toISOString()
-        })
-        .eq('id', sectorId);
+        } as any)
+        .eq('id', sectorId as any);
         
       if (error) throw error;
       
@@ -28,8 +28,8 @@ export function useSectorStatus() {
           entry_invoice: data.entryInvoice,
           tag_number: data.tagNumber,
           peritagem_date: data.peritagemDate
-        })
-        .eq('sector_id', sectorId)
+        } as any)
+        .eq('sector_id', sectorId as any)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -47,29 +47,33 @@ export function useSectorStatus() {
   };
 
   const verifyScrapStatus = async (sectorId: string) => {
-    const { data: checkData, error: checkError } = await supabase
-      .from('sectors')
-      .select('current_status')
-      .eq('id', sectorId)
-      .single();
-      
-    if (checkError) {
-      console.error("Erro ao verificar status:", checkError);
-      return;
-    }
-
-    if (checkData.current_status !== 'sucateadoPendente') {
-      const { error: forceError } = await supabase
+    try {
+      const { data: checkData, error: checkError } = await supabase
         .from('sectors')
-        .update({
-          current_status: 'sucateadoPendente',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', sectorId);
+        .select('current_status')
+        .eq('id', sectorId as any)
+        .single();
         
-      if (forceError) {
-        console.error("Erro ao forçar status:", forceError);
+      if (checkError) {
+        console.error("Erro ao verificar status:", checkError);
+        return;
       }
+
+      if (!checkData || checkData.current_status !== 'sucateadoPendente') {
+        const { error: forceError } = await supabase
+          .from('sectors')
+          .update({
+            current_status: 'sucateadoPendente' as SectorStatus,
+            updated_at: new Date().toISOString()
+          } as any)
+          .eq('id', sectorId as any);
+          
+        if (forceError) {
+          console.error("Erro ao forçar status:", forceError);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao verificar status de sucateamento:", error);
     }
   };
 

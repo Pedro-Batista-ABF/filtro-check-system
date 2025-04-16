@@ -11,8 +11,12 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
         // Usar o serviço de foto real em vez de URL temporária
         const uploadResult = await photoService.uploadPhoto(file, 'tags');
         
-        toast.success("Foto da TAG capturada com sucesso");
-        return uploadResult;
+        if (uploadResult) {
+          toast.success("Foto da TAG capturada com sucesso");
+          return uploadResult;
+        } else {
+          throw new Error("URL de foto inválida");
+        }
       } catch (error) {
         console.error('Erro ao fazer upload da foto da TAG:', error);
         toast.error("Erro ao fazer upload da foto da TAG");
@@ -40,9 +44,9 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Usar o serviço de upload real
         try {
-          const photoUrl = await photoService.uploadPhoto(file, `services/${serviceId}`);
+          const uploadPath = `services/${serviceId}/${type}`;
+          const photoUrl = await photoService.uploadPhoto(file, uploadPath);
           
           if (photoUrl) {
             newPhotos.push({
@@ -52,6 +56,10 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
               serviceId,
               file
             });
+            console.log(`Foto adicionada com sucesso. URL: ${photoUrl}`);
+          } else {
+            console.error('URL de foto retornada inválida');
+            toast.error(`Erro ao processar foto ${i + 1}`);
           }
         } catch (uploadError) {
           console.error('Erro ao fazer upload da foto:', uploadError);
@@ -67,7 +75,7 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
       
       setServices(updatedServices);
       
-      if (newPhotos.length > service.photos?.length || 0) {
+      if (newPhotos.length > (service.photos?.length || 0)) {
         toast.success(`${files.length} foto(s) adicionada(s) ao serviço`);
       }
     } catch (error) {
@@ -78,8 +86,17 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
 
   const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
     e.preventDefault();
-    // Implementar funcionalidade de câmera em uma versão futura
-    toast.info("Funcionalidade de câmera será implementada em breve");
+    
+    // Verificar se a API de câmera está disponível
+    if ('mediaDevices' in navigator && navigator.mediaDevices.getUserMedia) {
+      toast.info("Abrindo câmera...", {
+        description: "Esta funcionalidade ainda está em desenvolvimento."
+      });
+    } else {
+      toast.error("Câmera não disponível", {
+        description: "Seu dispositivo não suporta acesso à câmera ou o acesso foi negado."
+      });
+    }
   };
 
   return {

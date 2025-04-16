@@ -21,11 +21,15 @@ export const photoService = {
         throw new Error("O arquivo precisa ser uma imagem");
       }
 
+      console.log(`Iniciando upload de foto para pasta '${folder}'`);
+
       // Gerar nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const randomId = Math.random().toString(36).substring(2, 15);
       const fileName = `${randomId}_${Date.now()}.${fileExt}`;
       const filePath = `${folder}/${fileName}`;
+      
+      console.log(`Nome de arquivo gerado: ${fileName}`);
       
       // Fazer upload para o bucket 'photos'
       const { data, error } = await supabase.storage
@@ -35,13 +39,20 @@ export const photoService = {
           upsert: false
         });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Erro no upload para o Supabase:", error);
+        throw error;
+      }
+      
+      console.log("Upload para Supabase concluído com sucesso");
       
       // Obter a URL pública
       const { data: urlData } = supabase.storage
         .from('photos')
         .getPublicUrl(filePath);
         
+      console.log(`URL pública gerada: ${urlData.publicUrl}`);
+      
       return urlData.publicUrl;
     } catch (error) {
       console.error("Erro no upload da foto:", error);

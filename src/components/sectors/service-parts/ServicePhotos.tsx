@@ -1,9 +1,10 @@
 
 import React, { useRef, useState } from 'react';
-import { Camera, Trash2, Image, Loader2 } from 'lucide-react';
+import { Camera, Trash2, Image, Loader2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Service, Photo } from '@/types';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface ServicePhotosProps {
   service: Service;
@@ -11,7 +12,7 @@ interface ServicePhotosProps {
   required: boolean;
   onPhotoUpload: (serviceId: string, files: FileList, type: "before" | "after") => void;
   disabled?: boolean;
-  onCameraCapture?: (e: React.MouseEvent) => void;
+  onCameraCapture?: (e: React.MouseEvent, serviceId: string) => void;
 }
 
 const ServicePhotos: React.FC<ServicePhotosProps> = ({
@@ -56,6 +57,11 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
       setUploading(false);
     }
   };
+
+  const handleCameraCaptureClick = (e: React.MouseEvent) => {
+    if (disabled || !onCameraCapture) return;
+    onCameraCapture(e, service.id);
+  };
   
   return (
     <div className="mt-2">
@@ -92,7 +98,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
               type="button"
               variant="outline"
               size="sm"
-              onClick={onCameraCapture}
+              onClick={handleCameraCaptureClick}
               disabled={disabled || uploading}
               className="text-xs"
             >
@@ -116,26 +122,33 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
       {typePhotos.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {typePhotos.map((photo, index) => (
-            <div key={index} className="relative border rounded-md overflow-hidden h-24">
-              <a 
-                href={photo.url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="block h-full w-full"
-              >
+            <Dialog key={photo.id || `photo-${index}`}>
+              <DialogTrigger asChild>
+                <div className="relative border rounded-md overflow-hidden h-24 cursor-pointer">
+                  <img
+                    src={photo.url}
+                    alt={`Foto ${index + 1} do serviço ${service.name}`}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      // Fallback para imagem quebrada
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                      target.classList.add('bg-gray-100');
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 flex items-center justify-center transition-all">
+                    <Eye className="h-5 w-5 text-white opacity-0 hover:opacity-100" />
+                  </div>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl p-0">
                 <img
                   src={photo.url}
                   alt={`Foto ${index + 1} do serviço ${service.name}`}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    // Fallback para imagem quebrada
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.svg';
-                    target.classList.add('bg-gray-100');
-                  }}
+                  className="w-full h-auto max-h-[80vh] object-contain"
                 />
-              </a>
-            </div>
+              </DialogContent>
+            </Dialog>
           ))}
         </div>
       ) : (
