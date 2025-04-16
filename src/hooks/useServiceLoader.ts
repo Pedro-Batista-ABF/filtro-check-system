@@ -1,14 +1,9 @@
-
 import { useState, useCallback } from "react";
 import { Service } from "@/types";
 import { serviceTypeService } from "@/services/supabase/serviceTypeService";
-import { 
-  validateSession, 
-  createProcessedService, 
-  handleServiceError, 
-  logServiceLoadTime, 
-  loadServicesOptimized 
-} from "@/utils/serviceUtils";
+import { validateSession } from "@/utils/sessionUtils";
+import { handleServiceError, logServiceLoadTime } from "@/utils/serviceProcessingUtils";
+import { loadServicesOptimized } from "@/utils/serviceLoadUtils";
 
 export const useServiceLoader = () => {
   const [loading, setLoading] = useState(true);
@@ -58,3 +53,4 @@ export const useServiceLoader = () => {
     connectionChecked
   };
 };
+
