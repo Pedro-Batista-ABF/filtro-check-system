@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { EntryFormSection } from "./form-sections/EntryFormSection";
 import ScrapForm from "./forms/ScrapForm";
@@ -36,11 +35,18 @@ export default function SectorForm({
     tagNumber: '',
     entryInvoice: '',
     entryDate: new Date().toISOString(),
+    peritagemDate: new Date().toISOString(),
     services: [],
     tagPhotoUrl: '',
-    entryObservations: ''
+    entryObservations: '',
+    beforePhotos: [],
+    afterPhotos: [],
+    scrapPhotos: [],
+    status: 'peritagemPendente',
+    scrapValidated: false,
+    productionCompleted: false
   };
-  
+
   const formState = useSectorFormState(safeSector);
   const { validateForm, prepareFormData } = useSectorFormSubmit();
   const { handleTagPhotoUpload, handleServicePhotoUpload } = useSectorPhotoHandling();

@@ -1,16 +1,14 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sector } from "@/types";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { checkSupabaseConnection } from "@/utils/serviceUtils";
 
 import SectorForm from "@/components/sectors/SectorForm";
 import { Card } from "@/components/ui/card";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { usePeritagemData } from "@/hooks/usePeritagemData";
 import { usePeritagemSubmit } from "@/hooks/usePeritagemSubmit";
+import { useConnectionAuth } from "@/hooks/useConnectionAuth";
 import PeritagemHeader from "@/components/peritagem/PeritagemHeader";
 import ErrorMessage from "@/components/peritagem/ErrorMessage";
 import LoadingState from "@/components/peritagem/LoadingState";
@@ -21,6 +19,15 @@ import OfflineWarning from "@/components/peritagem/OfflineWarning";
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [mountTime] = useState(Date.now());
+  const [hasTimeout, setHasTimeout] = useState(false);
+  const [maxLoadTime] = useState(12000);
+  const { 
+    connectionStatus,
+    authVerified,
+    forceRefreshing,
+    handleForceRefresh 
+  } = useConnectionAuth();
   
   const { 
     validDefaultSector, 
@@ -40,67 +47,7 @@ export default function PeritagemForm() {
   } = usePeritagemSubmit();
 
   const [formSector, setFormSector] = useState<Sector | null>(null);
-  const [hasTimeout, setHasTimeout] = useState(false);
-  const [mountTime] = useState(Date.now());
-  const [forceRefreshing, setForceRefreshing] = useState(false);
-  const [authVerified] = useState(false);
-  const [maxLoadTime] = useState(12000);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const isAuth = !!data.session?.user;
-        
-        if (!isAuth) {
-          console.error("PeritagemForm: Usuário não autenticado na verificação direta");
-          toast.error("Sessão expirada", {
-            description: "Faça login novamente para continuar"
-          });
-          navigate('/login');
-        } else {
-          console.log("PeritagemForm: Autenticação verificada diretamente:", data.session.user.id);
-          
-          const isConnected = await checkSupabaseConnection();
-          setConnectionStatus(isConnected ? 'online' : 'offline');
-          
-          if (!isConnected) {
-            toast.error("Problemas de conexão", {
-              description: "Não foi possível estabelecer uma conexão estável com o servidor"
-            });
-          }
-        }
-      } catch (error) {
-        console.error("PeritagemForm: Erro ao verificar autenticação:", error);
-        setConnectionStatus('offline');
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    
-    if (connectionStatus === 'offline') {
-      interval = setInterval(async () => {
-        console.log("PeritagemForm: Tentando reconectar...");
-        const isConnected = await checkSupabaseConnection();
-        if (isConnected) {
-          setConnectionStatus('online');
-          toast.success("Conexão estabelecida", {
-            description: "A conexão com o servidor foi restaurada"
-          });
-          clearInterval(interval);
-        }
-      }, 10000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [connectionStatus]);
+  const [forceRefreshingState, setForceRefreshingState] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -143,7 +90,7 @@ export default function PeritagemForm() {
   }, [validDefaultSector, defaultServices, loading, updateDataReady]);
 
   const handleForceRefresh = () => {
-    setForceRefreshing(true);
+    setForceRefreshingState(true);
     window.location.reload();
   };
 
@@ -196,7 +143,7 @@ export default function PeritagemForm() {
     );
   }
 
-  if (hasTimeout || forceRefreshing) {
+  if (hasTimeout || forceRefreshingState) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
