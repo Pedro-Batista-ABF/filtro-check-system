@@ -61,29 +61,6 @@ export function useServicesManagement() {
       
       console.log(`useServicesManagement: ${serviceTypes.length} tipos de serviço encontrados`);
       
-      // Serviços de fallback se não houver nenhum
-      if (serviceTypes.length === 0) {
-        console.warn("useServicesManagement: Nenhum serviço encontrado, usando padrões");
-        serviceTypes = [
-          {
-            id: "limpeza_emergencia",
-            name: "Limpeza (Emergência)",
-            selected: false,
-            type: "limpeza_emergencia" as any,
-            photos: [],
-            quantity: 1
-          },
-          {
-            id: "manutencao_emergencia",
-            name: "Manutenção (Emergência)",
-            selected: false,
-            type: "manutencao_emergencia" as any,
-            photos: [],
-            quantity: 1
-          }
-        ];
-      }
-      
       // Processar serviços
       const processedServices = serviceTypes.map(service => ({
         id: service.id,
