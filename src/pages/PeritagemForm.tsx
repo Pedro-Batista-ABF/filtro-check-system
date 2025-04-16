@@ -28,7 +28,8 @@ export default function PeritagemForm() {
     connectionStatus,
     authVerified,
     forceRefreshing,
-    handleForceRefresh 
+    handleForceRefresh,
+    handleRetryConnection
   } = useConnectionAuth();
   
   const { 
@@ -50,9 +51,13 @@ export default function PeritagemForm() {
 
   const [formSector, setFormSector] = useState<Sector | null>(null);
   const [forceRefreshingState, setForceRefreshingState] = useState(false);
+  const [retryAttempts, setRetryAttempts] = useState(0);
 
+  // Efeito para forçar timeout após período máximo
   useEffect(() => {
     console.log("🕒 PeritagemForm - Configurando timeout de carregamento", Date.now());
+    console.log("🕒 connectionStatus:", connectionStatus);
+    
     const timer = setTimeout(() => {
       if (loading || !formSector) {
         console.warn(`PeritagemForm: Timeout máximo de ${maxLoadTime/1000}s atingido`);
@@ -61,7 +66,6 @@ export default function PeritagemForm() {
           setFormSector(validDefaultSector);
         }
         updateDataReady(true);
-        setHasTimeout(false);
         
         toast.warning("Carregamento parcial", {
           description: "Alguns dados podem estar usando valores padrão devido ao tempo de carregamento excedido."
@@ -70,10 +74,12 @@ export default function PeritagemForm() {
     }, maxLoadTime);
     
     return () => clearTimeout(timer);
-  }, [loading, formSector, validDefaultSector, maxLoadTime, updateDataReady]);
+  }, [loading, formSector, validDefaultSector, maxLoadTime, updateDataReady, connectionStatus]);
 
+  // Efeito para mostrar tela de timeout após espera prolongada
   useEffect(() => {
     console.log("⏱️ PeritagemForm - Configurando timeout longo", Date.now());
+    
     const timer = setTimeout(() => {
       if (loading) {
         console.log("⏱️ PeritagemForm - Timeout longo atingido, setando hasTimeout", Date.now());
@@ -84,12 +90,14 @@ export default function PeritagemForm() {
     return () => clearTimeout(timer);
   }, [loading]);
 
+  // Efeito para atualizar formSector quando os dados estiverem prontos
   useEffect(() => {
     console.log("📋 PeritagemForm useEffect - Atualizando formSector", Date.now());
     console.log("📋 loading:", loading);
     console.log("📋 validDefaultSector:", validDefaultSector?.id || "não definido");
     console.log("📋 defaultServices length:", defaultServices?.length || 0);
     console.log("📋 dataReady:", dataReady);
+    console.log("📋 connectionStatus:", connectionStatus);
     
     if (!loading && validDefaultSector && defaultServices.length > 0) {
       // Log diagnóstico justo antes de definir o formSector
@@ -97,12 +105,31 @@ export default function PeritagemForm() {
       console.log("⚠️ Timestamp de definição do formSector:", Date.now());
       setFormSector(validDefaultSector);
       updateDataReady(true);
+      setHasTimeout(false);  // Limpar timeout se dados chegaram
     }
-  }, [validDefaultSector, defaultServices, loading, updateDataReady]);
+  }, [validDefaultSector, defaultServices, loading, updateDataReady, connectionStatus]);
 
   const handleForceRefreshLocal = () => {
     setForceRefreshingState(true);
     handleForceRefresh();
+  };
+
+  const handleRetry = () => {
+    // Tentar novamente com incremento de contador
+    setRetryAttempts(prev => prev + 1);
+    updateDataReady(false);
+    setFormSector(null);
+    setHasTimeout(false);
+    
+    if (connectionStatus === 'offline') {
+      handleRetryConnection();
+    } else {
+      toast.info("Tentando carregar novamente...");
+      // Pequena ação para forçar re-render e recarregar dados
+      setTimeout(() => {
+        updateDataReady(false);
+      }, 50);
+    }
   };
 
   console.log("📊 PeritagemForm - Estado para decisão de render:", {
@@ -111,10 +138,13 @@ export default function PeritagemForm() {
     dataReady,
     defaultServicesLength: defaultServices?.length || 0,
     validDefaultSector: !!validDefaultSector,
-    hasTimeout
+    hasTimeout,
+    connectionStatus,
+    retryAttempts
   });
 
-  // Critério de renderização melhorado conforme solicitado
+  // Critério de renderização com lógica de conexão
+  // Renderizar o formulário somente se tiver todos os dados necessários
   if (!loading && formSector && dataReady && defaultServices.length > 0 && validDefaultSector) {
     console.log("✅ PeritagemForm - Renderizando formulário", Date.now());
     return (
@@ -122,12 +152,17 @@ export default function PeritagemForm() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <PeritagemHeader isEditing={isEditing} />
-            <ConnectionStatus status={connectionStatus} />
+            <ConnectionStatus 
+              status={connectionStatus} 
+              onRetryConnection={handleRetryConnection}
+            />
           </div>
           
           {errorMessage && <ErrorMessage message={errorMessage} />}
           {submitError && <ErrorMessage message={submitError} />}
-          {connectionStatus === 'offline' && <OfflineWarning />}
+          {connectionStatus === 'offline' && (
+            <OfflineWarning onRetryConnection={handleRetryConnection} />
+          )}
           
           <Card className="border-none shadow-lg">
             <div className="p-6">
@@ -145,35 +180,45 @@ export default function PeritagemForm() {
     );
   }
 
-  if (loading && !hasTimeout) {
+  // Estado de carregamento normal
+  if ((loading || !formSector) && !hasTimeout && connectionStatus !== 'offline') {
     console.log("⏳ PeritagemForm - Renderizando loading", Date.now());
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <PeritagemHeader isEditing={isEditing} />
-            <ConnectionStatus status={connectionStatus} />
+            <ConnectionStatus 
+              status={connectionStatus} 
+              onRetryConnection={handleRetryConnection}
+            />
           </div>
           <LoadingState 
             message="Carregando formulário de peritagem" 
             showTiming={true} 
-            details={connectionStatus === 'offline' ? 
-              "Tentando reconectar ao servidor..." : 
-              "Buscando tipos de serviços e preparando formulário..."}
+            details={
+              connectionStatus === 'checking' ? 
+                "Verificando conexão com o servidor..." : 
+                "Buscando tipos de serviços e preparando formulário..."
+            }
           />
         </div>
       </PageLayoutWrapper>
     );
   }
 
-  if (hasTimeout || forceRefreshingState) {
-    console.log("⚠️ PeritagemForm - Renderizando timeout error", Date.now());
+  // Estado de erro por timeout ou desconexão
+  if (hasTimeout || forceRefreshingState || connectionStatus === 'offline') {
+    console.log("⚠️ PeritagemForm - Renderizando timeout/conexão error", Date.now());
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <PeritagemHeader isEditing={isEditing} />
-            <ConnectionStatus status={connectionStatus} />
+            <ConnectionStatus 
+              status={connectionStatus} 
+              onRetryConnection={handleRetryConnection}
+            />
           </div>
           <TimeoutError
             forceRefreshing={forceRefreshing}
@@ -184,21 +229,26 @@ export default function PeritagemForm() {
             defaultSector={validDefaultSector}
             sector={validDefaultSector}
             errorMessage={errorMessage}
-            onRetry={handleForceRefreshLocal}
+            onRetry={handleRetry}
             onBack={() => navigate('/peritagem')}
+            onRetryConnection={handleRetryConnection}
           />
         </div>
       </PageLayoutWrapper>
     );
   }
 
+  // Fallback para outros casos (não deve ocorrer, mas como garantia)
   console.log("⏳ PeritagemForm - Renderizando fallback loading", Date.now());
   return (
     <PageLayoutWrapper>
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <PeritagemHeader isEditing={isEditing} />
-          <ConnectionStatus status={connectionStatus} />
+          <ConnectionStatus 
+            status={connectionStatus} 
+            onRetryConnection={handleRetryConnection}
+          />
         </div>
         <LoadingState 
           message="Carregando peritagem" 

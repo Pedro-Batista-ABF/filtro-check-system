@@ -1,4 +1,3 @@
-
 import { Service, ServiceType } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,40 +33,50 @@ export const logServiceLoadTime = (startTime: number) => {
   console.log(`ServiceUtils: 🔥 Carregamento de serviços finalizado em ${elapsedTime}ms`);
 };
 
-// Nova função para adicionar diagnóstico de conexão
+// Função aprimorada para diagnóstico de conexão
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
     const startTime = Date.now();
     console.log("ServiceUtils: Verificando conexão com Supabase...");
     
+    // Implementamos um timeout mais curto para evitar esperas longas
+    const timeoutMs = 3000;
+    
     // Tenta uma query simples para testar a conexão com promise race para timeout
     const timeout = new Promise<null>((_, reject) => 
-      setTimeout(() => reject(new Error("Timeout de conexão")), 3000)
+      setTimeout(() => reject(new Error("Timeout de conexão")), timeoutMs)
     );
     
+    // Utilizamos uma query leve - apenas checando se o serviço responde
     const fetchPromise = supabase
       .from('service_types')
       .select('count(*)', { count: 'exact', head: true });
       
-    const result = await Promise.race([fetchPromise, timeout]) as any;
-    
-    // Se timeout vencer, result será null
-    if (!result) {
+    try {
+      const result = await Promise.race([fetchPromise, timeout]) as any;
+      
+      // Se timeout vencer, result será null
+      if (!result) {
+        const elapsedTime = Date.now() - startTime;
+        console.error(`ServiceUtils: Timeout de conexão com Supabase após ${elapsedTime}ms`);
+        return false;
+      }
+      
+      const { error } = result;
       const elapsedTime = Date.now() - startTime;
-      console.error(`ServiceUtils: Timeout de conexão com Supabase após ${elapsedTime}ms`);
+      
+      if (error) {
+        console.error(`ServiceUtils: Erro de conexão com Supabase após ${elapsedTime}ms:`, error);
+        return false;
+      }
+      
+      console.log(`ServiceUtils: Conexão com Supabase OK em ${elapsedTime}ms`);
+      return true;
+    } catch (error) {
+      const elapsedTime = Date.now() - startTime;
+      console.error(`ServiceUtils: Falha na corrida de promises após ${elapsedTime}ms:`, error);
       return false;
     }
-    
-    const { error } = result;
-    const elapsedTime = Date.now() - startTime;
-    
-    if (error) {
-      console.error(`ServiceUtils: Erro de conexão com Supabase após ${elapsedTime}ms:`, error);
-      return false;
-    }
-    
-    console.log(`ServiceUtils: Conexão com Supabase OK em ${elapsedTime}ms`);
-    return true;
   } catch (error) {
     console.error("ServiceUtils: Erro crítico ao verificar conexão:", error);
     return false;

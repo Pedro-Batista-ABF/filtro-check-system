@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { checkSupabaseConnection } from '@/utils/serviceUtils';
@@ -10,48 +10,60 @@ export function useConnectionAuth() {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [authVerified, setAuthVerified] = useState(false);
   const [forceRefreshing, setForceRefreshing] = useState(false);
+  const [lastConnectionAttempt, setLastConnectionAttempt] = useState(Date.now());
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const isAuth = !!data.session?.user;
-        
-        if (!isAuth) {
-          console.error("useConnectionAuth: Usuário não autenticado na verificação direta");
-          toast.error("Sessão expirada", {
-            description: "Faça login novamente para continuar"
-          });
-          navigate('/login');
-          return;
-        }
-        
-        console.log("useConnectionAuth: Autenticação verificada:", data.session.user.id);
-        setAuthVerified(true);
-        
-        const isConnected = await checkSupabaseConnection();
-        setConnectionStatus(isConnected ? 'online' : 'offline');
-        
-        if (!isConnected) {
-          toast.error("Problemas de conexão", {
-            description: "Não foi possível estabelecer uma conexão estável com o servidor"
-          });
-        }
-      } catch (error) {
-        console.error("useConnectionAuth: Erro ao verificar autenticação:", error);
-        setConnectionStatus('offline');
+  const checkAuth = useCallback(async () => {
+    try {
+      console.log("useConnectionAuth: Verificando autenticação...");
+      const { data } = await supabase.auth.getSession();
+      const isAuth = !!data.session?.user;
+      
+      if (!isAuth) {
+        console.error("useConnectionAuth: Usuário não autenticado na verificação direta");
+        toast.error("Sessão expirada", {
+          description: "Faça login novamente para continuar"
+        });
+        navigate('/login');
+        return false;
       }
-    };
-    
-    checkAuth();
+      
+      console.log("useConnectionAuth: Autenticação verificada:", data.session.user.id);
+      setAuthVerified(true);
+      
+      const isConnected = await checkSupabaseConnection();
+      setConnectionStatus(isConnected ? 'online' : 'offline');
+      
+      if (!isConnected) {
+        console.warn("useConnectionAuth: Não foi possível estabelecer conexão com o servidor");
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("useConnectionAuth: Erro ao verificar autenticação:", error);
+      setConnectionStatus('offline');
+      return false;
+    }
   }, [navigate]);
+  
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     
     if (connectionStatus === 'offline') {
       interval = setInterval(async () => {
-        console.log("useConnectionAuth: Tentando reconectar...");
+        const now = Date.now();
+        // Prevenir tentativas de reconexão muito frequentes
+        if (now - lastConnectionAttempt < 5000) {
+          return;
+        }
+        
+        setLastConnectionAttempt(now);
+        console.log("useConnectionAuth: Tentando reconectar...", new Date().toISOString());
+        
         const isConnected = await checkSupabaseConnection();
         if (isConnected) {
           setConnectionStatus('online');
@@ -66,17 +78,42 @@ export function useConnectionAuth() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [connectionStatus]);
+  }, [connectionStatus, lastConnectionAttempt]);
 
   const handleForceRefresh = () => {
     setForceRefreshing(true);
     window.location.reload();
+  };
+  
+  const handleRetryConnection = async () => {
+    setConnectionStatus('checking');
+    setLastConnectionAttempt(Date.now());
+    
+    toast.info("Verificando conexão", {
+      description: "Tentando reconectar ao servidor..."
+    });
+    
+    const isConnected = await checkSupabaseConnection();
+    setConnectionStatus(isConnected ? 'online' : 'offline');
+    
+    if (isConnected) {
+      toast.success("Conexão estabelecida", {
+        description: "A conexão com o servidor foi restaurada"
+      });
+      // Revalidar autenticação
+      await checkAuth();
+    } else {
+      toast.error("Falha na conexão", {
+        description: "Não foi possível estabelecer conexão com o servidor"
+      });
+    }
   };
 
   return {
     connectionStatus,
     authVerified,
     forceRefreshing,
-    handleForceRefresh
+    handleForceRefresh,
+    handleRetryConnection
   };
 }
