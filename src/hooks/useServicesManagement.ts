@@ -19,7 +19,7 @@ export function useServicesManagement() {
       // Verifica autenticação explicitamente
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user?.id) {
-        console.error("Usuário não autenticado ao buscar serviços");
+        console.error("UID ausente na busca de serviços");
         setError("Você precisa estar logado para acessar esta página");
         setServices([]);
         setLoading(false);
@@ -31,8 +31,9 @@ export function useServicesManagement() {
         const serviceTypes = await serviceTypeService.getServiceTypes();
         console.log(`${serviceTypes.length} tipos de serviço encontrados:`, serviceTypes);
         
+        // Verificação explícita do formato dos dados
         if (!Array.isArray(serviceTypes) || serviceTypes.length === 0) {
-          console.warn("Nenhum tipo de serviço encontrado");
+          console.warn("Serviços não encontrados. Verifique tabela 'service_types'");
           setError("Não foram encontrados serviços disponíveis");
           setServices([]);
           setLoading(false);

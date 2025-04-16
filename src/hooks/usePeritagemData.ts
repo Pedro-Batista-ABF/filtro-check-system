@@ -83,7 +83,7 @@ export function usePeritagemData(id?: string) {
         // Verificar sessão explicitamente por redundância
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData?.session?.user?.id) {
-          console.error("Usuário não autenticado - verificação explícita");
+          console.error("UID ausente na carregamento de dados");
           setErrorMessage("Você precisa estar logado para acessar esta página");
           setLoading(false);
           clearTimeout(timeoutId);

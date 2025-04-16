@@ -39,7 +39,8 @@ export const serviceTypeService = {
       
       console.log(`serviceTypeService: ${data.length} tipos de serviço encontrados`);
       
-      return data.map(serviceType => ({
+      // Garantir que o retorno seja sempre um array válido
+      const services = data.map(serviceType => ({
         id: serviceType.id,
         name: serviceType.name,
         selected: false,
@@ -47,6 +48,14 @@ export const serviceTypeService = {
         photos: [],
         quantity: 1 // Adicionar quantidade padrão
       }));
+      
+      // Log explícito de resultados para depuração
+      console.log("SERVICES:", services);
+      if (!Array.isArray(services) || services.length === 0) {
+        console.warn("SERVICES VAZIOS: Verifique tabela 'service_types'");
+      }
+      
+      return services;
     } catch (error) {
       console.error('Erro ao buscar tipos de serviços:', error);
       throw error;

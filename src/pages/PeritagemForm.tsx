@@ -150,7 +150,7 @@ export default function PeritagemForm() {
                 <p className="text-gray-600 mb-4">
                   Não foi possível carregar os dados necessários para a peritagem.
                   {!services || services.length === 0 ? 
-                    " Não foram encontrados serviços disponíveis." : 
+                    " Não foram encontrados serviços disponíveis na tabela 'service_types'." : 
                     " Ocorreu um erro ao preparar o formulário."}
                 </p>
                 <div className="flex gap-4 mt-2">
