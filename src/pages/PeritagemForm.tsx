@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sector } from "@/types";
@@ -88,6 +89,8 @@ export default function PeritagemForm() {
       }
     }
   }, [validDefaultSector, defaultServices, loading, updateDataReady]);
+
+  // Removed duplicate handleForceRefresh function, using the one from useConnectionAuth
 
   if (!loading && formSector) {
     return (
