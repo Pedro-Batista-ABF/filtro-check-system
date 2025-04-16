@@ -11,6 +11,7 @@ import { CalendarIcon, ImageIcon, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PhotoWithFile } from "@/types";
+import PhotoUpload from "../PhotoUpload";
 
 interface ScrapFormProps {
   tagNumber: string;
@@ -58,7 +59,7 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
   setScrapDate,
   scrapInvoice,
   setScrapInvoice,
-  scrapPhotos,
+  scrapPhotos = [],
   handleScrapPhotoUpload,
   formErrors,
   onCameraCapture,
@@ -107,55 +108,13 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
 
             <div className="border-t pt-4">
               <h3 className="font-medium mb-2">Fotos do Estado de Sucateamento*</h3>
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                {scrapPhotos.map((photo, index) => (
-                  <div key={photo.id || `temp-${index}`} className="relative">
-                    <img
-                      src={photo.url || (photo.file ? URL.createObjectURL(photo.file) : '')}
-                      alt={`Foto ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md border"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </div>
-                ))}
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-24 border-dashed flex flex-col items-center justify-center"
-                  onClick={handleClick}
-                  disabled={disabled}
-                >
-                  <ImageIcon className="h-6 w-6 mb-1" />
-                  <span className="text-xs">Adicionar foto</span>
-                </Button>
-              </div>
-              
-              <div className="flex space-x-2 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onCameraCapture}
-                  disabled={disabled}
-                  className="text-xs"
-                >
-                  <Camera className="h-3 w-3 mr-1" />
-                  Usar câmera
-                </Button>
-              </div>
-              
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={(e) => e.target.files && handleScrapPhotoUpload(e.target.files)}
-                accept="image/*"
-                className="hidden"
-                multiple
+              <PhotoUpload
+                photos={scrapPhotos}
+                onChange={handleScrapPhotoUpload}
                 disabled={disabled}
+                title="Adicionar fotos do sucateamento"
+                required={true}
+                onCameraCapture={onCameraCapture}
               />
               
               {formErrors.scrapPhotos && (

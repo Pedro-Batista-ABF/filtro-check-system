@@ -13,13 +13,15 @@ export function useSectorStatus() {
         throw new Error("ID do setor inválido");
       }
 
+      const updateData = {
+        current_status: status,
+        current_outcome: data.outcome || 'EmAndamento',
+        updated_at: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('sectors')
-        .update({
-          current_status: status,
-          current_outcome: data.outcome || 'EmAndamento',
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', sectorId);
         
       if (error) {
@@ -47,16 +49,18 @@ export function useSectorStatus() {
       
       const cycleId = cycleData[0].id;
       
+      const cycleUpdateData = {
+        status: status,
+        outcome: data.outcome || 'EmAndamento',
+        updated_at: new Date().toISOString(),
+        entry_invoice: data.entryInvoice,
+        tag_number: data.tagNumber,
+        peritagem_date: data.peritagemDate
+      };
+
       const { error: cycleError } = await supabase
         .from('cycles')
-        .update({
-          status: status,
-          outcome: data.outcome || 'EmAndamento',
-          updated_at: new Date().toISOString(),
-          entry_invoice: data.entryInvoice,
-          tag_number: data.tagNumber,
-          peritagem_date: data.peritagemDate
-        })
+        .update(cycleUpdateData)
         .eq('id', cycleId);
         
       if (cycleError) {
@@ -96,12 +100,14 @@ export function useSectorStatus() {
       }
 
       if (checkData.current_status !== 'sucateadoPendente') {
+        const forceUpdateData = {
+          current_status: 'sucateadoPendente' as SectorStatus,
+          updated_at: new Date().toISOString()
+        };
+
         const { error: forceError } = await supabase
           .from('sectors')
-          .update({
-            current_status: 'sucateadoPendente',
-            updated_at: new Date().toISOString()
-          })
+          .update(forceUpdateData)
           .eq('id', sectorId);
           
         if (forceError) {

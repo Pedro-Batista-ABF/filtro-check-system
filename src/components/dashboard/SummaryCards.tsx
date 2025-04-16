@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import FeatureCard from './FeatureCard';
 import { ClipboardList, AlertTriangle, CheckCircle, Wrench, InfinityIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { SectorStatus } from '@/types';
 
 export function SummaryCards() {
   const [counts, setCounts] = useState({
@@ -28,31 +27,31 @@ export function SummaryCards() {
         const { count: peritagemCount, error: peritagemError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'peritagemPendente' as SectorStatus);
+          .eq('current_status', 'peritagemPendente');
 
         // Buscar contagem de setores com status "emExecucao"
         const { count: execucaoCount, error: execucaoError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'emExecucao' as SectorStatus);
+          .eq('current_status', 'emExecucao');
 
         // Buscar contagem de setores com status "execucaoConcluida"
         const { count: concluidaCount, error: concluidaError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'execucaoConcluida' as SectorStatus);
+          .eq('current_status', 'execucaoConcluida');
 
         // Buscar contagem de setores com status "emChecagem"
         const { count: checagemCount, error: checagemError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'emChecagem' as SectorStatus);
+          .eq('current_status', 'emChecagem');
 
         // Buscar contagem de setores com status "concluido"
         const { count: concluidoCount, error: concluidoError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'concluido' as SectorStatus);
+          .eq('current_status', 'concluido');
 
         // Buscar contagem total de setores
         const { count: totalCount, error: totalError } = await supabase

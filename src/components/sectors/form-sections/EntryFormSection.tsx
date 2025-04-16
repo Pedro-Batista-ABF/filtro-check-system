@@ -4,12 +4,11 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Camera } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { TagPhotoField } from "../form-fields/TagPhotoField";
 import { Textarea } from "@/components/ui/textarea";
 
 interface EntryFormSectionProps {
@@ -48,6 +47,11 @@ export function EntryFormSection({
   photoRequired = true,
   disabled = false
 }: EntryFormSectionProps) {
+  const handlePhotoUpload = async (files: FileList) => {
+    onPhotoUpload(files);
+    return files.length > 0 ? URL.createObjectURL(files[0]) : undefined;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -148,31 +152,6 @@ export function EntryFormSection({
           </div>
         </div>
         
-        {disabled ? (
-          <div className="space-y-2">
-            <Label>Foto da TAG (somente visualização)</Label>
-            {tagPhotoUrl ? (
-              <div className="mt-2">
-                <img 
-                  src={tagPhotoUrl} 
-                  alt="TAG do Setor" 
-                  className="w-32 h-32 object-cover rounded-md border"
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Nenhuma foto disponível</p>
-            )}
-          </div>
-        ) : (
-          <TagPhotoField
-            tagPhotoUrl={tagPhotoUrl}
-            onPhotoUpload={onPhotoUpload}
-            onCameraCapture={(e) => {/* Função para captura de câmera */}}
-            error={errors.tagPhoto}
-            required={photoRequired}
-          />
-        )}
-
         <div className="space-y-2">
           <Label htmlFor="entryObservations">
             Observações de Entrada
@@ -185,6 +164,60 @@ export function EntryFormSection({
             disabled={disabled}
             className={disabled ? "bg-gray-50" : ""}
           />
+        </div>
+        
+        <div className="space-y-2">
+          <Label className={errors.tagPhoto ? "text-red-500" : ""}>
+            Foto da TAG
+            {photoRequired && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          
+          {disabled ? (
+            <div className="mt-2">
+              {tagPhotoUrl ? (
+                <img 
+                  src={tagPhotoUrl} 
+                  alt="TAG do Setor" 
+                  className="w-32 h-32 object-cover rounded-md border"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder.svg';
+                  }}
+                />
+              ) : (
+                <div className="w-32 h-32 bg-gray-100 flex items-center justify-center rounded-md border">
+                  <p className="text-sm text-gray-500">Sem foto</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => e.target.files && onPhotoUpload(e.target.files)}
+                className={errors.tagPhoto ? "border-red-500" : ""}
+              />
+              
+              {tagPhotoUrl && (
+                <div className="mt-2">
+                  <img 
+                    src={tagPhotoUrl} 
+                    alt="TAG do Setor" 
+                    className="w-32 h-32 object-cover rounded-md border"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          
+          {errors.tagPhoto && photoRequired && (
+            <p className="text-xs text-red-500">Foto da TAG é obrigatória</p>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -85,7 +85,7 @@ const ScrapToggle: React.FC<ScrapToggleProps> = ({
                   Fotos do estado de sucateamento*
                 </Label>
                 <PhotoUpload 
-                  photos={scrapPhotos} 
+                  photos={scrapPhotos || []} 
                   onChange={handleScrapPhotoUpload}
                   disabled={disabled}
                   title="Adicionar fotos do sucateamento"

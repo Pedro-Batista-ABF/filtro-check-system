@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { Photo, PhotoWithFile } from '@/types';
+import { PhotoWithFile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, Plus, Camera, Eye } from 'lucide-react';
@@ -18,7 +18,7 @@ interface PhotoUploadProps {
 }
 
 export default function PhotoUpload({ 
-  photos, 
+  photos = [], 
   onChange, 
   disabled = false, 
   title = "Adicionar fotos", 
@@ -30,7 +30,10 @@ export default function PhotoUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = () => {
-    fileInputRef.current?.click();
+    if (disabled) return;
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   // Função para obter URL segura da foto, seja arquivo ou URL
@@ -148,7 +151,7 @@ export default function PhotoUpload({
         accept="image/*"
         onChange={(e) => e.target.files && onChange(e.target.files)}
         className="hidden"
-        required={required && photos.length === 0}
+        required={required && (!photos || photos.length === 0)}
         multiple
       />
     </div>

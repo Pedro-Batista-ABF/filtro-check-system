@@ -1,264 +1,320 @@
 
-import React, { useState, useEffect } from 'react';
-import { useSectorFormState } from '@/hooks/useSectorFormState';
-import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit';
-import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
-import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
-import { Sector, Service } from '@/types';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useIsMobile } from '@/hooks/use-mobile';
-import ScrapToggle from './forms/ScrapToggle';
-import ScrapForm from './forms/ScrapForm';
-import ReviewForm from './forms/ReviewForm';
-import FormActions from './forms/FormActions';
-import { FormValidationAlert } from './form-parts/FormValidationAlert';
+import React, { useState, useEffect } from "react";
+import { Sector, Service, PhotoWithFile } from "@/types";
+import { toast } from "sonner";
+import ServicesList from "./ServicesList";
+import ScrapToggle from "./forms/ScrapToggle";
+import { Card } from "@/components/ui/card";
+import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import SectorInfoSection from "./forms/review/SectorInfoSection";
+import { useSectorPhotoHandling } from "@/hooks/useSectorPhotoHandling";
+import ScrapForm from "./forms/ScrapForm";
 
 interface SectorFormProps {
   initialSector: Sector;
-  onSubmit: (data: Partial<Sector>) => Promise<void>;
-  mode: 'peritagem' | 'production' | 'quality' | 'scrap';
-  photoRequired: boolean;
-  isLoading: boolean;
-  disableEntryFields: boolean;
+  onSubmit: (data: Sector) => void;
+  isLoading?: boolean;
+  mode?: "peritagem" | "sucateamento" | "scrap" | "quality";
 }
 
-const SectorForm: React.FC<SectorFormProps> = ({
+export default function SectorForm({
   initialSector,
   onSubmit,
-  mode,
-  photoRequired,
-  isLoading,
-  disableEntryFields
-}) => {
-  const isMobile = useIsMobile();
-  const [showValidationErrors, setShowValidationErrors] = useState(false);
+  isLoading = false,
+  mode = "peritagem"
+}: SectorFormProps) {
+  // Estado local para o setor
+  const [sector, setSector] = useState<Sector>(initialSector);
   
-  // Hooks para gerenciamento de estado e submissão do formulário
-  const sectorState = useSectorFormState(initialSector);
-  const { validateForm, prepareFormData } = useSectorFormSubmit();
-  
-  // Hooks para manipulação de serviços e fotos
+  // Estados específicos para campos individuais
+  const [tagNumber, setTagNumber] = useState(initialSector.tagNumber || "");
+  const [entryInvoice, setEntryInvoice] = useState(initialSector.entryInvoice || "");
+  const [entryDate, setEntryDate] = useState<Date | undefined>(
+    initialSector.entryDate ? new Date(initialSector.entryDate) : undefined
+  );
+  const [tagPhotoUrl, setTagPhotoUrl] = useState(initialSector.tagPhotoUrl || "");
+  const [entryObservations, setEntryObservations] = useState(initialSector.entryObservations || "");
+  const [services, setServices] = useState<Service[]>(initialSector.services || []);
+  const [isScrap, setIsScrap] = useState(initialSector.status === "sucateadoPendente");
+  const [scrapObservations, setScrapObservations] = useState(initialSector.scrapObservations || "");
+  const [servicesError, setServicesError] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    tagNumber: false,
+    tagPhoto: false,
+    entryInvoice: false,
+    entryDate: false,
+  });
+  const [scrapDate, setScrapDate] = useState<Date | undefined>(
+    initialSector.scrapDate ? new Date(initialSector.scrapDate) : undefined
+  );
+  const [scrapInvoice, setScrapInvoice] = useState(initialSector.scrapInvoice || "");
+  const [scrapPhotos, setScrapPhotos] = useState<PhotoWithFile[]>(
+    initialSector.scrapPhotos?.map(photo => ({ ...photo, file: null })) || []
+  );
+  const [scrapFormErrors, setScrapFormErrors] = useState({
+    scrapObservations: false,
+    scrapDate: false,
+    scrapInvoice: false,
+    scrapPhotos: false
+  });
+
+  // Handlers para manipulação de fotos
   const { 
-    handleServiceChange, 
-    handleQuantityChange, 
-    handleObservationChange 
-  } = useSectorServiceHandling();
-  
-  const { 
-    handleTagPhotoUpload,
-    handlePhotoUpload,
+    handleTagPhotoUpload: tagPhotoHandler,
+    handlePhotoUpload: servicePhotoHandler,
     handleCameraCapture 
-  } = useSectorPhotoHandling(sectorState.services, sectorState.setServices);
-  
-  // Atualizar o estado inicial quando mudar o setor
+  } = useSectorPhotoHandling(services, setServices);
+
+  // Efeito para atualizar o estado do setor quando o initialSector mudar
   useEffect(() => {
-    if (initialSector && initialSector.id) {
-      sectorState.setTagNumber(initialSector.tagNumber || '');
-      sectorState.setEntryInvoice(initialSector.entryInvoice || '');
-      sectorState.setEntryDate(initialSector.entryDate ? new Date(initialSector.entryDate) : undefined);
-      sectorState.setTagPhotoUrl(initialSector.tagPhotoUrl);
-      sectorState.setEntryObservations(initialSector.entryObservations || '');
-      sectorState.setServices(Array.isArray(initialSector.services) ? initialSector.services : []);
-      sectorState.setIsScrap(initialSector.status === 'sucateadoPendente' || false);
-      sectorState.setScrapObservations(initialSector.scrapObservations || '');
-      sectorState.setScrapDate(
-        initialSector.scrapReturnDate ? new Date(initialSector.scrapReturnDate) : undefined
-      );
-      sectorState.setScrapInvoice(initialSector.scrapReturnInvoice || '');
-    }
+    setSector(initialSector);
+    setTagNumber(initialSector.tagNumber || "");
+    setEntryInvoice(initialSector.entryInvoice || "");
+    setEntryDate(initialSector.entryDate ? new Date(initialSector.entryDate) : undefined);
+    setTagPhotoUrl(initialSector.tagPhotoUrl || "");
+    setEntryObservations(initialSector.entryObservations || "");
+    setServices(initialSector.services || []);
+    setIsScrap(initialSector.status === "sucateadoPendente");
+    setScrapObservations(initialSector.scrapObservations || "");
+    setScrapDate(initialSector.scrapDate ? new Date(initialSector.scrapDate) : undefined);
+    setScrapInvoice(initialSector.scrapInvoice || "");
+    setScrapPhotos(initialSector.scrapPhotos?.map(photo => ({ ...photo, file: null })) || []);
   }, [initialSector]);
-  
-  // Função para submeter o formulário
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+
+  // Handler para mudança nos serviços
+  const handleServiceChange = (id: string, checked: boolean) => {
+    setServices(prevServices =>
+      prevServices.map(service =>
+        service.id === id ? { ...service, selected: checked } : service
+      )
+    );
+    setServicesError(false);
+  };
+
+  // Handler para mudança na quantidade
+  const handleQuantityChange = (id: string, quantity: number) => {
+    setServices(prevServices =>
+      prevServices.map(service =>
+        service.id === id ? { ...service, quantity } : service
+      )
+    );
+  };
+
+  // Handler para mudança em observações
+  const handleObservationChange = (id: string, observations: string) => {
+    setServices(prevServices =>
+      prevServices.map(service =>
+        service.id === id ? { ...service, observations } : service
+      )
+    );
+  };
+
+  // Handler para upload de foto da TAG
+  const handleTagPhotoUpload = async (files: FileList) => {
+    const photoUrl = await tagPhotoHandler(files);
+    if (photoUrl) {
+      setTagPhotoUrl(photoUrl);
+      setFormErrors(prev => ({ ...prev, tagPhoto: false }));
+    }
+  };
+
+  // Handler para upload de foto de serviço
+  const handleServicePhotoUpload = (serviceId: string, files: FileList, type: "before" | "after") => {
+    servicePhotoHandler(serviceId, files, type);
+    setServicesError(false);
+  };
+
+  // Handler para upload de foto de sucateamento
+  const handleScrapPhotoUpload = (files: FileList) => {
+    if (!files.length) return;
     
-    const formState = {
-      tagNumber: sectorState.tagNumber,
-      tagPhotoUrl: sectorState.tagPhotoUrl,
-      entryInvoice: sectorState.entryInvoice,
-      entryDate: sectorState.entryDate,
-      entryObservations: sectorState.entryObservations,
-      services: sectorState.services,
-      isScrap: sectorState.isScrap,
-      scrapObservations: sectorState.scrapObservations,
-      scrapDate: sectorState.scrapDate,
-      scrapInvoice: sectorState.scrapInvoice
+    const newPhotos: PhotoWithFile[] = Array.from(files).map(file => ({
+      id: `scrap-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      url: URL.createObjectURL(file),
+      type: 'scrap',
+      file
+    }));
+    
+    setScrapPhotos(prev => [...prev, ...newPhotos]);
+    setScrapFormErrors(prev => ({ ...prev, scrapPhotos: false }));
+  };
+
+  // Função de validação do formulário
+  const validateForm = (): boolean => {
+    const errors = {
+      tagNumber: !tagNumber.trim(),
+      tagPhoto: !tagPhotoUrl,
+      entryInvoice: !entryInvoice.trim(),
+      entryDate: !entryDate,
     };
     
-    // Validar formulário
-    const errors = validateForm(formState);
-    sectorState.setFormErrors(errors);
+    setFormErrors(errors);
     
-    // Verificar se há erros
-    const hasErrors = Object.values(errors).some(Boolean);
+    // Validação específica para sucateamento
+    if (isScrap) {
+      const scrapErrors = {
+        scrapObservations: !scrapObservations.trim(),
+        scrapDate: mode === "scrap" && !scrapDate,
+        scrapInvoice: mode === "scrap" && !scrapInvoice.trim(),
+        scrapPhotos: scrapPhotos.length === 0
+      };
+      
+      setScrapFormErrors(scrapErrors);
+      
+      // Verificar se há erros de sucateamento
+      if (Object.values(scrapErrors).some(Boolean)) {
+        return false;
+      }
+    } else {
+      // Validação para serviços quando não está sucateando
+      const selectedServices = services.filter(s => s.selected);
+      const hasServicesWithoutPhotos = selectedServices.some(
+        service => !service.photos || service.photos.length === 0
+      );
+      
+      if (selectedServices.length === 0 || hasServicesWithoutPhotos) {
+        setServicesError(true);
+        return false;
+      }
+    }
     
-    if (hasErrors) {
-      setShowValidationErrors(true);
+    // Verificar se há erros gerais
+    return !Object.values(errors).some(Boolean);
+  };
+
+  // Handler para submissão do formulário
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error("Verifique os campos obrigatórios", {
+        description: "Há campos obrigatórios não preenchidos."
+      });
       return;
     }
     
-    // Preparar dados para envio
-    const formData = prepareFormData(formState, !!initialSector.id, initialSector.id);
+    const updatedSector: Sector = {
+      ...sector,
+      tagNumber,
+      entryInvoice,
+      entryDate: entryDate ? entryDate.toISOString() : undefined,
+      tagPhotoUrl,
+      entryObservations,
+      services,
+      status: isScrap ? "sucateadoPendente" : sector.status,
+      scrapObservations: isScrap ? scrapObservations : "",
+      scrapDate: isScrap && scrapDate ? scrapDate.toISOString() : undefined,
+      scrapInvoice: isScrap ? scrapInvoice : "",
+      scrapPhotos: isScrap ? scrapPhotos : []
+    };
     
-    // Submeter dados
-    try {
-      await onSubmit(formData);
-    } catch (error) {
-      console.error("Erro ao submeter formulário:", error);
-    }
+    onSubmit(updatedSector);
   };
 
-  // Funções para lidar com a mudança de serviços adaptadas para a interface esperada
-  const onServiceChange = (id: string, checked: boolean) => {
-    const updatedServices = handleServiceChange(sectorState.services, id, checked);
-    sectorState.setServices(updatedServices);
-  };
-
-  const onQuantityChange = (id: string, quantity: number) => {
-    const updatedServices = handleQuantityChange(sectorState.services, id, quantity);
-    sectorState.setServices(updatedServices);
-  };
-
-  const onObservationChange = (id: string, observations: string) => {
-    const updatedServices = handleObservationChange(sectorState.services, id, observations);
-    sectorState.setServices(updatedServices);
-  };
-
-  // Função para lidar com upload de foto da TAG
-  const handleTagPhotoUploadLocal = async (files: FileList) => {
-    const url = await handleTagPhotoUpload(files);
-    if (url) {
-      sectorState.setTagPhotoUrl(url);
-    }
-  };
-  
-  return (
-    <form onSubmit={handleFormSubmit} className="space-y-6">
-      {/* Toggle para modo sucateamento */}
-      {mode === 'peritagem' && (
-        <ScrapToggle
-          isScrap={sectorState.isScrap}
-          setIsScrap={sectorState.setIsScrap}
-          scrapObservations={sectorState.scrapObservations}
-          setScrapObservations={sectorState.setScrapObservations}
-        />
-      )}
-      
-      {/* Formulário de sucateamento */}
-      {sectorState.isScrap ? (
-        <ScrapForm
-          tagNumber={sectorState.tagNumber}
-          setTagNumber={sectorState.setTagNumber}
-          entryInvoice={sectorState.entryInvoice}
-          setEntryInvoice={sectorState.setEntryInvoice}
-          entryDate={sectorState.entryDate}
-          setEntryDate={sectorState.setEntryDate}
-          tagPhotoUrl={sectorState.tagPhotoUrl}
-          handleTagPhotoUpload={handleTagPhotoUploadLocal}
-          scrapObservations={sectorState.scrapObservations}
-          setScrapObservations={sectorState.setScrapObservations}
-          scrapDate={sectorState.scrapDate}
-          setScrapDate={sectorState.setScrapDate}
-          scrapInvoice={sectorState.scrapInvoice}
-          setScrapInvoice={sectorState.setScrapInvoice}
-          formErrors={sectorState.formErrors}
-          onCameraCapture={handleCameraCapture}
-          disabled={disableEntryFields}
-        />
-      ) : (
-        /* Abas para navegação entre seções do formulário em modo mobile */
-        isMobile ? (
-          <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="info">Informações</TabsTrigger>
-              <TabsTrigger value="services">Serviços</TabsTrigger>
-            </TabsList>
-            <TabsContent value="info" className="mt-4">
-              <ReviewForm
-                tagNumber={sectorState.tagNumber}
-                setTagNumber={sectorState.setTagNumber}
-                entryInvoice={sectorState.entryInvoice}
-                setEntryInvoice={sectorState.setEntryInvoice}
-                entryDate={sectorState.entryDate}
-                setEntryDate={sectorState.setEntryDate}
-                tagPhotoUrl={sectorState.tagPhotoUrl}
-                handleTagPhotoUpload={handleTagPhotoUploadLocal}
-                entryObservations={sectorState.entryObservations}
-                setEntryObservations={sectorState.setEntryObservations}
-                services={[]} // Apenas serviços na aba de serviços
-                handleServiceChange={onServiceChange}
-                handleQuantityChange={onQuantityChange}
-                handleObservationChange={onObservationChange}
-                handlePhotoUpload={handlePhotoUpload}
-                formErrors={sectorState.formErrors}
-                photoRequired={photoRequired}
-                handleCameraCapture={handleCameraCapture}
-              />
-            </TabsContent>
-            <TabsContent value="services" className="mt-4">
-              <ReviewForm
-                tagNumber={sectorState.tagNumber}
-                setTagNumber={sectorState.setTagNumber}
-                entryInvoice={sectorState.entryInvoice}
-                setEntryInvoice={sectorState.setEntryInvoice}
-                entryDate={sectorState.entryDate}
-                setEntryDate={sectorState.setEntryDate}
-                tagPhotoUrl={sectorState.tagPhotoUrl}
-                handleTagPhotoUpload={handleTagPhotoUploadLocal}
-                entryObservations={sectorState.entryObservations}
-                setEntryObservations={sectorState.setEntryObservations}
-                services={sectorState.services}
-                handleServiceChange={onServiceChange}
-                handleQuantityChange={onQuantityChange}
-                handleObservationChange={onObservationChange}
-                handlePhotoUpload={handlePhotoUpload}
-                formErrors={sectorState.formErrors}
-                photoRequired={photoRequired}
-                handleCameraCapture={handleCameraCapture}
-              />
-            </TabsContent>
-          </Tabs>
-        ) : (
-          /* Visualização desktop completa */
-          <ReviewForm
-            tagNumber={sectorState.tagNumber}
-            setTagNumber={sectorState.setTagNumber}
-            entryInvoice={sectorState.entryInvoice}
-            setEntryInvoice={sectorState.setEntryInvoice}
-            entryDate={sectorState.entryDate}
-            setEntryDate={sectorState.setEntryDate}
-            tagPhotoUrl={sectorState.tagPhotoUrl}
-            handleTagPhotoUpload={handleTagPhotoUploadLocal}
-            entryObservations={sectorState.entryObservations}
-            setEntryObservations={sectorState.setEntryObservations}
-            services={sectorState.services}
-            handleServiceChange={onServiceChange}
-            handleQuantityChange={onQuantityChange}
-            handleObservationChange={onObservationChange}
-            handlePhotoUpload={handlePhotoUpload}
-            formErrors={sectorState.formErrors}
-            photoRequired={photoRequired}
-            handleCameraCapture={handleCameraCapture}
+  // Render para modo de sucateamento
+  if (mode === "scrap") {
+    return (
+      <Form onSubmit={handleSubmit}>
+        <div className="space-y-6">
+          <ScrapForm
+            tagNumber={tagNumber}
+            setTagNumber={setTagNumber}
+            entryInvoice={entryInvoice}
+            setEntryInvoice={setEntryInvoice}
+            entryDate={entryDate}
+            setEntryDate={setEntryDate}
+            tagPhotoUrl={tagPhotoUrl}
+            handleTagPhotoUpload={handleTagPhotoUpload}
+            scrapObservations={scrapObservations}
+            setScrapObservations={setScrapObservations}
+            scrapDate={scrapDate}
+            setScrapDate={setScrapDate}
+            scrapInvoice={scrapInvoice}
+            setScrapInvoice={setScrapInvoice}
+            scrapPhotos={scrapPhotos}
+            handleScrapPhotoUpload={handleScrapPhotoUpload}
+            formErrors={{
+              ...formErrors,
+              ...scrapFormErrors
+            }}
+            onCameraCapture={handleCameraCapture}
+            disabled={isLoading}
           />
-        )
-      )}
-      
-      {/* Alerta de validação */}
-      {showValidationErrors && (
-        <FormValidationAlert 
-          formErrors={sectorState.formErrors}
-          isScrap={sectorState.isScrap}
-        />
-      )}
-      
-      {/* Botões de ação */}
-      <FormActions 
-        loading={isLoading} 
-        mode={mode} 
-        isScrap={sectorState.isScrap}
-      />
-    </form>
-  );
-};
+          
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Sucateamento
+            </Button>
+          </div>
+        </div>
+      </Form>
+    );
+  }
 
-export default SectorForm;
+  // Render padrão para peritagem
+  return (
+    <Form onSubmit={handleSubmit}>
+      <div className="space-y-6">
+        <SectorInfoSection
+          tagNumber={tagNumber}
+          setTagNumber={setTagNumber}
+          entryInvoice={entryInvoice}
+          setEntryInvoice={setEntryInvoice}
+          entryDate={entryDate}
+          setEntryDate={setEntryDate}
+          tagPhotoUrl={tagPhotoUrl}
+          handleTagPhotoUpload={handleTagPhotoUpload}
+          entryObservations={entryObservations}
+          setEntryObservations={setEntryObservations}
+          onCameraCapture={handleCameraCapture}
+          formErrors={formErrors}
+        />
+        
+        <ScrapToggle
+          isScrap={isScrap}
+          setIsScrap={setIsScrap}
+          scrapObservations={scrapObservations}
+          setScrapObservations={setScrapObservations}
+          scrapPhotos={scrapPhotos}
+          handleScrapPhotoUpload={handleScrapPhotoUpload}
+          error={{
+            observations: scrapFormErrors.scrapObservations,
+            photos: scrapFormErrors.scrapPhotos
+          }}
+          disabled={isLoading}
+          onCameraCapture={handleCameraCapture}
+        />
+        
+        {!isScrap && (
+          <Card>
+            <div className="p-6">
+              <h2 className="text-lg font-medium mb-4">Serviços Necessários</h2>
+              
+              <ServicesList
+                services={services}
+                error={servicesError}
+                photoRequired={true}
+                onServiceChange={handleServiceChange}
+                onQuantityChange={handleQuantityChange}
+                onObservationChange={handleObservationChange}
+                onServicePhotoUpload={handleServicePhotoUpload}
+                disabled={isLoading}
+                onCameraCapture={handleCameraCapture}
+              />
+            </div>
+          </Card>
+        )}
+        
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isScrap ? "Registrar Sucateamento" : "Salvar Peritagem"}
+          </Button>
+        </div>
+      </div>
+    </Form>
+  );
+}
