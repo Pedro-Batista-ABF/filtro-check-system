@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { refreshAuthSession, supabase, performFullConnectivityTest } from '@/integrations/supabase/client';
+import { refreshAuthSession, supabase, performFullConnectivityTest } from '@/utils/connectionUtils';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 

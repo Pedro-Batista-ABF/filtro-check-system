@@ -1,10 +1,10 @@
-
 import { Wifi, WifiOff, Loader2, RefreshCw, AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
-import { checkSupabaseStatus, logAuthStatus, refreshAuthSession, performFullConnectivityTest } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { checkSupabaseStatus, logAuthStatus, refreshAuthSession, performFullConnectivityTest } from "@/utils/connectionUtils";
 import { toast } from "sonner";
 
 interface ConnectionStatusProps {

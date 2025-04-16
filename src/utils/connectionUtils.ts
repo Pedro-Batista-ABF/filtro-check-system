@@ -1,4 +1,3 @@
-
 import { supabase, refreshAuthSession } from "@/integrations/supabase/client";
 
 /**
@@ -338,4 +337,111 @@ export const getSessionDetails = async () => {
     console.error("Erro ao obter detalhes da sessão:", error);
     return { hasSession: false, error: String(error) };
   }
+};
+
+/**
+ * Executa um teste completo de conectividade com o Supabase
+ * Verifica internet, conexão com Supabase e autenticação
+ * @returns Resultado detalhado dos testes
+ */
+export const performFullConnectivityTest = async () => {
+  console.log("=== INICIANDO TESTE COMPLETO DE CONECTIVIDADE ===");
+  
+  // 1. Verificar internet
+  console.log("1. Verificando conexão com internet...");
+  const hasInternet = await checkInternetConnection();
+  console.log(`   Internet: ${hasInternet ? '✅ OK' : '❌ FALHA'}`);
+  
+  if (!hasInternet) {
+    console.log("=== TESTE INTERROMPIDO: SEM INTERNET ===");
+    return {
+      success: false,
+      internetConnected: false,
+      supabaseConnected: false,
+      authenticated: false,
+      errors: ["Sem conexão com a internet"]
+    };
+  }
+  
+  // 2. Verificar Supabase (sem autenticação)
+  console.log("2. Verificando conexão com Supabase...");
+  const supabaseConnected = await checkSupabaseConnection();
+  console.log(`   Supabase: ${supabaseConnected ? '✅ OK' : '❌ FALHA'}`);
+  
+  if (!supabaseConnected) {
+    console.log("=== TESTE INTERROMPIDO: SUPABASE INDISPONÍVEL ===");
+    return {
+      success: false,
+      internetConnected: true,
+      supabaseConnected: false,
+      authenticated: false,
+      errors: ["Servidor Supabase indisponível"]
+    };
+  }
+  
+  // 3. Verificar autenticação
+  console.log("3. Verificando status da autenticação...");
+  const { data: sessionData } = await supabase.auth.getSession();
+  const authenticated = !!sessionData.session?.user;
+  console.log(`   Autenticação: ${authenticated ? '✅ OK' : '❌ NÃO AUTENTICADO'}`);
+  
+  if (!authenticated) {
+    console.log("=== TESTE INTERROMPIDO: USUÁRIO NÃO AUTENTICADO ===");
+    return {
+      success: false,
+      internetConnected: true,
+      supabaseConnected: true,
+      authenticated: false,
+      errors: ["Usuário não autenticado"]
+    };
+  }
+  
+  // 4. Verificar validade do token
+  console.log("4. Verificando validade do token...");
+  try {
+    const { error } = await supabase.from('profiles').select('id').limit(1);
+    if (error) {
+      console.log(`   Token: ❌ INVÁLIDO (${error.message})`);
+      
+      // Tentar refresh
+      console.log("   Tentando renovar token...");
+      const refreshed = await refreshAuthSession();
+      console.log(`   Renovação: ${refreshed ? '✅ SUCESSO' : '❌ FALHA'}`);
+      
+      if (!refreshed) {
+        console.log("=== TESTE INTERROMPIDO: FALHA AO RENOVAR TOKEN ===");
+        return {
+          success: false,
+          internetConnected: true,
+          supabaseConnected: true,
+          authenticated: true,
+          tokenValid: false,
+          tokenRefreshed: false,
+          errors: ["Token inválido e falha ao renovar"]
+        };
+      }
+    } else {
+      console.log("   Token: ✅ VÁLIDO");
+    }
+  } catch (e) {
+    console.error("   Erro ao verificar token:", e);
+    return {
+      success: false,
+      internetConnected: true,
+      supabaseConnected: true,
+      authenticated: true,
+      tokenValid: false,
+      errors: ["Erro ao verificar validade do token"]
+    };
+  }
+  
+  // 5. Teste completo concluído com sucesso
+  console.log("=== TESTE CONCLUÍDO COM SUCESSO ===");
+  return {
+    success: true,
+    internetConnected: true,
+    supabaseConnected: true,
+    authenticated: true,
+    tokenValid: true
+  };
 };
