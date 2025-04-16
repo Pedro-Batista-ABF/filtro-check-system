@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { WiFiOff, RefreshCw, Home, ArrowLeft } from "lucide-react";
+import { WifiOff, RefreshCw, Home, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ConnectionErrorFallbackProps {
@@ -25,14 +25,14 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
       <Card className="w-full max-w-md border-red-100 shadow-lg">
         <CardHeader className="pb-2 border-b border-red-100">
           <CardTitle className="flex items-center text-lg text-red-700">
-            <WiFiOff className="h-5 w-5 mr-2" />
+            <WifiOff className="h-5 w-5 mr-2" />
             Erro de Conexão
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center text-center space-y-4">
             <div className="bg-red-50 p-4 rounded-full">
-              <WiFiOff className="h-12 w-12 text-red-500" />
+              <WifiOff className="h-12 w-12 text-red-500" />
             </div>
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900">Conexão Interrompida</h3>
