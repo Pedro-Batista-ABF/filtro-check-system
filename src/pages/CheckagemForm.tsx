@@ -126,15 +126,17 @@ export default function CheckagemForm() {
         </div>
         <Card className="border-none shadow-lg">
           <div className="p-6">
-            <SectorForm 
-              initialSector={sector}
-              onSubmit={handleSubmit}
-              mode="checagem"
-              photoRequired={true}
-              isLoading={saving}
-              disableEntryFields={true}
-              hasAfterPhotosForAllServices={false}
-            />
+            {sector && (
+              <SectorForm 
+                initialSector={sector}
+                onSubmit={handleSubmit}
+                mode="checagem"
+                photoRequired={true}
+                isLoading={saving}
+                disableEntryFields={true}
+                hasAfterPhotosForAllServices={false}
+              />
+            )}
           </div>
         </Card>
       </div>

@@ -9,7 +9,7 @@ import { hasActiveSession, logSessionDetails } from "@/utils/sessionUtils";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, refreshSession } = useAuth();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
   const [sessionRefreshAttempted, setSessionRefreshAttempted] = useState(false);
@@ -30,7 +30,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           
           if (!sessionRefreshAttempted) {
             console.log("ProtectedRoute: Tentando atualizar sessão...");
-            const refreshed = await refreshAuthSession();
+            
+            // Se não conseguiu obter a sessão, tenta atualizar
+            const refreshed = await refreshSession();
             setSessionRefreshAttempted(true);
             
             if (refreshed) {
@@ -61,7 +63,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           
           if (timeToExpire < 300000) { // 5 minutos
             console.warn("ProtectedRoute: Sessão próxima de expirar, renovando...");
-            await refreshAuthSession();
+            await refreshSession();
           }
           
           setIsUserAuthenticated(true);
@@ -95,7 +97,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     
     return () => clearInterval(intervalId);
     
-  }, [navigate, sessionRefreshAttempted]);
+  }, [navigate, refreshSession, isAuthenticated, sessionRefreshAttempted]);
 
   // Show loading when auth is being checked
   if (loading || isCheckingAuth) {

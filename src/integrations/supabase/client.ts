@@ -36,8 +36,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 export const checkSupabaseStatus = async (): Promise<boolean> => {
   try {
     const startTime = Date.now();
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     // Primeiro, obter a sessão atual para garantir autenticação
     const { data: sessionData } = await supabase.auth.getSession();
@@ -46,6 +44,9 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
       `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
     
     // Tentativa de conexão com headers adequados
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    
     const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: 'HEAD',
       headers: {
@@ -134,4 +135,29 @@ export const logAuthStatus = async (): Promise<string | null> => {
     console.error("❌ Erro ao verificar autenticação:", error);
     return null;
   }
+};
+
+// Criar uma função que obtenha os headers de autenticação atuais
+export const getAuthHeaders = async () => {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token || SUPABASE_PUBLISHABLE_KEY;
+  
+  return {
+    'Authorization': `Bearer ${token}`,
+    'apikey': SUPABASE_PUBLISHABLE_KEY
+  };
+};
+
+// Função para fazer fetch com headers de autenticação atualizados
+export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const headers = await getAuthHeaders();
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...headers,
+      ...options.headers,
+      'Content-Type': 'application/json',
+    },
+  });
 };

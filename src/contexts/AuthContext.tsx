@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, refreshAuthSession } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface AuthContextProps {
@@ -12,12 +12,12 @@ interface AuthContextProps {
   isAuthenticated: boolean;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
   // Aliases para compatibilidade
   login: (email: string) => Promise<void>;
   registerUser: (email: string) => Promise<void>;
   getUserMetadata: () => Record<string, any> | null;
   logout: () => Promise<void>;
-  refreshSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -108,16 +108,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setLoading(true);
-      const { data, error } = await refreshAuthSession();
+      
+      // Corrigindo o uso da função refreshAuthSession
+      const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
         console.error("AuthContext: Erro ao atualizar sessão:", error);
         return false;
       }
       
-      if (data) {
+      if (data && data.session) {
         console.log("AuthContext: Sessão atualizada com sucesso");
         setLastTokenRefresh(now);
+        
+        // Atualizar o estado com a nova sessão
+        setSession(data.session);
+        setUser(data.session.user);
+        setIsAuthenticated(!!data.session.user);
+        
         return true;
       }
       
@@ -131,20 +139,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const getSession = async () => {
+    const setupAuth = async () => {
       try {
         setLoading(true);
-        console.log("AuthContext: Verificando sessão...");
+        console.log("AuthContext: Iniciando configuração de autenticação...");
         
-        // Adicionando timeout para evitar bloqueio indefinido
-        const timeoutPromise = new Promise<{data: {session: Session | null}}>((_, reject) => {
-          setTimeout(() => reject(new Error("Timeout ao buscar sessão")), 8000);
-        });
+        // Primeiro, configurar o listener de alterações de estado antes de verificar a sessão
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, newSession) => {
+            console.log("AuthContext: Evento de alteração de estado de autenticação:", event);
+            
+            // Atualizar estado com base no novo estado de autenticação
+            setSession(newSession);
+            setUser(newSession?.user || null);
+            setIsAuthenticated(!!newSession?.user);
+            
+            if (event === "SIGNED_IN") {
+              toast.success('Login realizado com sucesso!');
+            } else if (event === "SIGNED_OUT") {
+              setSession(null);
+              setUser(null);
+              setIsAuthenticated(false);
+            } else if (event === "TOKEN_REFRESHED") {
+              console.log("AuthContext: Token atualizado automaticamente pelo Supabase");
+            }
+          }
+        );
         
-        const sessionPromise = supabase.auth.getSession();
-        
-        // Race entre o timeout e a busca da sessão
-        const { data } = await Promise.race([sessionPromise, timeoutPromise]);
+        // Depois, verificar a sessão atual
+        const { data } = await supabase.auth.getSession();
         
         if (data.session) {
           console.log("AuthContext: Sessão encontrada, usuário autenticado");
@@ -157,15 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (timeToExpire < 300000) { // 5 minutos
             console.warn("AuthContext: Token próximo de expirar, renovando...");
-            await refreshAuthSession();
-            // Buscar a sessão novamente após a atualização
-            const { data: refreshedData } = await supabase.auth.getSession();
-            if (refreshedData.session) {
-              setSession(refreshedData.session);
-              setUser(refreshedData.session.user);
-              setIsAuthenticated(true);
-              console.log("AuthContext: Sessão renovada com sucesso");
-            }
+            await refreshSession();
           } else {
             setSession(data.session);
             setUser(data.session.user);
@@ -177,8 +192,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setIsAuthenticated(false);
         }
+        
+        // Configurar verificação periódica da sessão
+        const intervalId = setInterval(async () => {
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              // Verificar se o token está próximo de expirar (menos de 15 minutos)
+              const expiresAt = data.session.expires_at * 1000;
+              const now = Date.now();
+              const timeToExpire = expiresAt - now;
+              
+              if (timeToExpire < 900000) { // 15 minutos
+                console.log("AuthContext: Atualizando token proativamente...");
+                await refreshSession();
+              }
+            }
+          } catch (error) {
+            console.error("AuthContext: Erro na verificação periódica de sessão:", error);
+          }
+        }, 600000); // Verificar a cada 10 minutos
+        
+        // Limpar intervalo quando o componente for desmontado
+        return () => {
+          subscription.unsubscribe();
+          clearInterval(intervalId);
+        };
+        
       } catch (error) {
-        console.error("AuthContext: Erro ao buscar sessão:", error);
+        console.error("AuthContext: Erro ao configurar autenticação:", error);
         setSession(null);
         setUser(null);
         setIsAuthenticated(false);
@@ -189,58 +231,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
       }
     };
-
-    getSession();
-
-    // Listener para mudanças de estado de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        console.log("AuthContext: Evento de alteração de estado de autenticação:", event);
-        
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-          setSession(newSession);
-          setUser(newSession?.user || null);
-          setIsAuthenticated(!!newSession?.user);
-          
-          if (event === "SIGNED_IN") {
-            toast.success('Login realizado com sucesso!');
-          }
-          
-          if (event === "TOKEN_REFRESHED") {
-            console.log("AuthContext: Token atualizado automaticamente pelo Supabase");
-          }
-        } else if (event === "SIGNED_OUT") {
-          setSession(null);
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      }
-    );
-
-    // Configurar verificação periódica da sessão
-    const intervalId = setInterval(async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          // Verificar se o token está próximo de expirar (menos de 15 minutos)
-          const expiresAt = data.session.expires_at * 1000;
-          const now = Date.now();
-          const timeToExpire = expiresAt - now;
-          
-          if (timeToExpire < 900000) { // 15 minutos
-            console.log("AuthContext: Atualizando token proativamente...");
-            await refreshAuthSession();
-          }
-        }
-      } catch (error) {
-        console.error("AuthContext: Erro na verificação periódica de sessão:", error);
-      }
-    }, 600000); // Verificar a cada 10 minutos
-
-    return () => {
-      subscription.unsubscribe();
-      clearInterval(intervalId);
-    };
+    
+    setupAuth();
   }, []);
 
   const value: AuthContextProps = {
