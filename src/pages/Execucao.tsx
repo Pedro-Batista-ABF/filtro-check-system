@@ -1,144 +1,29 @@
 
-import PageLayout from "@/components/layout/PageLayout";
-import { useApi } from "@/contexts/ApiContextExtended";
-import { SectorStatus } from "@/types";
-import { Link } from "react-router-dom";
-import SectorStatusCard from "@/components/sectors/SectorStatusCard";
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import React, { useState } from 'react';
+import PageLayout from '@/components/layout/PageLayout';
+import ConnectionStatus from '@/components/peritagem/ConnectionStatus';
+import { useConnectionAuth } from '@/hooks/useConnectionAuth';
 
 export default function Execucao() {
-  const { sectors, loading, refreshData } = useApi();
-  const navigate = useNavigate();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasRefreshed, setHasRefreshed] = useState(false);
-  const [directSectors, setDirectSectors] = useState<any[]>([]);
+  const { connectionStatus, handleRetryConnection } = useConnectionAuth();
   
-  // Forçar atualização dos dados ao carregar a página apenas uma vez
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!hasRefreshed) {
-        setIsRefreshing(true);
-        try {
-          await refreshData();
-          
-          // Verificar setores diretamente no Supabase para diagnóstico
-          const { data: dbSectors, error } = await supabase
-            .from('sectors')
-            .select('id, tag_number, current_status, tag_photo_url')
-            .eq('current_status', 'emExecucao');
-            
-          if (error) {
-            console.error("Erro ao buscar setores do banco:", error);
-            toast.error("Erro ao buscar setores do banco", {
-              description: error.message
-            });
-          } else {
-            console.log("Setores em execução encontrados diretamente no banco:", dbSectors?.length);
-            console.log("Dados dos setores:", dbSectors);
-            setDirectSectors(dbSectors || []);
-          }
-          
-          setHasRefreshed(true);
-        } catch (error) {
-          console.error("Erro ao atualizar dados:", error);
-          toast.error("Erro ao atualizar dados", {
-            description: error instanceof Error ? error.message : "Erro desconhecido"
-          });
-        } finally {
-          setIsRefreshing(false);
-        }
-      }
-    };
-    
-    fetchData();
-  }, [refreshData, hasRefreshed]);
-  
-  // Filtra apenas setores em execução
-  const sectorsInExecution = sectors.filter(sector => 
-    sector.status === 'emExecucao'
+  const HeaderExtra = (
+    <ConnectionStatus 
+      status={connectionStatus} 
+      onRetryConnection={handleRetryConnection} 
+      showDetails={true}
+    />
   );
   
-  console.log("Total de setores carregados:", sectors.length);
-  console.log("Setores em execução:", sectorsInExecution.length);
-  console.log("Status dos setores:", sectors.map(s => s.status));
-  
-  // Utilize os setores do banco se não encontrar na API
-  const displaySectors = sectorsInExecution.length > 0 ? sectorsInExecution : directSectors;
-  
-  // Calculate sector counts by status
-  const statusCounts: Record<SectorStatus, number> = {
-    peritagemPendente: sectors.filter(s => s.status === 'peritagemPendente').length,
-    emExecucao: sectors.filter(s => s.status === 'emExecucao').length,
-    checagemFinalPendente: sectors.filter(s => s.status === 'checagemFinalPendente').length,
-    concluido: sectors.filter(s => s.status === 'concluido').length,
-    sucateado: sectors.filter(s => s.status === 'sucateado').length,
-    sucateadoPendente: sectors.filter(s => s.status === 'sucateadoPendente').length
-  };
-  
-  // Atualizar contagens com dados diretos do Supabase
-  if (sectorsInExecution.length === 0 && directSectors.length > 0) {
-    statusCounts.emExecucao = directSectors.length;
-  }
-
   return (
-    <PageLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-4">Execução</h1>
+    <PageLayout HeaderExtra={HeaderExtra}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Execução</h1>
+        </div>
         
-        {loading || isRefreshing ? (
-          <p>Carregando setores...</p>
-        ) : displaySectors.length === 0 ? (
-          <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 mb-6">
-            <h3 className="font-medium text-yellow-800">Nenhum setor em execução</h3>
-            <p className="text-yellow-700 mt-1">
-              Não há setores em fase de execução no momento. Verifique a seção de Peritagem 
-              para cadastrar novos setores ou finalizar peritagems pendentes.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {displaySectors.map(sector => (
-              <div key={sector.id} className="bg-white rounded-lg shadow-md p-4">
-                <h2 className="text-lg font-semibold mb-2">{sector.tagNumber || sector.tag_number}</h2>
-                <p className="text-gray-600">Nota Fiscal: {sector.entryInvoice || "Pendente"}</p>
-                <p className="text-gray-600">Data de Entrada: {
-                  sector.entryDate ? new Date(sector.entryDate).toLocaleDateString() : 'N/A'
-                }</p>
-                <Link to={`/execucao/${sector.id}`} className="inline-block mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                  Ver Detalhes
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">Status dos Setores</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
-            <SectorStatusCard
-              title="Peritagem Pendente"
-              status="peritagemPendente"
-              count={statusCounts.peritagemPendente}
-              onClick={() => navigate('/peritagem')}
-            />
-            
-            <SectorStatusCard
-              title="Checagem Pendente"
-              status="checagemFinalPendente"
-              count={statusCounts.checagemFinalPendente}
-              onClick={() => navigate('/checagem')}
-            />
-            
-            <SectorStatusCard
-              title="Sucateamento Pendente"
-              status="sucateadoPendente"
-              count={statusCounts.sucateadoPendente}
-              onClick={() => navigate('/sucateamento')}
-            />
-          </div>
+        <div className="p-4 border rounded-md bg-gray-50">
+          <p>Nenhum setor em execução</p>
         </div>
       </div>
     </PageLayout>

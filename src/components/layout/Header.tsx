@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Filter, ClipboardCheck, CheckSquare, Home, FileText, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 
 interface HeaderProps {
   HeaderExtra?: React.ReactNode;

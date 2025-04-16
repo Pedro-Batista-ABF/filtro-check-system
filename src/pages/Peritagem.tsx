@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
@@ -162,22 +161,23 @@ export function Peritagem() {
     }
   };
   
+  const HeaderExtra = (
+    <ConnectionStatus 
+      status={connectionStatus} 
+      onRetryConnection={handleRetryConnection} 
+      showDetails={true}
+    />
+  );
+  
   return (
-    <PageLayout>
+    <PageLayout HeaderExtra={HeaderExtra}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Peritagem</h1>
-          <div className="flex items-center gap-4">
-            <ConnectionStatus 
-              status={connectionStatus} 
-              onRetryConnection={handleRetryConnection} 
-              showDetails={true}
-            />
-            <Button onClick={() => navigate('/peritagem/novo')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Peritagem
-            </Button>
-          </div>
+          <Button onClick={() => navigate('/peritagem/novo')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Peritagem
+          </Button>
         </div>
         
         {errorMessage && (

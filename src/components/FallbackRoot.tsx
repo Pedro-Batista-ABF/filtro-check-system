@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ConnectionErrorFallback from './fallback/ConnectionErrorFallback';
 import { useConnectionAuth } from '@/hooks/useConnectionAuth';

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,7 +9,6 @@ import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import FallbackRoot from './components/FallbackRoot';
 import { Toaster } from 'sonner';
-import { AuthProvider } from './contexts/AuthContext';
 import { runConnectionDiagnostics } from './utils/connectionUtils';
 import Checagem from './pages/Checagem';
 import Execucao from './pages/Execucao';
@@ -66,104 +64,102 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <FallbackRoot>
-          <Routes>
-            {/* Rotas de autenticação */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* Rota raiz - redirecionando para peritagem */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Peritagem />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rotas de peritagem */}
-            <Route path="/peritagem" element={
-              <ProtectedRoute>
-                <Peritagem />
-              </ProtectedRoute>
-            } />
-            <Route path="/peritagem/novo" element={
-              <ProtectedRoute>
-                <PeritagemForm />
-              </ProtectedRoute>
-            } />
-            <Route path="/peritagem/:id" element={
-              <ProtectedRoute>
-                <PeritagemForm />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rotas de execução */}
-            <Route path="/execucao" element={
-              <ProtectedRoute>
-                <Execucao />
-              </ProtectedRoute>
-            } />
-            <Route path="/execucao/:id" element={
-              <ProtectedRoute>
-                <ExecucaoDetails />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rotas de checagem */}
-            <Route path="/checagem" element={
-              <ProtectedRoute>
-                <Checagem />
-              </ProtectedRoute>
-            } />
-            <Route path="/checagem/:id" element={
-              <ProtectedRoute>
-                <CheckagemForm />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rotas de sucateamento */}
-            <Route path="/sucateamento" element={
-              <ProtectedRoute>
-                <Sucateamento />
-              </ProtectedRoute>
-            } />
-            <Route path="/sucateamento/:id" element={
-              <ProtectedRoute>
-                <ScrapValidationForm />
-              </ProtectedRoute>
-            } />
-            <Route path="/sucateamento/validacao" element={
-              <ProtectedRoute>
-                <ScrapValidation />
-              </ProtectedRoute>
-            } />
-            
-            {/* Rotas de relatórios */}
-            <Route path="/concluidos" element={
-              <ProtectedRoute>
-                <Concluidos />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorio/setor/:id" element={
-              <ProtectedRoute>
-                <SectorReport />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorio/consolidado" element={
-              <ProtectedRoute>
-                <ConsolidatedReport />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorio/preview" element={
-              <ProtectedRoute>
-                <ReportPreview />
-              </ProtectedRoute>
-            } />
-            
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </FallbackRoot>
+      <FallbackRoot>
+        <Routes>
+          {/* Rotas de autenticação */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Rota raiz - redirecionando para peritagem */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Peritagem />
+            </ProtectedRoute>
+          } />
+          
+          {/* Rotas de peritagem */}
+          <Route path="/peritagem" element={
+            <ProtectedRoute>
+              <Peritagem />
+            </ProtectedRoute>
+          } />
+          <Route path="/peritagem/novo" element={
+            <ProtectedRoute>
+              <PeritagemForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/peritagem/:id" element={
+            <ProtectedRoute>
+              <PeritagemForm />
+            </ProtectedRoute>
+          } />
+          
+          {/* Rotas de execução */}
+          <Route path="/execucao" element={
+            <ProtectedRoute>
+              <Execucao />
+            </ProtectedRoute>
+          } />
+          <Route path="/execucao/:id" element={
+            <ProtectedRoute>
+              <ExecucaoDetails />
+            </ProtectedRoute>
+          } />
+          
+          {/* Rotas de checagem */}
+          <Route path="/checagem" element={
+            <ProtectedRoute>
+              <Checagem />
+            </ProtectedRoute>
+          } />
+          <Route path="/checagem/:id" element={
+            <ProtectedRoute>
+              <CheckagemForm />
+            </ProtectedRoute>
+          } />
+          
+          {/* Rotas de sucateamento */}
+          <Route path="/sucateamento" element={
+            <ProtectedRoute>
+              <Sucateamento />
+            </ProtectedRoute>
+          } />
+          <Route path="/sucateamento/:id" element={
+            <ProtectedRoute>
+              <ScrapValidationForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/sucateamento/validacao" element={
+            <ProtectedRoute>
+              <ScrapValidation />
+            </ProtectedRoute>
+          } />
+          
+          {/* Rotas de relatórios */}
+          <Route path="/concluidos" element={
+            <ProtectedRoute>
+              <Concluidos />
+            </ProtectedRoute>
+          } />
+          <Route path="/relatorio/setor/:id" element={
+            <ProtectedRoute>
+              <SectorReport />
+            </ProtectedRoute>
+          } />
+          <Route path="/relatorio/consolidado" element={
+            <ProtectedRoute>
+              <ConsolidatedReport />
+            </ProtectedRoute>
+          } />
+          <Route path="/relatorio/preview" element={
+            <ProtectedRoute>
+              <ReportPreview />
+            </ProtectedRoute>
+          } />
+          
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster 
           richColors 
           position="top-right" 
@@ -173,7 +169,7 @@ function App() {
             duration: 5000,
           }}
         />
-      </AuthProvider>
+      </FallbackRoot>
     </QueryClientProvider>
   );
 }
