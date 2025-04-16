@@ -117,7 +117,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
   };
 
   const onServicePhotoUpload = async (serviceId: string, files: FileList) => {
-    setServices(handleServicePhotoUpload(serviceId, files, 'before', services));
+    setServices(await handleServicePhotoUpload(serviceId, files, 'before', services));
   };
 
   const onTagPhotoUpload = async (files: FileList) => {
@@ -141,7 +141,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
         entryDate={entryDate}
         setEntryDate={setEntryDate}
         tagPhotoUrl={tagPhotoUrl}
-        onTagPhotoUpload={onTagPhotoUpload}
+        onPhotoUpload={onTagPhotoUpload}
         entryObservations={entryObservations}
         setEntryObservations={setEntryObservations}
         errors={{
@@ -157,13 +157,8 @@ const SectorForm: React.FC<SectorFormProps> = ({
         <h2 className="text-xl font-semibold mb-4">Serviços a Executar</h2>
         <ServicesList
           services={services}
-          onServiceChange={onServiceChange}
-          onQuantityChange={onQuantityChange}
-          onObservationChange={onObservationChange}
-          onPhotoUpload={onServicePhotoUpload}
           error={formErrors.services || formErrors.photos}
           photoRequired={photoRequired}
-          showSelectedOnly={false}
         />
       </Card>
 

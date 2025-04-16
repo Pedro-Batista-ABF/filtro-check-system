@@ -90,7 +90,10 @@ export default function PeritagemForm() {
     }
   }, [validDefaultSector, defaultServices, loading, updateDataReady]);
 
-  // Removed duplicate handleForceRefresh function, using the one from useConnectionAuth
+  const handleForceRefreshLocal = () => {
+    setForceRefreshingState(true);
+    handleForceRefresh();
+  };
 
   if (!loading && formSector) {
     return (
@@ -141,7 +144,7 @@ export default function PeritagemForm() {
     );
   }
 
-  if (hasTimeout) {
+  if (hasTimeout || forceRefreshingState) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
@@ -158,7 +161,7 @@ export default function PeritagemForm() {
             defaultSector={validDefaultSector}
             sector={validDefaultSector}
             errorMessage={errorMessage}
-            onRetry={handleForceRefresh}
+            onRetry={handleForceRefreshLocal}
             onBack={() => navigate('/peritagem')}
           />
         </div>

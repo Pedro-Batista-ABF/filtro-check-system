@@ -21,16 +21,16 @@ interface EntryFormSectionProps {
   entryDate: Date | undefined;
   setEntryDate: (date: Date | undefined) => void;
   tagPhotoUrl: string | undefined;
-  handleTagPhotoUpload: (files: FileList) => void;
-  handleCameraCapture: (e: React.MouseEvent) => void;
+  onPhotoUpload: (files: FileList) => void;
   entryObservations: string;
   setEntryObservations: (value: string) => void;
-  formErrors: {
+  errors: {
     tagNumber?: boolean;
     tagPhoto?: boolean;
     entryInvoice?: boolean;
     entryDate?: boolean;
   };
+  photoRequired?: boolean;
 }
 
 export function EntryFormSection({
@@ -41,12 +41,19 @@ export function EntryFormSection({
   entryDate,
   setEntryDate,
   tagPhotoUrl,
-  handleTagPhotoUpload,
-  handleCameraCapture,
+  onPhotoUpload,
   entryObservations,
   setEntryObservations,
-  formErrors
+  errors,
+  photoRequired = true
 }: EntryFormSectionProps) {
+  // Mock function for camera capture - will be implemented properly later
+  const handleCameraCapture = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Camera capture requested");
+    // Actual camera implementation would go here
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -61,7 +68,7 @@ export function EntryFormSection({
             onChange={setTagNumber}
             placeholder="Ex: ABC-123"
             required
-            error={formErrors.tagNumber}
+            error={errors?.tagNumber}
             errorMessage="TAG é obrigatória"
           />
           
@@ -72,12 +79,12 @@ export function EntryFormSection({
             onChange={setEntryInvoice}
             placeholder="Ex: NF-12345"
             required
-            error={formErrors.entryInvoice}
+            error={errors?.entryInvoice}
             errorMessage="Nota fiscal é obrigatória"
           />
           
           <div className="space-y-2">
-            <Label className={formErrors.entryDate ? "text-red-500" : ""}>
+            <Label className={errors?.entryDate ? "text-red-500" : ""}>
               Data de Entrada*
             </Label>
             <Popover>
@@ -87,7 +94,7 @@ export function EntryFormSection({
                   className={cn(
                     "w-full justify-start text-left font-normal",
                     !entryDate && "text-muted-foreground",
-                    formErrors.entryDate && "border-red-500"
+                    errors?.entryDate && "border-red-500"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -103,7 +110,7 @@ export function EntryFormSection({
                 />
               </PopoverContent>
             </Popover>
-            {formErrors.entryDate && (
+            {errors?.entryDate && (
               <p className="text-xs text-red-500">Data é obrigatória</p>
             )}
           </div>
@@ -120,10 +127,10 @@ export function EntryFormSection({
         
         <TagPhotoField
           tagPhotoUrl={tagPhotoUrl}
-          onPhotoUpload={handleTagPhotoUpload}
+          onPhotoUpload={onPhotoUpload}
           onCameraCapture={handleCameraCapture}
-          error={formErrors.tagPhoto}
-          required
+          error={errors?.tagPhoto}
+          required={photoRequired}
         />
 
         <div className="space-y-2">
