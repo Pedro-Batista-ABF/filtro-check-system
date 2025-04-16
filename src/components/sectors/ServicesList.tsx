@@ -16,6 +16,7 @@ interface ServicesListProps {
   onObservationChange: (id: string, observations: string) => void;
   onServicePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
   disabled?: boolean;
+  readOnly?: boolean;
 }
 
 const ServicesList: React.FC<ServicesListProps> = ({
@@ -26,7 +27,8 @@ const ServicesList: React.FC<ServicesListProps> = ({
   onQuantityChange,
   onObservationChange,
   onServicePhotoUpload,
-  disabled = false
+  disabled = false,
+  readOnly = false
 }) => {
   console.log("🔄 ServicesList render", Date.now());
   console.log("🔄 services:", services.length);
@@ -53,14 +55,13 @@ const ServicesList: React.FC<ServicesListProps> = ({
                   <ServiceCheckbox
                     service={service}
                     onServiceChange={onServiceChange}
-                    disabled={disabled}
+                    disabled={disabled || readOnly}
                   />
                   
                   <ServiceQuantity
                     service={service}
                     onQuantityChange={onQuantityChange}
-                    enabled={service.selected}
-                    disabled={disabled}
+                    disabled={disabled || !service.selected}
                   />
                 </div>
                 
@@ -82,10 +83,10 @@ const ServicesList: React.FC<ServicesListProps> = ({
                     
                     <ServicePhotos
                       service={service}
-                      photoType={disabled ? "after" : "before"}
+                      photoType={readOnly ? "after" : "before"}
                       required={photoRequired}
                       onPhotoUpload={onServicePhotoUpload}
-                      disabled={!service.selected}
+                      disabled={!service.selected || disabled}
                     />
                   </>
                 )}

@@ -26,12 +26,81 @@ export function usePeritagemSubmit() {
       setIsSaving(true);
       setErrorMessage(null);
       
+      // Verificar autenticação
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Não autenticado");
         throw new Error("Não autenticado");
       }
 
+      // Caso especial: sucateamento
+      if (data.status === 'sucateadoPendente') {
+        console.log("📦 Processando setor para sucateamento");
+        
+        // Validação específica para sucateamento
+        if (!data.tagNumber || !data.tagPhotoUrl || !data.entryInvoice || !data.entryDate || !data.scrapObservations) {
+          throw new Error("Preencha todos os campos obrigatórios para sucateamento");
+        }
+
+        let sectorResult: string | boolean = "";
+        
+        // Setor novo com sucateamento
+        if (!isEditing) {
+          const cycleCount = generateUniqueCycleCount(0);
+          
+          const sectorData = {
+            ...data,
+            cycleCount,
+            services: [],
+            beforePhotos: [],
+            afterPhotos: []
+          };
+          
+          // Adicionar setor para sucateamento
+          try {
+            const apiResult = await addSector(sectorData as Omit<Sector, 'id'>);
+            sectorResult = typeof apiResult === 'string' ? apiResult : false;
+            
+            if (sectorResult) {
+              await updateSectorStatus(sectorResult, data, 'sucateadoPendente');
+              await refreshData();
+              
+              toast.success("Setor registrado para sucateamento");
+              navigate('/peritagem');
+            } else {
+              throw new Error("Falha ao registrar setor para sucateamento");
+            }
+          } catch (error) {
+            console.error("Erro ao registrar setor para sucateamento:", error);
+            throw error;
+          }
+          
+          return true;
+        }
+        
+        // Setor existente marcado para sucateamento
+        if (isEditing && sectorId) {
+          try {
+            const apiResult = await updateSector(sectorId, data);
+            if (apiResult) {
+              await updateSectorStatus(sectorId, data, 'sucateadoPendente');
+              await refreshData();
+              
+              toast.success("Setor marcado para sucateamento");
+              navigate('/peritagem');
+            } else {
+              throw new Error("Falha ao marcar setor para sucateamento");
+            }
+          } catch (error) {
+            console.error("Erro ao marcar setor para sucateamento:", error);
+            throw error;
+          }
+          
+          return true;
+        }
+      }
+
+      // Fluxo normal de peritagem (não sucateamento)
       // Validar dados
       const validationResult = validatePeritagemData(data);
       if (validationResult) {

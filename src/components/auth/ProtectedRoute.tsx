@@ -1,12 +1,13 @@
 
-import { Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const navigate = useNavigate();
   const { isAuthenticated, loading } = useAuth();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
@@ -50,6 +51,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           setIsUserAuthenticated(true);
         } else {
           setIsUserAuthenticated(false);
+          navigate('/login');
         }
       }
     );
@@ -57,7 +59,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   // Show loading when auth is being checked
   if (loading || isCheckingAuth) {

@@ -16,7 +16,16 @@ root.render(
       <ApiProvider>
         <ApiContextExtendedProvider>
           <App />
-          <Toaster richColors position="top-right" />
+          <Toaster 
+            richColors 
+            position="top-right" 
+            closeButton
+            expand={false}
+            toastOptions={{
+              duration: 5000,
+              className: "my-toast-class"
+            }}
+          />
         </ApiContextExtendedProvider>
       </ApiProvider>
     </AuthProvider>

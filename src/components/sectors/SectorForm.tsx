@@ -14,6 +14,7 @@ import { EntryFormSection } from '@/components/sectors/form-sections/EntryFormSe
 import ServicesList from '@/components/sectors/ServicesList';
 import FormActions from '@/components/sectors/forms/FormActions';
 import QualityForm from './forms/QualityForm';
+import ScrapToggle from './forms/ScrapToggle';
 
 interface SectorFormProps {
   sector: Sector;
@@ -159,6 +160,47 @@ const SectorForm: React.FC<SectorFormProps> = ({
       scrapInvoice
     };
 
+    // Validações específicas para sucateamento
+    if (isScrap) {
+      const scrapErrors = {
+        tagNumber: !tagNumber.trim(),
+        tagPhoto: !tagPhotoUrl,
+        entryInvoice: !entryInvoice.trim(),
+        entryDate: !entryDate,
+        scrapObservations: !scrapObservations.trim(),
+        services: false,
+        photos: false,
+        exitDate: false,
+        exitInvoice: false
+      };
+
+      setFormErrors(scrapErrors);
+
+      if (Object.values(scrapErrors).some(error => error)) {
+        console.log("❌ SectorForm - Erros de validação para sucateamento encontrados:", scrapErrors);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Preparar dados para sucateamento
+      const scrapData: Partial<Sector> = {
+        tagNumber,
+        tagPhotoUrl,
+        entryInvoice,
+        entryDate: entryDate ? format(entryDate, 'yyyy-MM-dd') : undefined,
+        entryObservations,
+        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+        scrapObservations,
+        status: 'sucateadoPendente',
+        outcome: 'sucateado',
+        services: []
+      };
+
+      onSubmit(scrapData);
+      return;
+    }
+
+    // Validação normal (não sucateamento)
     const errors = validateForm(formData);
     setFormErrors(errors);
 
@@ -177,25 +219,31 @@ const SectorForm: React.FC<SectorFormProps> = ({
   };
 
   const onServiceChange = (id: string, checked: boolean) => {
-    // No modo de qualidade, não permitimos mudar a seleção dos serviços
-    if (mode === 'quality') return;
+    // No modo de qualidade ou se for sucateamento, não permitimos mudar a seleção dos serviços
+    if (mode === 'quality' || isScrap) return;
     
     setServices(handleServiceChange(services, id, checked));
   };
 
   const onQuantityChange = (id: string, quantity: number) => {
-    // No modo de qualidade, não permitimos mudar a quantidade
-    if (mode === 'quality') return;
+    // No modo de qualidade ou se for sucateamento, não permitimos mudar a quantidade
+    if (mode === 'quality' || isScrap) return;
     
     setServices(handleQuantityChange(services, id, quantity));
   };
 
   const onObservationChange = (id: string, observations: string) => {
+    // Se for sucateamento, não permitimos editar observações de serviços
+    if (isScrap) return;
+    
     setServices(handleObservationChange(services, id, observations));
   };
 
   const onServicePhotoUpload = async (serviceId: string, files: FileList, type: "before" | "after") => {
     // No modo de qualidade, sempre usamos "after" independente do parâmetro passado
+    // Se for sucateamento, não permitimos adicionar fotos a serviços
+    if (isScrap) return;
+    
     const photoType = mode === 'quality' ? "after" : type;
     
     setServices(await handleServicePhotoUpload(serviceId, files, photoType, services));
@@ -215,6 +263,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
   console.log("🖥️ sector:", sector?.id || "não definido");
   console.log("🖥️ services:", services?.length || 0);
   console.log("🖥️ formErrors:", formErrors);
+  console.log("🖥️ isScrap:", isScrap);
 
   return (
     <form onSubmit={handleSubmitForm} className="space-y-8">
@@ -228,6 +277,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
           photos={formErrors.photos}
           exitDate={formErrors.exitDate}
           exitInvoice={formErrors.exitInvoice}
+          scrapObservations={formErrors.scrapObservations}
         />
       )}
 
@@ -284,6 +334,18 @@ const SectorForm: React.FC<SectorFormProps> = ({
         </>
       ) : (
         <>
+          {/* Opção de sucateamento no modo review */}
+          {mode === 'review' && (
+            <ScrapToggle
+              isScrap={isScrap}
+              setIsScrap={setIsScrap}
+              scrapObservations={scrapObservations}
+              setScrapObservations={setScrapObservations}
+              error={formErrors.scrapObservations}
+              disabled={disableEntryFields}
+            />
+          )}
+
           <EntryFormSection
             tagNumber={tagNumber}
             setTagNumber={setTagNumber}
@@ -301,23 +363,26 @@ const SectorForm: React.FC<SectorFormProps> = ({
               entryInvoice: formErrors.entryInvoice || false,
               entryDate: formErrors.entryDate || false
             }}
-            photoRequired={photoRequired}
-            disabled={disableEntryFields}
+            photoRequired={photoRequired || isScrap}
+            disabled={disableEntryFields || (mode === 'production' && isScrap)}
           />
 
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Serviços a Executar</h2>
-            <ServicesList
-              services={services}
-              error={formErrors.services || formErrors.photos || false}
-              photoRequired={photoRequired}
-              onServiceChange={onServiceChange}
-              onQuantityChange={onQuantityChange}
-              onObservationChange={onObservationChange}
-              onServicePhotoUpload={onServicePhotoUpload}
-              disabled={mode === 'quality'}
-            />
-          </Card>
+          {!isScrap && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Serviços a Executar</h2>
+              <ServicesList
+                services={services}
+                error={formErrors.services || formErrors.photos || false}
+                photoRequired={photoRequired}
+                onServiceChange={onServiceChange}
+                onQuantityChange={onQuantityChange}
+                onObservationChange={onObservationChange}
+                onServicePhotoUpload={onServicePhotoUpload}
+                disabled={disableEntryFields || (mode === 'production' && isScrap)}
+                readOnly={mode === 'quality'}
+              />
+            </Card>
+          )}
         </>
       )}
 

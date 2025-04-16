@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface FormValidationAlertProps {
   tagNumber?: boolean;
@@ -12,43 +12,38 @@ interface FormValidationAlertProps {
   photos?: boolean;
   exitDate?: boolean;
   exitInvoice?: boolean;
+  scrapObservations?: boolean;
 }
 
-export function FormValidationAlert({
-  tagNumber = false,
-  tagPhoto = false,
-  entryInvoice = false,
-  entryDate = false,
-  services = false,
-  photos = false,
-  exitDate = false,
-  exitInvoice = false
-}: FormValidationAlertProps) {
-  const hasEntryErrors = tagNumber || tagPhoto || entryInvoice || entryDate;
-  const hasServiceErrors = services || photos;
-  const hasExitErrors = exitDate || exitInvoice;
-  
-  if (!hasEntryErrors && !hasServiceErrors && !hasExitErrors) {
-    return null;
-  }
-
+export const FormValidationAlert: React.FC<FormValidationAlertProps> = ({
+  tagNumber,
+  tagPhoto,
+  entryInvoice,
+  entryDate,
+  services,
+  photos,
+  exitDate,
+  exitInvoice,
+  scrapObservations
+}) => {
   return (
     <Alert variant="destructive">
-      <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>Atenção</AlertTitle>
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Erro no preenchimento do formulário</AlertTitle>
       <AlertDescription>
-        <p>Por favor, corrija os seguintes erros:</p>
-        <ul className="list-disc ml-5 mt-2">
-          {tagNumber && <li>Número de TAG é obrigatório</li>}
-          {tagPhoto && <li>Foto da TAG é obrigatória</li>}
-          {entryInvoice && <li>Nota fiscal de entrada é obrigatória</li>}
-          {entryDate && <li>Data de entrada é obrigatória</li>}
+        <p>Por favor, corrija os seguintes erros antes de continuar:</p>
+        <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+          {tagNumber && <li>O número da TAG é obrigatório</li>}
+          {tagPhoto && <li>A foto da TAG é obrigatória</li>}
+          {entryInvoice && <li>O número da nota fiscal de entrada é obrigatório</li>}
+          {entryDate && <li>A data de entrada é obrigatória</li>}
           {services && <li>Selecione pelo menos um serviço</li>}
-          {photos && <li>Adicione pelo menos uma foto para cada serviço selecionado</li>}
-          {exitDate && <li>Data de saída é obrigatória</li>}
-          {exitInvoice && <li>Nota fiscal de saída é obrigatória</li>}
+          {photos && <li>Adicione fotos para todos os serviços selecionados</li>}
+          {exitDate && <li>A data de saída é obrigatória</li>}
+          {exitInvoice && <li>O número da nota fiscal de saída é obrigatório</li>}
+          {scrapObservations && <li>O motivo do sucateamento é obrigatório</li>}
         </ul>
       </AlertDescription>
     </Alert>
   );
-}
+};

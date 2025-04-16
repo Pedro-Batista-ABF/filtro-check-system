@@ -22,14 +22,17 @@ export function useSectorFormState(sector: Sector) {
     services: false,
     photos: false,
     exitDate: false,
-    exitInvoice: false
+    exitInvoice: false,
+    scrapObservations: false
   });
   
   // Estados para sucateamento
-  const [isScrap, setIsScrap] = useState(false);
-  const [scrapObservations, setScrapObservations] = useState('');
-  const [scrapDate, setScrapDate] = useState<Date | undefined>();
-  const [scrapInvoice, setScrapInvoice] = useState('');
+  const [isScrap, setIsScrap] = useState(sector.status === 'sucateadoPendente' || false);
+  const [scrapObservations, setScrapObservations] = useState(sector.scrapObservations || '');
+  const [scrapDate, setScrapDate] = useState<Date | undefined>(
+    sector.scrapReturnDate ? new Date(sector.scrapReturnDate) : undefined
+  );
+  const [scrapInvoice, setScrapInvoice] = useState(sector.scrapReturnInvoice || '');
   
   // Estados para checagem final
   const [exitInvoice, setExitInvoice] = useState(sector.exitInvoice || '');
