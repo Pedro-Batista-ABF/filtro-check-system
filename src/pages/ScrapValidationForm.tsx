@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
 
-import SectorForm from "@/components/sectors/SectorForm";
 import { Card } from "@/components/ui/card";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { useApi } from "@/contexts/ApiContextExtended";
@@ -14,6 +13,7 @@ import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import { checkSupabaseConnection } from "@/utils/connectionUtils";
 import { refreshAuthSession } from "@/integrations/supabase/client";
 import { validateSession } from "@/utils/sessionUtils";
+import SectorFormWrapper from "@/components/sectors/SectorFormWrapper";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -180,7 +180,7 @@ export default function ScrapValidationForm() {
         <Card className="border-none shadow-lg">
           <div className="p-6">
             {sector && (
-              <SectorForm 
+              <SectorFormWrapper 
                 initialSector={sector}
                 onSubmit={handleSubmit}
                 mode="scrap"

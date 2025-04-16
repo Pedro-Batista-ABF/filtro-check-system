@@ -8,25 +8,38 @@ import { supabase, refreshAuthSession } from "@/integrations/supabase/client";
 export const checkSupabaseConnection = async (): Promise<boolean> => {
   try {
     console.log("Verificando conexão com Supabase...");
+    
     // Usando apenas verificação básica sem autenticação, apenas para testar se o servidor está online
     const startTime = Date.now();
-    const response = await fetch(
-      "https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/",
-      {
-        method: 'HEAD',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4"
-        },
-        signal: AbortSignal.timeout(5000), // Limitar tempo de espera para 5 segundos
-        cache: 'no-store' // Evitar cache
-      }
-    );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const elapsed = Date.now() - startTime;
-    console.log(`Verificação de conexão com Supabase: ${response.status} (${elapsed}ms)`);
-    
-    return response.status >= 200 && response.status < 500; // Aceitar inclusive 401, pois estamos apenas verificando se o servidor está online
+    try {
+      const response = await fetch(
+        "https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/",
+        {
+          method: 'HEAD',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4"
+          },
+          signal: controller.signal,
+          cache: 'no-store' // Evitar cache
+        }
+      );
+      
+      clearTimeout(timeoutId);
+      
+      const elapsed = Date.now() - startTime;
+      console.log(`Verificação de conexão com Supabase: ${response.status} (${elapsed}ms)`);
+      
+      // Aceitar inclusive 401, pois estamos apenas verificando se o servidor está online
+      return response.status >= 200 && response.status < 500; 
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error("Erro na requisição de verificação:", fetchError);
+      return false;
+    }
   } catch (error) {
     console.error("Erro ao verificar conexão com Supabase:", error);
     return false;
@@ -101,7 +114,21 @@ export const checkSupabaseAuth = async (): Promise<boolean> => {
       return await refreshAuthSession();
     }
     
-    return true;
+    // Verificar se o token é válido fazendo uma requisição
+    try {
+      const { error } = await supabase.from('profiles').select('id').limit(1);
+      if (error && (error.code === 'PGRST301' || error.status === 401)) {
+        // Token inválido, tentar renovar
+        console.log("Token inválido, tentando renovar...");
+        return await refreshAuthSession();
+      }
+      
+      // Se não houve erro, o token é válido
+      return true;
+    } catch (e) {
+      console.error("Erro ao verificar token:", e);
+      return false;
+    }
   } catch (error) {
     console.error("Erro ao verificar autenticação Supabase:", error);
     return false;
@@ -137,6 +164,17 @@ export const runConnectionDiagnostics = async () => {
       const now = Date.now();
       const timeToExpire = expiresAt - now;
       console.log(`Token expira em: ${Math.floor(timeToExpire / 60000)} minutos`);
+    }
+    
+    // Verificar autorização com requisição real
+    try {
+      const { error } = await supabase.from('profiles').select('id').limit(1);
+      console.log(`Teste de autorização: ${error ? 'FALHOU' : 'PASSOU'}`);
+      if (error) {
+        console.error("Erro no teste de autorização:", error);
+      }
+    } catch (e) {
+      console.error("Erro ao testar autorização:", e);
     }
   }
   
@@ -201,6 +239,21 @@ export const checkConnectionHealth = async () => {
       }
     }
     
+    // Verificar se o token é realmente válido com uma requisição
+    try {
+      const { error } = await supabase.from('profiles').select('id').limit(1);
+      if (error && (error.code === 'PGRST301' || error.status === 401)) {
+        // Token inválido, tentar renovar
+        const refreshed = await refreshAuthSession();
+        if (!refreshed) {
+          return { status: 'online', reason: 'invalid-token' };
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao verificar token:", e);
+      return { status: 'online', reason: 'auth-check-failed' };
+    }
+    
     return { status: 'online', reason: 'healthy' };
   } catch (error) {
     console.error("Erro ao verificar sessão:", error);
@@ -237,10 +290,52 @@ export const ensureValidAuthentication = async (): Promise<boolean> => {
       return await refreshAuthSession();
     }
     
+    // Verificar se o token é válido com uma requisição
+    try {
+      const { error } = await supabase.from('profiles').select('id').limit(1);
+      if (error && (error.code === 'PGRST301' || error.status === 401)) {
+        // Token inválido, tentar renovar
+        console.log("Token inválido, tentando renovar...");
+        return await refreshAuthSession();
+      }
+    } catch (e) {
+      console.error("Erro ao verificar token:", e);
+      await refreshAuthSession(); // tentar renovar mesmo assim
+    }
+    
     // Sessão válida e não está próxima de expirar
     return true;
   } catch (error) {
     console.error("Erro ao verificar/renovar autenticação:", error);
     return false;
+  }
+};
+
+/**
+ * Verifica o token atual e retorna detalhes da sessão 
+ * para diagnóstico de problemas
+ */
+export const getSessionDetails = async () => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      return { hasSession: false };
+    }
+    
+    const expiresAt = data.session.expires_at * 1000;
+    const now = Date.now();
+    
+    return {
+      hasSession: true,
+      userId: data.session.user.id,
+      email: data.session.user.email,
+      expiresIn: Math.floor((expiresAt - now) / 60000), // minutos
+      accessToken: data.session.access_token.substring(0, 15) + '...',
+      refreshToken: data.session.refresh_token ? 'Presente' : 'Ausente',
+      tokenType: data.session.token_type
+    };
+  } catch (error) {
+    console.error("Erro ao obter detalhes da sessão:", error);
+    return { hasSession: false, error: String(error) };
   }
 };

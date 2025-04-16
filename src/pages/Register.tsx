@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 export default function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { registerUser } = useAuth();
   const navigate = useNavigate();
@@ -19,14 +20,15 @@ export default function Register() {
     e.preventDefault();
     
     // Form validation
-    if (!fullName || !email) {
+    if (!fullName || !email || !password) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
     
     try {
       setIsSubmitting(true);
-      await registerUser(email);
+      // Agora passamos o email e a senha para o registerUser
+      await registerUser(email, password);
       toast.success("Cadastro realizado com sucesso! Verifique seu email.");
       navigate('/login');
     } catch (error) {
@@ -68,6 +70,17 @@ export default function Register() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Digite seu email"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
                   required
                 />
               </div>

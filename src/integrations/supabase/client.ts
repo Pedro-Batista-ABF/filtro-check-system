@@ -13,10 +13,10 @@ const options = {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'supabase.auth.token',
+    storage: localStorage,
   },
   global: {
     headers: {
-      'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
       'apikey': SUPABASE_PUBLISHABLE_KEY,
     },
   },
@@ -66,9 +66,6 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
     
     // Primeiro, obter a sessão atual para garantir autenticação
     const { data: sessionData } = await supabase.auth.getSession();
-    const authHeader = sessionData?.session ? 
-      `Bearer ${sessionData.session.access_token}` : 
-      `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
     
     // Tentativa de conexão com headers adequados
     const controller = new AbortController();
@@ -77,7 +74,6 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: 'HEAD',
       headers: {
-        'Authorization': authHeader,
         'apikey': SUPABASE_PUBLISHABLE_KEY,
         'Content-Type': 'application/json',
       },
@@ -200,10 +196,17 @@ export const logAuthStatus = async (): Promise<string | null> => {
 // Criar uma função que obtenha os headers de autenticação atuais
 export const getAuthHeaders = async () => {
   const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token || SUPABASE_PUBLISHABLE_KEY;
   
+  // Se tiver uma sessão, use o access_token do usuário
+  if (data.session?.access_token) {
+    return {
+      'Authorization': `Bearer ${data.session.access_token}`,
+      'apikey': SUPABASE_PUBLISHABLE_KEY
+    };
+  }
+  
+  // Caso contrário, use apenas a chave pública
   return {
-    'Authorization': `Bearer ${token}`,
     'apikey': SUPABASE_PUBLISHABLE_KEY
   };
 };
