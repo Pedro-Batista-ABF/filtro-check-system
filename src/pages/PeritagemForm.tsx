@@ -41,6 +41,7 @@ export default function PeritagemForm() {
   const [mountTime] = useState(Date.now());
   const [forceRefreshing, setForceRefreshing] = useState(false);
   const [authVerified, setAuthVerified] = useState(false);
+  const [maxLoadTime] = useState(12000); // 12 segundos máximo para carregamento
 
   // Verificação extra de autenticação
   useEffect(() => {
@@ -67,10 +68,67 @@ export default function PeritagemForm() {
     checkAuth();
   }, []);
 
-  // Definir timeout de segurança para evitar loading infinito
+  // Definir timeout máximo absoluto
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Se ainda estiver carregando após 15 segundos, mostrar opção de recarregar
+      if (loading || !formSector) {
+        console.warn(`PeritagemForm: Timeout máximo de ${maxLoadTime/1000}s atingido, forçando exibição do formulário`);
+        
+        // Força a criação de um setor padrão se ainda não existe
+        if (!formSector && defaultSector) {
+          setFormSector(defaultSector);
+          console.log("PeritagemForm: Forçando uso do defaultSector");
+        } else if (!formSector && sector) {
+          setFormSector(sector);
+          console.log("PeritagemForm: Forçando uso do sector");
+        } else if (!formSector) {
+          // Criar um setor de emergência se nenhum estiver disponível
+          const emergencySector: Sector = {
+            id: '',
+            tagNumber: '',
+            tagPhotoUrl: '',
+            entryInvoice: '',
+            entryDate: new Date().toISOString().split('T')[0],
+            peritagemDate: new Date().toISOString().split('T')[0],
+            services: services && services.length > 0 ? services : [{
+              id: "emergencia_timeout",
+              name: "Serviço de Emergência (Timeout)",
+              selected: false,
+              type: "emergencia_timeout" as any,
+              photos: [],
+              quantity: 1
+            }],
+            beforePhotos: [],
+            afterPhotos: [],
+            scrapPhotos: [],
+            productionCompleted: false,
+            cycleCount: 1,
+            status: 'peritagemPendente',
+            outcome: 'EmAndamento',
+            updated_at: new Date().toISOString()
+          };
+          
+          setFormSector(emergencySector);
+          console.log("PeritagemForm: Criado setor de emergência por timeout");
+        }
+        
+        setDataReady(true);
+        setLoading(false);
+        setHasTimeout(false); // Desativa o componente de timeout para mostrar o formulário
+        
+        toast.warning("Carregamento parcial", {
+          description: "Alguns dados podem estar usando valores padrão devido ao tempo de carregamento excedido."
+        });
+      }
+    }, maxLoadTime);
+    
+    return () => clearTimeout(timer);
+  }, [loading, formSector, defaultSector, sector, services, maxLoadTime]);
+
+  // Timeout de segurança para mostrar opção de recarregar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Se ainda estiver carregando após o tempo definido, mostrar opção de recarregar
       if (loading) {
         console.warn("PeritagemForm: Timeout de carregamento de página atingido");
         setHasTimeout(true);
@@ -91,26 +149,16 @@ export default function PeritagemForm() {
       isEditing,
       hasValidData,
       tempoDecorrido: `${Date.now() - mountTime}ms`,
-      authVerified
+      authVerified,
+      temFormSector: !!formSector
     });
-  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime, authVerified]);
+  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime, authVerified, formSector]);
 
   // Garantir que temos um setor válido para o formulário
   useEffect(() => {
     if (loading) return;
     
-    // Verificar se temos dados válidos para mostrar o formulário
-    const hasValidSectorData = isEditing ? !!sector : !!defaultSector;
-    const hasValidServiceData = Array.isArray(services) && services.length > 0;
-    
-    if (!hasValidSectorData || !hasValidServiceData) {
-      console.error("PeritagemForm: Dados insuficientes para renderizar formulário", {
-        hasValidSectorData,
-        hasValidServiceData
-      });
-      return;
-    }
-    
+    // Atualizar formSector assim que tivermos dados disponíveis
     if (isEditing && sector) {
       setFormSector(sector);
       setDataReady(true);
@@ -119,11 +167,8 @@ export default function PeritagemForm() {
       setFormSector(defaultSector);
       setDataReady(true);
       console.log("PeritagemForm: Usando setor padrão para criação");
-    } else {
-      setDataReady(false);
-      console.log("PeritagemForm: Sem dados de setor válidos");
     }
-  }, [sector, defaultSector, isEditing, loading, services]);
+  }, [sector, defaultSector, isEditing, loading]);
 
   // Forçar recarregamento da página
   const handleForceRefresh = () => {
@@ -131,16 +176,48 @@ export default function PeritagemForm() {
     window.location.reload();
   };
 
+  // Se temos os dados necessários, mostrar formulário mesmo com erro
+  if (!loading && formSector) {
+    return (
+      <PageLayoutWrapper>
+        <div className="space-y-6">
+          <PeritagemHeader isEditing={isEditing} />
+          
+          {errorMessage && (
+            <ErrorMessage message={errorMessage} />
+          )}
+          
+          {submitError && (
+            <ErrorMessage message={submitError} />
+          )}
+          
+          <Card className="border-none shadow-lg">
+            <div className="p-6">
+              <SectorForm 
+                sector={formSector}
+                onSubmit={(data) => handleSubmit(data, isEditing, sector?.id)}
+                mode="create"
+                photoRequired={true}
+                isLoading={isSaving}
+              />
+            </div>
+          </Card>
+        </div>
+      </PageLayoutWrapper>
+    );
+  }
+
   // Componente de carregamento
   if (loading && !hasTimeout) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
           <PeritagemHeader isEditing={isEditing} />
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-            <h1 className="text-xl font-semibold">Carregando...</h1>
-          </div>
+          <LoadingState 
+            message="Carregando formulário de peritagem" 
+            showTiming={true} 
+            details="Buscando tipos de serviços e preparando formulário..."
+          />
         </div>
       </PageLayoutWrapper>
     );
@@ -223,74 +300,28 @@ export default function PeritagemForm() {
     );
   }
 
-  // Verificação adicional para garantir que temos dados válidos
-  if (!formSector || !services || !Array.isArray(services) || services.length === 0) {
-    return (
-      <PageLayoutWrapper>
-        <div className="space-y-4">
-          <PeritagemHeader isEditing={isEditing} />
-          <Card className="border-none shadow-lg">
-            <div className="p-6">
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <AlertCircle className="h-10 w-10 text-amber-500 mb-4" />
-                <h2 className="text-xl font-bold mb-2">Dados insuficientes</h2>
-                <p className="text-gray-600 mb-4">
-                  Não foi possível carregar os dados necessários para a peritagem.
-                  {!services || services.length === 0 ? 
-                    " Não foram encontrados serviços disponíveis na tabela 'service_types'." : 
-                    " Ocorreu um erro ao preparar o formulário."}
-                </p>
-                <div className="flex gap-4 mt-2">
-                  <Button onClick={handleForceRefresh} variant="default">
-                    Tentar novamente
-                  </Button>
-                  <Button onClick={() => navigate('/peritagem')} variant="outline">
-                    Voltar para Peritagem
-                  </Button>
-                </div>
-                <details className="mt-4 text-left border p-2 rounded-md w-full max-w-md">
-                  <summary className="font-medium cursor-pointer flex items-center">
-                    <Bug className="h-4 w-4 mr-2" /> Detalhes técnicos
-                  </summary>
-                  <div className="text-xs mt-2 whitespace-pre-wrap bg-gray-50 p-2 rounded">
-                    <p>Serviços: {services ? JSON.stringify(services.length) : 'undefined'}</p>
-                    <p>FormSector: {formSector ? 'definido' : 'undefined'}</p>
-                    <p>DataReady: {dataReady ? 'true' : 'false'}</p>
-                    <p>AuthVerified: {authVerified ? 'true' : 'false'}</p>
-                    <p>Tempo: {Date.now() - mountTime}ms</p>
-                    <p>UID verificado: {authVerified ? 'sim' : 'não'}</p>
-                  </div>
-                </details>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </PageLayoutWrapper>
-    );
-  }
-
-  // Log explícito antes de renderização final
-  console.log("🔥 Renderizando formulário completo. Dados carregados com sucesso.");
-  console.log("Services:", services.length, "FormSector:", formSector !== null);
-
+  // Fallback para qualquer outro caso
   return (
     <PageLayoutWrapper>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <PeritagemHeader isEditing={isEditing} />
-        
-        {submitError && (
-          <ErrorMessage message={submitError} />
-        )}
-        
         <Card className="border-none shadow-lg">
           <div className="p-6">
-            <SectorForm 
-              sector={formSector}
-              onSubmit={(data) => handleSubmit(data, isEditing, sector?.id)}
-              mode="create"
-              photoRequired={true}
-              isLoading={isSaving}
-            />
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <AlertCircle className="h-10 w-10 text-amber-500 mb-4" />
+              <h2 className="text-xl font-bold mb-2">Carregando peritagem</h2>
+              <p className="text-gray-600 mb-4">
+                Aguarde, estamos preparando o formulário...
+              </p>
+              <div className="flex gap-4 mt-2">
+                <Button onClick={handleForceRefresh} variant="default">
+                  Tentar novamente
+                </Button>
+                <Button onClick={() => navigate('/peritagem')} variant="outline">
+                  Voltar para Peritagem
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
       </div>

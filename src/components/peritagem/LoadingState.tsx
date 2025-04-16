@@ -7,11 +7,13 @@ import { Card } from "@/components/ui/card";
 interface LoadingStateProps {
   message?: string;
   showTiming?: boolean;
+  details?: string;
 }
 
 export default function LoadingState({ 
   message = "Carregando...", 
-  showTiming = false 
+  showTiming = false,
+  details
 }: LoadingStateProps) {
   const [elapsedTime, setElapsedTime] = React.useState(0);
   
@@ -34,6 +36,11 @@ export default function LoadingState({
             {showTiming && (
               <p className="text-sm text-gray-500">
                 Tempo decorrido: {elapsedTime} {elapsedTime === 1 ? 'segundo' : 'segundos'}
+              </p>
+            )}
+            {details && (
+              <p className="text-sm text-gray-500 mt-2 max-w-md">
+                {details}
               </p>
             )}
           </div>

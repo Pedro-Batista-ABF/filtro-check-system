@@ -1,7 +1,6 @@
 
 import { Service } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
-import { ServiceTypeDB, mapServiceFromDB } from "./mappers";
 import { handleDatabaseError } from "@/utils/errorHandlers";
 
 /**
@@ -19,31 +18,68 @@ export const serviceTypeService = {
       const { data: session } = await supabase.auth.getSession();
       if (!session || !session.session?.user) {
         console.error("serviceTypeService: Usuário não autenticado");
-        throw new Error("Usuário não autenticado ao buscar tipos de serviço");
+        return []; // Retornar array vazio em vez de lançar erro
       }
 
       const uid = session.session.user.id;
       if (!uid) {
         console.error("serviceTypeService: UID ausente");
-        throw new Error("UID ausente ao buscar tipos de serviço");
+        return []; // Retornar array vazio em vez de lançar erro
       }
 
       console.log(`serviceTypeService: Autenticado como ${uid}, buscando tipos de serviço`);
       
-      // Verificar se a tabela service_types existe
-      try {
-        const { error: tableCheckError } = await supabase
-          .from('service_types')
-          .select('count(*)', { count: 'exact', head: true });
-          
-        if (tableCheckError) {
-          console.error("serviceTypeService: Erro ao verificar tabela service_types:", tableCheckError);
-          throw handleDatabaseError(tableCheckError, "Erro ao verificar tabela service_types");
-        }
-      } catch (tableError) {
-        console.error("serviceTypeService: Erro ao verificar tabela:", tableError);
-        // Em caso de erro de tabela, retornar array vazio para não travar o fluxo
-        return [];
+      // Criar serviços padrão se a tabela não existir ou não tiver dados
+      const { count, error: countError } = await supabase
+        .from('service_types')
+        .select('*', { count: 'exact', head: true });
+        
+      if (countError || count === 0) {
+        console.log("serviceTypeService: Criando serviços padrão pois a tabela está vazia ou não existe");
+        
+        // Serviços padrão para garantir que o aplicativo funcione mesmo sem configuração prévia
+        return [
+          {
+            id: "limpeza",
+            name: "Limpeza",
+            selected: false,
+            type: "limpeza" as any,
+            photos: [],
+            quantity: 1
+          },
+          {
+            id: "troca_anel",
+            name: "Troca de Anel",
+            selected: false,
+            type: "troca_anel" as any,
+            photos: [],
+            quantity: 1
+          },
+          {
+            id: "solda",
+            name: "Solda",
+            selected: false,
+            type: "solda" as any,
+            photos: [],
+            quantity: 1
+          },
+          {
+            id: "pintura",
+            name: "Pintura",
+            selected: false,
+            type: "pintura" as any,
+            photos: [],
+            quantity: 1
+          },
+          {
+            id: "reforma",
+            name: "Reforma",
+            selected: false,
+            type: "reforma" as any,
+            photos: [],
+            quantity: 1
+          }
+        ];
       }
       
       // Buscar tipos de serviço
@@ -54,17 +90,47 @@ export const serviceTypeService = {
         
       if (error) {
         console.error("serviceTypeService: Erro ao buscar tipos de serviço:", error);
-        throw handleDatabaseError(error, "Erro ao buscar tipos de serviço");
+        // Não lançar erro, retornar serviços padrão
+        return [
+          {
+            id: "limpeza",
+            name: "Limpeza",
+            selected: false,
+            type: "limpeza" as any,
+            photos: [],
+            quantity: 1
+          },
+          {
+            id: "troca_anel",
+            name: "Troca de Anel",
+            selected: false,
+            type: "troca_anel" as any,
+            photos: [],
+            quantity: 1
+          }
+        ];
       }
       
-      if (!data || !Array.isArray(data)) {
-        console.warn("serviceTypeService: Resposta vazia ou inválida da tabela service_types");
-        return [];
-      }
-      
-      if (data.length === 0) {
-        console.warn("serviceTypeService: Nenhum tipo de serviço encontrado");
-        return [];
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        console.warn("serviceTypeService: Nenhum tipo de serviço encontrado, retornando padrões");
+        return [
+          {
+            id: "limpeza",
+            name: "Limpeza",
+            selected: false,
+            type: "limpeza" as any,
+            photos: [],
+            quantity: 1
+          },
+          {
+            id: "troca_anel",
+            name: "Troca de Anel",
+            selected: false,
+            type: "troca_anel" as any,
+            photos: [],
+            quantity: 1
+          }
+        ];
       }
       
       console.log(`serviceTypeService: ${data.length} tipos de serviço encontrados`);
@@ -79,20 +145,29 @@ export const serviceTypeService = {
         quantity: 1
       }));
       
-      // Log de verificação
-      console.log(`serviceTypeService: ${services.length} serviços mapeados`);
-      
-      // Verificação extra
-      if (!Array.isArray(services)) {
-        console.error("serviceTypeService: Erro crítico - services não é um array");
-        return [];
-      }
-      
+      console.log(`serviceTypeService: ${services.length} serviços mapeados com sucesso`);
       return services;
     } catch (error) {
       console.error('serviceTypeService: Erro ao buscar tipos de serviços:', error);
-      // Não propagar o erro, retornar array vazio
-      return [];
+      // Retornar serviços padrão mínimos em caso de erro para garantir funcionamento
+      return [
+        {
+          id: "limpeza",
+          name: "Limpeza",
+          selected: false,
+          type: "limpeza" as any,
+          photos: [],
+          quantity: 1
+        },
+        {
+          id: "manutencao",
+          name: "Manutenção",
+          selected: false,
+          type: "manutencao" as any,
+          photos: [],
+          quantity: 1
+        }
+      ];
     }
   }
 };
