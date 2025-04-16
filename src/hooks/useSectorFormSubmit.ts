@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Sector, Service } from '@/types';
+import { Sector, Service, CycleOutcome } from '@/types';
 import { format } from 'date-fns';
 import { toast } from "sonner";
 import { findServicesWithoutPhotos } from '@/utils/peritagemValidation';
@@ -79,7 +79,7 @@ export function useSectorFormSubmit() {
         scrapReturnInvoice: formState.scrapInvoice || "",
         scrapReturnDate: formState.scrapDate ? format(formState.scrapDate, "yyyy-MM-dd") : undefined,
         status: 'sucateadoPendente',
-        outcome: 'sucateado',
+        outcome: 'Sucateado' as CycleOutcome,
         services: [],
         beforePhotos: [],
         afterPhotos: []
@@ -117,7 +117,7 @@ export function useSectorFormSubmit() {
       formData.scrapReturnInvoice = formState.scrapInvoice;
       formData.scrapReturnDate = formState.scrapDate ? format(formState.scrapDate, "yyyy-MM-dd") : undefined;
       formData.scrapValidated = true;
-      formData.outcome = 'sucateado';
+      formData.outcome = 'Sucateado' as CycleOutcome;
     }
 
     return formData;

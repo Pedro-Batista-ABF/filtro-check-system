@@ -1,69 +1,97 @@
+import React, { useState, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
+import { Home } from './pages/Home';
+import { Index } from './pages/Index';
+import { Peritagem } from './pages/peritagem/Peritagem';
+import { PeritagemForm } from './pages/peritagem/PeritagemForm';
+import { PeritagemPendente } from './pages/peritagem/PeritagemPendente';
+import { Execucao } from './pages/execucao/Execucao';
+import { ExecucaoDetails } from './pages/execucao/ExecucaoDetails';
+import { Checagem } from './pages/checagem/Checagem';
+import { CheckagemForm } from './pages/checagem/CheckagemForm';
+import { CheckagemFinal } from './pages/checagem/CheckagemFinal';
+import { Sucateamento } from './pages/sucateamento/Sucateamento';
+import { ScrapValidationForm } from './pages/sucateamento/ScrapValidationForm';
+import { Concluidos } from './pages/concluidos/Concluidos';
+import { SectorReport } from './pages/relatorios/SectorReport';
+import { ConsolidatedReport } from './pages/relatorios/ConsolidatedReport';
+import { ReportPreview } from './pages/relatorios/ReportPreview';
+import { NotFound } from './pages/NotFound';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import FallbackRoot from './components/FallbackRoot';
 
-import { Route, Routes, Outlet, Navigate } from "react-router-dom";
+const queryClient = new QueryClient();
 
-import Header from "@/components/layout/Header";
-import Index from "@/pages/Index";
-import NotFound from "@/pages/NotFound";
-import Peritagem from "@/pages/Peritagem";
-import PeritagemForm from "@/pages/PeritagemForm";
-import Execucao from "@/pages/Execucao";
-import CheckagemFinal from "@/pages/CheckagemFinal";
-import Concluidos from "@/pages/Concluidos";
-import ExecucaoDetails from "@/pages/ExecucaoDetails";
-import CheckagemForm from "@/pages/CheckagemForm";
-import SectorReport from "@/pages/SectorReport";
-import ScrapValidation from "@/pages/ScrapValidation";
-import ScrapValidationForm from "@/pages/ScrapValidationForm";
-import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import ConsolidatedReport from "@/pages/ConsolidatedReport";
-import UserInfo from "@/components/auth/UserInfo";
-import Checagem from "@/pages/Checagem";
-import PeritagemPendente from "@/pages/PeritagemPendente";
-import ConnectionErrorFallback from "@/components/fallback/ConnectionErrorFallback";
+/**
+ * Componente principal da aplicação
+ */
+function App() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-const App = () => {
-  console.log("App component rendering");
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/error/connection" element={<ConnectionErrorFallback />} />
-      
-      <Route path="/" element={
-        <ProtectedRoute>
-          <div className="min-h-screen flex flex-col bg-gray-50">
-            <Header HeaderExtra={<UserInfo />} />
-            <main className="flex-1 container mx-auto px-4 py-8">
-              <Outlet />
-            </main>
-            <footer className="bg-gray-100 py-4 text-center text-gray-600 text-sm">
-              <p>© {new Date().getFullYear()} Controle de Recuperação de Setores</p>
-            </footer>
-          </div>
-        </ProtectedRoute>
-      }>
-        <Route index element={<Index />} />
-        <Route path="peritagem" element={<Peritagem />} />
-        <Route path="peritagem/pendente" element={<PeritagemPendente />} />
-        <Route path="peritagem/novo" element={<PeritagemForm />} />
-        <Route path="peritagem/editar/:id" element={<PeritagemForm />} />
-        <Route path="execucao" element={<Execucao />} />
-        <Route path="execucao/:id" element={<ExecucaoDetails />} />
-        <Route path="checagem" element={<Checagem />} />
-        <Route path="checagem-final" element={<CheckagemFinal />} />
-        <Route path="checagem/:id" element={<CheckagemForm />} />
-        <Route path="concluidos" element={<Concluidos />} />
-        <Route path="sucateamento" element={<ScrapValidation />} />
-        <Route path="sucateamento/:id" element={<ScrapValidationForm />} />
-        <Route path="setor/:id" element={<SectorReport />} />
-        <Route path="relatorio" element={<ConsolidatedReport />} />
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+    <QueryClientProvider client={queryClient}>
+      <FallbackRoot>
+        <Routes>
+          {/* Rotas públicas */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Rotas protegidas */}
+          <Route element={<ProtectedRoute />}>
+            {/* Home */}
+            <Route path="/" element={<Home />} />
+            <Route index element={<Index />} />
+            
+            {/* Peritagem */}
+            <Route path="/peritagem" element={<Peritagem />} />
+            <Route path="/peritagem/novo" element={<PeritagemForm />} />
+            <Route path="/peritagem/:id" element={<PeritagemForm />} />
+            <Route path="/peritagem/pendente" element={<PeritagemPendente />} />
+            
+            {/* Execução */}
+            <Route path="/execucao" element={<Execucao />} />
+            <Route path="/execucao/:id" element={<ExecucaoDetails />} />
+            
+            {/* Checagem */}
+            <Route path="/checagem" element={<Checagem />} />
+            <Route path="/checagem/:id" element={<CheckagemForm />} />
+            <Route path="/checagem-final" element={<CheckagemFinal />} />
+            
+            {/* Sucateamento */}
+            <Route path="/sucateamento" element={<Sucateamento />} />
+            <Route path="/sucateamento/:id" element={<ScrapValidationForm />} />
+            
+            {/* Concluídos */}
+            <Route path="/concluidos" element={<Concluidos />} />
+            
+            {/* Relatórios */}
+            <Route path="/relatorio/:id" element={<SectorReport />} />
+            <Route path="/relatorio-consolidado" element={<ConsolidatedReport />} />
+            <Route path="/relatorio-preview" element={<ReportPreview />} />
+          </Route>
+          
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </FallbackRoot>
+    </QueryClientProvider>
   );
-};
+}
 
 export default App;

@@ -11,12 +11,23 @@ export function useConnectionAuth() {
   const [authVerified, setAuthVerified] = useState(false);
   const [forceRefreshing, setForceRefreshing] = useState(false);
   const [lastConnectionAttempt, setLastConnectionAttempt] = useState(Date.now());
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  const MAX_RETRY_ATTEMPTS = 3;
 
   const checkAuth = useCallback(async () => {
     try {
       console.log("useConnectionAuth: Verificando autenticação...");
-      const { data } = await supabase.auth.getSession();
-      const isAuth = !!data.session?.user;
+      
+      // Adicionado um timeout para a verificação de autenticação
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout ao verificar autenticação")), 8000);
+      });
+      
+      const authPromise = supabase.auth.getSession();
+      
+      // Race entre o timeout e a chamada de autenticação
+      const { data } = await Promise.race([authPromise, timeoutPromise]) as any;
+      const isAuth = !!data?.session?.user;
       
       if (!isAuth) {
         console.error("useConnectionAuth: Usuário não autenticado na verificação direta");
@@ -33,8 +44,13 @@ export function useConnectionAuth() {
       const isConnected = await checkSupabaseConnection();
       setConnectionStatus(isConnected ? 'online' : 'offline');
       
-      if (!isConnected) {
+      if (isConnected) {
+        // Reset retry attempts on successful connection
+        setRetryAttempts(0);
+      } else {
         console.warn("useConnectionAuth: Não foi possível estabelecer conexão com o servidor");
+        // Increment retry attempts on failure
+        setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
         return false;
       }
       
@@ -42,6 +58,7 @@ export function useConnectionAuth() {
     } catch (error) {
       console.error("useConnectionAuth: Erro ao verificar autenticação:", error);
       setConnectionStatus('offline');
+      setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
       return false;
     }
   }, [navigate]);
@@ -54,15 +71,18 @@ export function useConnectionAuth() {
     let interval: ReturnType<typeof setInterval>;
     
     if (connectionStatus === 'offline') {
+      // Implementação de backoff exponencial para novas tentativas
+      const backoffTime = Math.min(5000 * Math.pow(2, retryAttempts), 30000);
+      
       interval = setInterval(async () => {
         const now = Date.now();
         // Prevenir tentativas de reconexão muito frequentes
-        if (now - lastConnectionAttempt < 5000) {
+        if (now - lastConnectionAttempt < backoffTime) {
           return;
         }
         
         setLastConnectionAttempt(now);
-        console.log("useConnectionAuth: Tentando reconectar...", new Date().toISOString());
+        console.log(`useConnectionAuth: Tentando reconectar... Tentativa ${retryAttempts + 1} (Backoff: ${backoffTime}ms)`, new Date().toISOString());
         
         const isConnected = await checkSupabaseConnection();
         if (isConnected) {
@@ -71,14 +91,16 @@ export function useConnectionAuth() {
             description: "A conexão com o servidor foi restaurada"
           });
           clearInterval(interval);
+          // Verificar autenticação após reconexão bem-sucedida
+          await checkAuth();
         }
-      }, 10000);
+      }, backoffTime);
     }
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [connectionStatus, lastConnectionAttempt]);
+  }, [connectionStatus, lastConnectionAttempt, retryAttempts, checkAuth]);
 
   const handleForceRefresh = () => {
     setForceRefreshing(true);
@@ -93,18 +115,38 @@ export function useConnectionAuth() {
       description: "Tentando reconectar ao servidor..."
     });
     
-    const isConnected = await checkSupabaseConnection();
-    setConnectionStatus(isConnected ? 'online' : 'offline');
-    
-    if (isConnected) {
-      toast.success("Conexão estabelecida", {
-        description: "A conexão com o servidor foi restaurada"
+    try {
+      // Adicionar um timeout para a tentativa de reconexão
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout ao verificar conexão")), 8000);
       });
-      // Revalidar autenticação
-      await checkAuth();
-    } else {
+      
+      const connectionPromise = checkSupabaseConnection();
+      
+      // Race entre o timeout e a verificação de conexão
+      const isConnected = await Promise.race([connectionPromise, timeoutPromise]);
+      
+      setConnectionStatus(isConnected ? 'online' : 'offline');
+      
+      if (isConnected) {
+        setRetryAttempts(0);
+        toast.success("Conexão estabelecida", {
+          description: "A conexão com o servidor foi restaurada"
+        });
+        // Revalidar autenticação
+        await checkAuth();
+      } else {
+        setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
+        toast.error("Falha na conexão", {
+          description: "Não foi possível estabelecer conexão com o servidor"
+        });
+      }
+    } catch (error) {
+      console.error("useConnectionAuth: Erro ao tentar reconectar:", error);
+      setConnectionStatus('offline');
+      setRetryAttempts(prev => Math.min(prev + 1, MAX_RETRY_ATTEMPTS));
       toast.error("Falha na conexão", {
-        description: "Não foi possível estabelecer conexão com o servidor"
+        description: "Tempo limite excedido ao tentar conectar ao servidor"
       });
     }
   };
@@ -113,6 +155,7 @@ export function useConnectionAuth() {
     connectionStatus,
     authVerified,
     forceRefreshing,
+    retryAttempts,
     handleForceRefresh,
     handleRetryConnection
   };

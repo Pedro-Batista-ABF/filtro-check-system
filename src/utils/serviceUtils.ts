@@ -1,11 +1,22 @@
 
-import { Service, ServiceType } from "@/types";
+import { Service, ServiceType, CycleOutcome } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const validateSession = async () => {
   try {
-    const { data: sessionData, error } = await supabase.auth.getSession();
+    // Adicionar timeout para evitar espera infinita
+    const timeoutPromise = new Promise<null>((_, reject) => 
+      setTimeout(() => reject(new Error("Timeout ao validar sessão")), 5000)
+    );
+    
+    const sessionPromise = supabase.auth.getSession();
+    
+    // Race entre o timeout e a validação da sessão
+    const { data: sessionData, error } = await Promise.race([
+      sessionPromise,
+      timeoutPromise
+    ]) as any;
     
     if (error) {
       console.error("ServiceUtils: Erro ao validar sessão:", error);
@@ -34,7 +45,7 @@ export const createProcessedService = (service: Service): Service => ({
   id: service.id,
   name: service.name,
   selected: false,
-  type: service.id as any, // Usando any para corrigir problema de tipagem
+  type: service.type || service.id as any,
   photos: [],
   quantity: 1
 });
@@ -181,7 +192,7 @@ export const loadServicesOptimized = async (): Promise<Service[]> => {
         id: service.id,
         name: service.name,
         selected: false,
-        type: service.id as any,
+        type: service.id,
         photos: [],
         quantity: 1
       }));
