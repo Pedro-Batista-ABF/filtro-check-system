@@ -1,8 +1,9 @@
 
 import React, { useRef, useState } from 'react';
-import { Camera, Trash2, Image } from 'lucide-react';
+import { Camera, Trash2, Image, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Service, Photo } from '@/types';
+import { toast } from 'sonner';
 
 interface ServicePhotosProps {
   service: Service;
@@ -24,12 +25,16 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   
-  const photos = service.photos || [];
+  // Garantir que photos é um array
+  const photos = Array.isArray(service.photos) ? service.photos : [];
+  // Filtrar fotos pelo tipo correto
   const typePhotos = photos.filter(photo => photo.type === photoType);
   
   const handleClick = () => {
     if (disabled) return;
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,10 +42,16 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
     
     setUploading(true);
     try {
+      // Processar as imagens
       await onPhotoUpload(service.id, e.target.files, photoType);
-      e.target.value = '';
+      
+      // Limpar o input para permitir selecionar o mesmo arquivo novamente
+      if (e.target.value) {
+        e.target.value = '';
+      }
     } catch (error) {
       console.error('Erro ao fazer upload da foto:', error);
+      toast.error("Falha ao enviar foto. Tente novamente.");
     } finally {
       setUploading(false);
     }
@@ -65,10 +76,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
           >
             {uploading ? (
               <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Enviando...
               </span>
             ) : (
@@ -101,7 +109,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
           accept="image/*"
           className="hidden"
           multiple
-          disabled={disabled}
+          disabled={disabled || uploading}
         />
       </div>
       
@@ -119,6 +127,12 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
                   src={photo.url}
                   alt={`Foto ${index + 1} do serviço ${service.name}`}
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    // Fallback para imagem quebrada
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder.svg';
+                    target.classList.add('bg-gray-100');
+                  }}
                 />
               </a>
             </div>
