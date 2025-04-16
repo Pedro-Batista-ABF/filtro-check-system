@@ -7,8 +7,24 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ApiProvider } from './contexts/ApiContext';
 import { ApiContextExtendedProvider } from './contexts/ApiContextExtended';
 import { Toaster } from 'sonner';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Suspense } from 'react';
 
 const root = createRoot(document.getElementById("root")!);
+
+// Configuração do cliente de consulta com retry mais tolerante e cache mais longo
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 5,  // Aumentado para 5 tentativas
+      retryDelay: attemptIndex => Math.min(1000 * Math.pow(2, attemptIndex), 30000),  // Backoff exponencial
+      staleTime: 5 * 60 * 1000, // 5 minutos (reduzido para obter dados mais frescos)
+      cacheTime: 30 * 60 * 1000, // 30 minutos
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,  // Buscar novamente ao reconectar
+    },
+  },
+});
 
 // Configuração global para fazer fetch timeouts
 const originalFetch = window.fetch;
@@ -160,21 +176,25 @@ if (import.meta.env.DEV) {
 
 root.render(
   <BrowserRouter>
-    <AuthProvider>
-      <ApiProvider>
-        <ApiContextExtendedProvider>
-          <App />
-          <Toaster 
-            position="top-right"
-            richColors 
-            closeButton
-            expand={false}
-            toastOptions={{
-              duration: 5000,
-            }}
-          />
-        </ApiContextExtendedProvider>
-      </ApiProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ApiProvider>
+          <ApiContextExtendedProvider>
+            <Suspense fallback={<div>Carregando...</div>}>
+              <App />
+            </Suspense>
+            <Toaster 
+              position="top-right"
+              richColors 
+              closeButton
+              expand={false}
+              toastOptions={{
+                duration: 5000,
+              }}
+            />
+          </ApiContextExtendedProvider>
+        </ApiProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </BrowserRouter>
 );
