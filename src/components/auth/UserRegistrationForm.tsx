@@ -11,16 +11,13 @@ import { useNavigate } from "react-router-dom";
 interface UserRegistrationData {
   fullName: string;
   email: string;
-  password: string;
 }
 
 export default function UserRegistrationForm() {
   const [formData, setFormData] = useState<UserRegistrationData>({
     fullName: "",
     email: "",
-    password: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { registerUser } = useAuth();
   const { toast } = useToast();
@@ -35,7 +32,7 @@ export default function UserRegistrationForm() {
     e.preventDefault();
     
     // Validate form data
-    if (!formData.fullName || !formData.email || !formData.password) {
+    if (!formData.fullName || !formData.email) {
       toast({
         title: "Erro de validação",
         description: "Todos os campos são obrigatórios.",
@@ -55,32 +52,19 @@ export default function UserRegistrationForm() {
       return;
     }
 
-    // Validate password length
-    if (formData.password.length < 6) {
-      toast({
-        title: "Senha inválida",
-        description: "A senha deve ter pelo menos 6 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const success = await registerUser(formData);
-      if (success) {
-        toast({
-          title: "Cadastro realizado com sucesso",
-          description: "Você já pode fazer login com suas credenciais.",
-        });
-        // Reset form data
-        setFormData({
-          fullName: "",
-          email: "",
-          password: "",
-        });
-      }
+      await registerUser(formData.email);
+      toast({
+        title: "Cadastro realizado com sucesso",
+        description: "Você receberá um email com o link de acesso.",
+      });
+      // Reset form data
+      setFormData({
+        fullName: "",
+        email: "",
+      });
     } catch (error) {
       toast({
         title: "Erro no cadastro",
@@ -119,35 +103,6 @@ export default function UserRegistrationForm() {
           disabled={isLoading}
           required
         />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Digite sua senha (mínimo 6 caracteres)"
-            className="pr-10"
-            disabled={isLoading}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-            tabIndex={-1}
-          >
-            {showPassword ? (
-              <EyeOff className="h-5 w-5" />
-            ) : (
-              <Eye className="h-5 w-5" />
-            )}
-          </button>
-        </div>
       </div>
       
       <Button 

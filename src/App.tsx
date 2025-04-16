@@ -4,6 +4,8 @@ import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Peritagem } from './pages/Peritagem';
 import { PeritagemForm } from './pages/PeritagemForm';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import FallbackRoot from './components/FallbackRoot';
@@ -41,6 +43,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <FallbackRoot>
         <Routes>
+          {/* Rotas de autenticação */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
           {/* Rota raiz - redirecionando para peritagem */}
           <Route path="/" element={<Peritagem />} />
           

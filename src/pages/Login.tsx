@@ -29,8 +29,8 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      await login(email, password);
-      navigate('/');
+      await login(email);
+      toast.success("Link de login enviado para seu email");
     } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
       console.error('Login error:', err);
@@ -45,7 +45,7 @@ const Login = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
           <CardDescription>
-            Entre com suas credenciais para acessar o sistema
+            Entre com seu email para receber um link de acesso
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -66,22 +66,12 @@ const Login = () => {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
             <Button 
               type="submit" 
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Entrando..." : "Entrar"}
+              {isSubmitting ? "Enviando..." : "Enviar link de acesso"}
             </Button>
           </form>
         </CardContent>

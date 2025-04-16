@@ -11,8 +11,6 @@ import { toast } from 'sonner';
 export default function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { registerUser } = useAuth();
   const navigate = useNavigate();
@@ -21,28 +19,16 @@ export default function Register() {
     e.preventDefault();
     
     // Form validation
-    if (!fullName || !email || !password) {
+    if (!fullName || !email) {
       toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      toast.error("As senhas não conferem");
-      return;
-    }
-    
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
       return;
     }
     
     try {
       setIsSubmitting(true);
-      const success = await registerUser({ email, password, fullName });
-      if (success) {
-        toast.success("Cadastro realizado com sucesso! Verifique seu email.");
-        navigate('/login');
-      }
+      await registerUser(email);
+      toast.success("Cadastro realizado com sucesso! Verifique seu email.");
+      navigate('/login');
     } catch (error) {
       console.error("Erro ao registrar:", error);
       toast.error("Erro ao criar conta. Tente novamente.");
@@ -82,28 +68,6 @@ export default function Register() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Digite seu email"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Digite sua senha (min. 6 caracteres)"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirme sua senha"
                   required
                 />
               </div>
