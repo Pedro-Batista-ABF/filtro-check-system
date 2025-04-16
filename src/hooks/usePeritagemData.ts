@@ -11,146 +11,107 @@ export function usePeritagemData(id?: string) {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { sector, fetchSector, getDefaultSector } = useSectorFetch(id);
-  const { services, fetchDefaultServices } = useServicesManagement();
+  const { 
+    services, 
+    fetchDefaultServices, 
+    loading: servicesLoading, 
+    error: servicesError,
+    initialized: servicesInitialized 
+  } = useServicesManagement();
+  
   const isEditing = !!id;
   const [defaultSector, setDefaultSector] = useState<Sector | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const [loadStartTime] = useState(Date.now());
 
-  // Verificar estado de autenticação usando o hook useAuth
+  // Verificação de timeout global
   useEffect(() => {
-    if (authLoading) return; // Aguardar carregamento da autenticação
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn("usePeritagemData: Timeout de carregamento atingido após 10s");
+        setLoading(false);
+        setErrorMessage("Tempo de carregamento excedido. Por favor, atualize a página.");
+      }
+    }, 10000);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Verificar estado de autenticação
+  useEffect(() => {
+    if (authLoading) return;
     
     if (!isAuthenticated) {
-      console.error("Usuário não autenticado - useAuth");
-      setErrorMessage("Você precisa estar logado para acessar esta página. Por favor, faça login novamente.");
+      console.error("usePeritagemData: Usuário não autenticado via useAuth");
+      setErrorMessage("Você precisa estar logado para acessar esta página");
       setLoading(false);
     }
   }, [isAuthenticated, authLoading]);
 
-  // Inicializar o setor padrão logo que os serviços estiverem disponíveis
+  // Carregar dados iniciais
   useEffect(() => {
-    if (services && services.length > 0 && !defaultSector) {
-      try {
-        const newDefaultSector = getDefaultSector(services);
-        console.log("Default sector criado com sucesso", newDefaultSector);
-        
-        // Validar que o defaultSector tem todos os campos obrigatórios
-        if (!newDefaultSector.tagNumber && newDefaultSector.tagNumber !== '') {
-          console.error("defaultSector: tagNumber ausente");
-        }
-        if (!newDefaultSector.entryInvoice && newDefaultSector.entryInvoice !== '') {
-          console.error("defaultSector: entryInvoice ausente");
-        }
-        if (!newDefaultSector.entryDate) {
-          console.error("defaultSector: entryDate ausente");
-        }
-        if (!Array.isArray(newDefaultSector.services)) {
-          console.error("defaultSector: services não é um array");
-        }
-        
-        setDefaultSector(newDefaultSector);
-      } catch (error) {
-        console.error("Erro ao criar setor padrão:", error);
-        setErrorMessage("Erro ao criar dados padrão do setor.");
-        setLoading(false);
-      }
-    }
-  }, [services, getDefaultSector, defaultSector]);
-
-  // Carregar dados apenas quando autenticado
-  useEffect(() => {
-    if (authLoading) return; // Aguardar carregamento da autenticação
-    if (!isAuthenticated) return; // Não carregar dados se não estiver autenticado
+    if (authLoading) return;
+    if (!isAuthenticated) return;
     
     const loadData = async () => {
-      const abortController = new AbortController();
-      const timeoutId = setTimeout(() => {
-        if (loading) {
-          console.error("Timeout loading data in usePeritagemData");
-          setErrorMessage("Tempo esgotado ao carregar dados. Atualize a página.");
-          setLoading(false);
-          abortController.abort();
-        }
-      }, 15000); // 15 segundos de timeout
-
       try {
+        console.log("usePeritagemData: Iniciando carregamento de dados");
         setLoading(true);
         setErrorMessage(null);
         
-        console.log("Iniciando carregamento de serviços padrão");
-        
-        // Verificar sessão explicitamente por redundância
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData?.session?.user?.id) {
-          console.error("UID ausente na carregamento de dados");
-          setErrorMessage("Você precisa estar logado para acessar esta página");
-          setLoading(false);
-          clearTimeout(timeoutId);
-          return;
-        }
-        
+        // Carregar serviços primeiro
+        console.log("usePeritagemData: Buscando serviços");
         const loadedServices = await fetchDefaultServices();
-        console.log("Serviços carregados:", loadedServices?.length || 0);
+        console.log(`usePeritagemData: ${loadedServices.length} serviços carregados`);
         
-        // Verificar se loadedServices é um array válido
+        // Verificar se temos serviços válidos
         if (!Array.isArray(loadedServices) || loadedServices.length === 0) {
-          console.warn("Serviços não encontrados ou array vazio");
-          setErrorMessage("Não foram encontrados serviços disponíveis. Verifique a tabela 'service_types'.");
+          console.warn("usePeritagemData: Não foram encontrados serviços");
+          setErrorMessage("Não foram encontrados serviços disponíveis.");
           setLoading(false);
-          clearTimeout(timeoutId);
           return;
         }
         
-        if (isEditing && id) {
-          console.log("Carregando dados do setor:", id);
+        // Criar setor padrão se necessário
+        if (!isEditing) {
+          const newDefaultSector = getDefaultSector(loadedServices);
+          setDefaultSector(newDefaultSector);
+          console.log("usePeritagemData: Setor padrão criado");
+        } else if (id) {
+          // Buscar setor existente
           await fetchSector();
+          console.log("usePeritagemData: Setor existente carregado");
         }
         
         setDataReady(true);
-        clearTimeout(timeoutId);
         setLoading(false);
-        console.log("🔥 Finalizado carregamento de dados com sucesso.");
+        console.log(`usePeritagemData: 🔥 Dados carregados com sucesso em ${Date.now() - loadStartTime}ms`);
       } catch (error) {
-        console.error("Error loading peritagem data:", error);
-        setErrorMessage(error instanceof Error 
-          ? `Erro ao carregar dados: ${error.message}` 
-          : "Erro ao carregar dados. Tente novamente mais tarde.");
-        toast.error("Erro ao carregar dados", {
-          description: "Ocorreu um erro ao carregar os dados. Tente novamente."
-        });
+        console.error("usePeritagemData: Erro ao carregar dados:", error);
+        setErrorMessage("Erro ao carregar dados. Tente novamente mais tarde.");
         setLoading(false);
-        clearTimeout(timeoutId);
-      } finally {
-        clearTimeout(timeoutId);
-        if (loading) {
-          setLoading(false);
-          console.log("🔥 Finalizado carregamento em finally.");
-        }
       }
     };
-
+    
     loadData();
     
-    // Cleanup function
     return () => {
-      console.log("Limpando recursos do usePeritagemData");
+      console.log("usePeritagemData: Limpando recursos");
     };
-  }, [id, isEditing, fetchSector, fetchDefaultServices, isAuthenticated, authLoading, loading]);
+  }, [isAuthenticated, authLoading, id, isEditing]);
 
-  // Garantir que temos dados válidos antes de prosseguir
+  // Verificação de dados válidos
   const hasValidServices = services && Array.isArray(services) && services.length > 0;
-  const validDefaultSector = defaultSector || 
-    (hasValidServices ? getDefaultSector(services) : null);
-
+  
   return {
     sector,
-    defaultSector: validDefaultSector,
+    defaultSector: defaultSector || (hasValidServices ? getDefaultSector(services) : null),
     loading,
-    errorMessage,
+    errorMessage: errorMessage || servicesError,
     isEditing,
     services,
-    hasValidData: !loading && !errorMessage && (!!validDefaultSector || !!sector) && hasValidServices,
+    hasValidData: !loading && !errorMessage && hasValidServices && (!!defaultSector || !!sector),
     dataReady
   };
 }

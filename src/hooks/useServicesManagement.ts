@@ -10,69 +10,86 @@ export function useServicesManagement() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const fetchDefaultServices = async () => {
+    // Registrar o início da operação
+    console.log("useServicesManagement: Iniciando busca de serviços padrão");
+    
     try {
-      console.log("Iniciando busca de serviços padrão");
       setLoading(true);
+      setError(null);
       
-      // Verifica autenticação explicitamente
+      // Verificação explícita da sessão
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session?.user?.id) {
-        console.error("UID ausente na busca de serviços");
-        setError("Você precisa estar logado para acessar esta página");
+        console.error("useServicesManagement: UID ausente na busca de serviços");
+        setError("Usuário não autenticado");
         setServices([]);
         setLoading(false);
         return [];
       }
       
-      // Usar o serviço específico para buscar tipos de serviço com tratamento de erro melhorado
+      console.log("useServicesManagement: UID confirmado, buscando tipos de serviço");
+      
+      // Buscar tipos de serviço
+      let serviceTypes: Service[] = [];
       try {
-        const serviceTypes = await serviceTypeService.getServiceTypes();
-        console.log(`${serviceTypes.length} tipos de serviço encontrados:`, serviceTypes);
+        serviceTypes = await serviceTypeService.getServiceTypes();
         
-        // Verificação explícita do formato dos dados
-        if (!Array.isArray(serviceTypes) || serviceTypes.length === 0) {
-          console.warn("Serviços não encontrados. Verifique tabela 'service_types'");
+        // Verificar se os dados são válidos
+        if (!Array.isArray(serviceTypes)) {
+          console.error("useServicesManagement: serviceTypes não é um array");
+          throw new Error("Formato de dados inválido");
+        }
+        
+        console.log(`useServicesManagement: ${serviceTypes.length} tipos de serviço encontrados`);
+        
+        if (serviceTypes.length === 0) {
+          console.warn("useServicesManagement: Nenhum serviço encontrado");
           setError("Não foram encontrados serviços disponíveis");
           setServices([]);
           setLoading(false);
           return [];
         }
-        
-        // Process services with proper type casting and create photo arrays
-        const processedServices = serviceTypes.map(service => ({
-          id: service.id,
-          name: service.name,
-          selected: false,
-          type: service.id as unknown as ServiceType,
-          photos: [],
-          quantity: 1  // Adicionar quantidade padrão para evitar erros
-        }));
-        
-        console.log("Serviços processados com sucesso:", processedServices.length);
-        setServices(processedServices);
-        setLoading(false);
-        console.log("🔥 Finalizado carregamento de serviços com sucesso.");
-        return processedServices;
       } catch (serviceError) {
-        console.error("Erro específico ao buscar serviços:", serviceError);
-        throw serviceError; // Repassar para tratamento no bloco catch externo
+        console.error("useServicesManagement: Erro ao buscar tipos de serviço:", serviceError);
+        setError("Erro ao carregar tipos de serviço");
+        setServices([]);
+        setLoading(false);
+        return [];
       }
+      
+      // Processar serviços
+      const processedServices = serviceTypes.map(service => ({
+        id: service.id,
+        name: service.name,
+        selected: false,
+        type: service.id as unknown as ServiceType,
+        photos: [],
+        quantity: 1
+      }));
+      
+      console.log("useServicesManagement: Serviços processados:", processedServices.length);
+      setServices(processedServices);
+      setInitialized(true);
+      setLoading(false);
+      
+      console.log("useServicesManagement: 🔥 Carregamento de serviços finalizado com sucesso");
+      return processedServices;
     } catch (error) {
-      console.error("Error fetching default services:", error);
-      setError("Erro ao carregar serviços");
+      console.error("useServicesManagement: Erro geral:", error);
+      setError(error instanceof Error ? error.message : "Erro desconhecido");
       toast.error("Erro ao carregar serviços", {
-        description: error instanceof Error ? error.message : "Tente novamente mais tarde"
+        description: "Verifique sua conexão ou tente novamente mais tarde"
       });
       setServices([]);
       setLoading(false);
       return [];
     } finally {
-      if (loading) {
-        setLoading(false);
-        console.log("🔥 Finalizado carregamento de serviços em finally.");
-      }
+      // Garantir que o loading seja sempre definido como false ao final
+      setLoading(false);
+      console.log("useServicesManagement: Finalizando busca de serviços (finally)");
     }
   };
 
@@ -82,6 +99,7 @@ export function useServicesManagement() {
     loading,
     setLoading,
     error,
+    initialized,
     fetchDefaultServices
   };
 }

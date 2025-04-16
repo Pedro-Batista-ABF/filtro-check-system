@@ -10,9 +10,8 @@ import ErrorMessage from "@/components/peritagem/ErrorMessage";
 import LoadingState from "@/components/peritagem/LoadingState";
 import { useEffect, useState } from "react";
 import { Sector } from "@/types";
-import { FormValidationAlert } from "@/components/sectors/form-parts/FormValidationAlert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, Bug } from "lucide-react";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -37,16 +36,17 @@ export default function PeritagemForm() {
   const [formSector, setFormSector] = useState<Sector | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [hasTimeout, setHasTimeout] = useState(false);
+  const [mountTime] = useState(Date.now());
 
   // Definir timeout de segurança para evitar loading infinito
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Se ainda estiver carregando após 20 segundos, mostrar opção de recarregar
+      // Se ainda estiver carregando após 15 segundos, mostrar opção de recarregar
       if (loading) {
-        console.warn("Timeout de carregamento de página atingido");
+        console.warn("PeritagemForm: Timeout de carregamento de página atingido");
         setHasTimeout(true);
       }
-    }, 20000);
+    }, 15000);
     
     return () => clearTimeout(timer);
   }, []);
@@ -60,9 +60,10 @@ export default function PeritagemForm() {
       temDefaultSector: !!defaultSector,
       temSector: !!sector,
       isEditing,
-      hasValidData
+      hasValidData,
+      tempoDecorrido: `${Date.now() - mountTime}ms`
     });
-  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData]);
+  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime]);
 
   // Garantir que temos um setor válido para o formulário
   useEffect(() => {
@@ -71,22 +72,20 @@ export default function PeritagemForm() {
     if (isEditing && sector) {
       setFormSector(sector);
       setDataReady(true);
-      console.log("Usando setor existente para edição");
+      console.log("PeritagemForm: Usando setor existente para edição");
     } else if (!isEditing && defaultSector) {
       setFormSector(defaultSector);
       setDataReady(true);
-      console.log("Usando setor padrão para criação");
+      console.log("PeritagemForm: Usando setor padrão para criação");
     } else {
       setDataReady(false);
-      console.log("Sem dados de setor válidos");
+      console.log("PeritagemForm: Sem dados de setor válidos");
     }
   }, [sector, defaultSector, isEditing, loading]);
 
   // Componente de carregamento
-  if (loading) {
-    return (
-      <LoadingState />
-    );
+  if (loading && !hasTimeout) {
+    return <LoadingState />;
   }
 
   // Caso o carregamento esteja demorando muito
@@ -103,13 +102,23 @@ export default function PeritagemForm() {
                 <p className="text-gray-600 mb-4">
                   O carregamento está demorando mais do que o esperado. Você pode aguardar mais um pouco ou tentar novamente.
                 </p>
-                <div className="flex gap-4 mt-2">
-                  <Button onClick={() => window.location.reload()} variant="default">
+                <div className="space-y-2 w-full max-w-md">
+                  <Button onClick={() => window.location.reload()} variant="default" className="w-full">
                     Tentar novamente
                   </Button>
-                  <Button onClick={() => navigate('/peritagem')} variant="outline">
+                  <Button onClick={() => navigate('/peritagem')} variant="outline" className="w-full">
                     Voltar para Peritagem
                   </Button>
+                  <details className="mt-4 text-left border p-2 rounded-md">
+                    <summary className="font-medium cursor-pointer">Informações de diagnóstico</summary>
+                    <div className="text-xs mt-2 whitespace-pre-wrap bg-gray-50 p-2 rounded">
+                      <p>Tempo: {Date.now() - mountTime}ms</p>
+                      <p>Serviços: {services?.length || 0}</p>
+                      <p>Default Sector: {defaultSector ? 'Sim' : 'Não'}</p>
+                      <p>Setor em Edição: {sector ? 'Sim' : 'Não'}</p>
+                      <p>Erro: {errorMessage || 'Nenhum'}</p>
+                    </div>
+                  </details>
                 </div>
               </div>
             </div>
@@ -161,6 +170,16 @@ export default function PeritagemForm() {
                     Voltar para Peritagem
                   </Button>
                 </div>
+                <details className="mt-4 text-left border p-2 rounded-md w-full max-w-md">
+                  <summary className="font-medium cursor-pointer flex items-center">
+                    <Bug className="h-4 w-4 mr-2" /> Detalhes técnicos
+                  </summary>
+                  <div className="text-xs mt-2 whitespace-pre-wrap bg-gray-50 p-2 rounded">
+                    <p>Serviços: {JSON.stringify(services)}</p>
+                    <p>Estado do formulário: {JSON.stringify({formSector: !!formSector, dataReady})}</p>
+                    <p>Tempo: {Date.now() - mountTime}ms</p>
+                  </div>
+                </details>
               </div>
             </div>
           </Card>

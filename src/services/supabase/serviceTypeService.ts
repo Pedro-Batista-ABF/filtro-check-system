@@ -32,33 +32,42 @@ export const serviceTypeService = {
         throw handleDatabaseError(error, "Erro ao buscar tipos de serviço");
       }
       
-      if (!data || data.length === 0) {
+      if (!data) {
+        console.warn("serviceTypeService: Resposta vazia da tabela service_types");
+        return [];
+      }
+      
+      if (data.length === 0) {
         console.warn("serviceTypeService: Nenhum tipo de serviço encontrado");
         return [];
       }
       
       console.log(`serviceTypeService: ${data.length} tipos de serviço encontrados`);
       
-      // Garantir que o retorno seja sempre um array válido
+      // Criar os serviços a partir dos dados do banco
       const services = data.map(serviceType => ({
         id: serviceType.id,
         name: serviceType.name,
         selected: false,
         type: serviceType.id as any,
         photos: [],
-        quantity: 1 // Adicionar quantidade padrão
+        quantity: 1
       }));
       
-      // Log explícito de resultados para depuração
-      console.log("SERVICES:", services);
-      if (!Array.isArray(services) || services.length === 0) {
-        console.warn("SERVICES VAZIOS: Verifique tabela 'service_types'");
+      // Log de verificação
+      console.log(`serviceTypeService: ${services.length} serviços mapeados`);
+      
+      // Verificação final do formato de retorno
+      if (!Array.isArray(services)) {
+        console.error("serviceTypeService: Erro crítico - services não é um array");
+        return [];
       }
       
       return services;
     } catch (error) {
-      console.error('Erro ao buscar tipos de serviços:', error);
-      throw error;
+      console.error('serviceTypeService: Erro ao buscar tipos de serviços:', error);
+      // Não propagar o erro, retornar array vazio
+      return [];
     }
   }
 };
