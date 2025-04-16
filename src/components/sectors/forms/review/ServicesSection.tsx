@@ -1,15 +1,12 @@
 
 import React from 'react';
-import { Service } from '@/types';
-import { ServiceCheck } from '../../ServiceCheck';
-import QuantityInput from '../../QuantityInput';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Camera } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Service } from "@/types";
+import { Label } from "@/components/ui/label";
+import ServiceCheck from "./ServiceCheck";
+import { Textarea } from "@/components/ui/textarea";
+import ServicePhotoUpload from "@/components/sectors/PhotoUpload";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ServicesSectionProps {
   services: Service[];
@@ -19,10 +16,6 @@ interface ServicesSectionProps {
   handlePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
   onCameraCapture: (e: React.MouseEvent, serviceId?: string) => void;
   formErrors: {
-    tagNumber?: boolean;
-    tagPhoto?: boolean;
-    entryInvoice?: boolean;
-    entryDate?: boolean;
     services?: boolean;
     photos?: boolean;
   };
@@ -42,120 +35,95 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
   servicesWithoutPhotos
 }) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Serviços a executar</CardTitle>
-        <CardDescription>
-          Selecione os serviços necessários e adicione detalhes
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {formErrors.services && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Erro</AlertTitle>
-            <AlertDescription>
-              Selecione pelo menos um serviço
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {formErrors.photos && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Fotos obrigatórias</AlertTitle>
-            <AlertDescription>
-              Adicione pelo menos uma foto para cada serviço selecionado: 
-              {servicesWithoutPhotos.map(name => <div key={name} className="font-semibold">{name}</div>)}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-4">
-          {services.map((service) => (
-            <div key={service.id} className={`p-4 border rounded-md ${service.selected ? 'border-primary' : 'border-gray-200'}`}>
-              <div className="flex items-start justify-between gap-2">
-                <ServiceCheck
-                  service={service}
-                  onChange={(checked) => handleServiceChange(service.id, checked)}
-                  checked={service.selected || false}
-                />
-                
-                {service.selected && (
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`quantity-${service.id}`} className="text-sm">
-                      Quantidade:
-                    </Label>
-                    <QuantityInput
-                      id={`quantity-${service.id}`}
-                      value={service.quantity || 1}
-                      onChange={(value) => handleQuantityChange(service.id, value)}
-                      min={1}
-                      max={100}
-                    />
-                  </div>
-                )}
-              </div>
-              
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Serviços</h3>
+      </div>
+
+      {formErrors.services && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Selecione pelo menos um serviço.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {photoRequired && formErrors.photos && servicesWithoutPhotos.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Adicione pelo menos uma foto para cada serviço selecionado:
+            <ul className="list-disc pl-5 mt-1">
+              {servicesWithoutPhotos.map(service => (
+                <li key={service}>{service}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="space-y-3">
+        {services.map((service) => (
+          <div
+            key={service.id}
+            className="border rounded-md p-3 space-y-3"
+          >
+            <div className="flex items-start justify-between">
+              <ServiceCheck
+                service={service}
+                checked={service.selected}
+                onChange={(checked) => handleServiceChange(service.id, checked)}
+              />
+
               {service.selected && (
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <Label htmlFor={`observations-${service.id}`}>
-                      Observações
-                    </Label>
-                    <Textarea
-                      id={`observations-${service.id}`}
-                      placeholder="Detalhes sobre este serviço..."
-                      value={service.observations || ''}
-                      onChange={(e) => handleObservationChange(service.id, e.target.value)}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label className="block mb-2">
-                      Fotos do defeito {photoRequired && <span className="text-red-500">*</span>}
-                    </Label>
-                    
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <div className="relative">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                          onChange={(e) => e.target.files && handlePhotoUpload(service.id, e.target.files, "before")}
-                          multiple
-                        />
-                        <Button variant="outline" type="button" className="relative">
-                          Adicionar Foto
-                        </Button>
-                      </div>
-                      
-                      <Button 
-                        variant="outline" 
-                        type="button"
-                        onClick={(e) => onCameraCapture(e, service.id)}
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Usar Câmera
-                      </Button>
-                      
-                      {service.photos && service.photos.length > 0 ? (
-                        <span className="text-sm text-green-600">
-                          {service.photos.length} foto(s) adicionada(s)
-                        </span>
-                      ) : (
-                        <span className={`text-sm ${photoRequired ? 'text-red-500' : 'text-gray-500'}`}>
-                          Nenhuma foto adicionada
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor={`quantity-${service.id}`} className="text-sm">Quantidade:</Label>
+                  <input
+                    id={`quantity-${service.id}`}
+                    type="number"
+                    min="1"
+                    value={service.quantity}
+                    onChange={(e) => handleQuantityChange(service.id, parseInt(e.target.value))}
+                    className="w-16 h-8 rounded-md border border-gray-300 px-2 text-sm"
+                  />
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+
+            {service.selected && (
+              <>
+                <div>
+                  <Label htmlFor={`observation-${service.id}`} className="text-sm mb-1 block">
+                    Observações:
+                  </Label>
+                  <Textarea
+                    id={`observation-${service.id}`}
+                    value={service.observations || ""}
+                    onChange={(e) => handleObservationChange(service.id, e.target.value)}
+                    placeholder="Adicione observações sobre este serviço..."
+                    className="resize-none min-h-[80px]"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm mb-1 block">
+                    Fotos do defeito {photoRequired && <span className="text-red-500">*</span>}:
+                  </Label>
+                  <ServicePhotoUpload
+                    serviceId={service.id}
+                    photos={service.photos?.filter(p => p.type === "before") || []}
+                    onUpload={(files) => handlePhotoUpload(service.id, files, "before")}
+                    hasError={photoRequired && 
+                      service.selected && 
+                      (!service.photos || service.photos.filter(p => p.type === "before").length === 0)}
+                    onCameraCapture={(e) => onCameraCapture(e, service.id)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };

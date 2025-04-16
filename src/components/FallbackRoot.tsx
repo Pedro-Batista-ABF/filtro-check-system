@@ -77,6 +77,8 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
       <ConnectionErrorFallback 
         onRetry={handleRetry}
         message="Não foi possível estabelecer conexão com o servidor. Verifique sua conexão com a internet ou tente novamente mais tarde."
+        showHomeButton={true}
+        showBackButton={true}
       >
         {showingManualFallback && (
           <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md">

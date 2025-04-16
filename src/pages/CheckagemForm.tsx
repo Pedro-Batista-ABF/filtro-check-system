@@ -14,6 +14,16 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import OfflineWarning from "@/components/peritagem/OfflineWarning";
 
+interface SectorFormProps {
+  sector: Sector;
+  onSubmit: (data: Partial<Sector>) => void;
+  mode: string;
+  photoRequired: boolean;
+  isLoading: boolean;
+  disableEntryFields?: boolean;
+  hasAfterPhotosForAllServices?: boolean;
+}
+
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

@@ -10,13 +10,15 @@ interface ConnectionErrorFallbackProps {
   message?: string;
   showHomeButton?: boolean;
   showBackButton?: boolean;
+  children?: React.ReactNode;
 }
 
 const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
   onRetry,
   message = "Não foi possível estabelecer conexão com o servidor.",
   showHomeButton = true,
-  showBackButton = true
+  showBackButton = true,
+  children
 }) => {
   const navigate = useNavigate();
   
@@ -45,6 +47,9 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
               </div>
             </div>
           </div>
+          
+          {children}
+          
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2">
           <div className="flex gap-2">

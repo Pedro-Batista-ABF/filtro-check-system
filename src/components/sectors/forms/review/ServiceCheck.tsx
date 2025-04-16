@@ -26,3 +26,5 @@ export const ServiceCheck: React.FC<ServiceCheckProps> = ({ service, onChange, c
     </div>
   );
 };
+
+export default ServiceCheck;
