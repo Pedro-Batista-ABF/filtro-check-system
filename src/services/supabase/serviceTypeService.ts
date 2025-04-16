@@ -24,12 +24,22 @@ export const serviceTypeService = {
         
       if (error) {
         console.error("serviceTypeService: Erro ao buscar tipos de serviço:", error);
-        throw error;
+        throw new Error(`Erro ao buscar serviços: ${error.message}`);
       }
       
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        console.error("serviceTypeService: Nenhum tipo de serviço encontrado");
-        throw new Error("Não foram encontrados serviços disponíveis");
+      if (!data) {
+        console.error("serviceTypeService: Resultado nulo da consulta");
+        throw new Error("Erro interno ao buscar serviços");
+      }
+      
+      if (!Array.isArray(data)) {
+        console.error("serviceTypeService: Retorno não é um array:", data);
+        throw new Error("Formato inválido de dados retornados");
+      }
+      
+      if (data.length === 0) {
+        console.warn("serviceTypeService: Nenhum tipo de serviço encontrado");
+        throw new Error("Não foram encontrados serviços disponíveis. Verifique se a tabela 'service_types' está corretamente configurada.");
       }
       
       console.log(`serviceTypeService: ${data.length} tipos de serviço encontrados`);

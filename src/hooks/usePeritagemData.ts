@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Sector } from "@/types";
 import { useSectorFetch } from "./useSectorFetch";
@@ -265,6 +266,6 @@ export function usePeritagemData(id?: string) {
     }],
     hasValidData: (!loading && hasValidServices) || !!defaultSector || !!sector,
     dataReady,
-    setLoading: setLoading
+    setDataReady
   };
 }

@@ -27,7 +27,8 @@ export default function PeritagemForm() {
     isEditing,
     services,
     hasValidData,
-    setLoading: updateLoadingState
+    dataReady,
+    setDataReady: updateDataReady
   } = usePeritagemData(id);
   
   const { 
@@ -37,7 +38,6 @@ export default function PeritagemForm() {
   } = usePeritagemSubmit();
 
   const [formSector, setFormSector] = useState<Sector | null>(null);
-  const [dataReady, setDataReady] = useState(false);
   const [hasTimeout, setHasTimeout] = useState(false);
   const [mountTime] = useState(Date.now());
   const [forceRefreshing, setForceRefreshing] = useState(false);
@@ -113,8 +113,7 @@ export default function PeritagemForm() {
           console.log("PeritagemForm: Criado setor de emergência por timeout");
         }
         
-        setDataReady(true);
-        setLoading(false);
+        updateDataReady(true);
         setHasTimeout(false); // Desativa o componente de timeout para mostrar o formulário
         
         toast.warning("Carregamento parcial", {
@@ -124,7 +123,7 @@ export default function PeritagemForm() {
     }, maxLoadTime);
     
     return () => clearTimeout(timer);
-  }, [loading, formSector, defaultSector, sector, services, maxLoadTime]);
+  }, [loading, formSector, defaultSector, sector, services, maxLoadTime, updateDataReady]);
 
   // Timeout de segurança para mostrar opção de recarregar
   useEffect(() => {
@@ -162,14 +161,14 @@ export default function PeritagemForm() {
     // Atualizar formSector assim que tivermos dados disponíveis
     if (isEditing && sector) {
       setFormSector(sector);
-      setDataReady(true);
+      updateDataReady(true);
       console.log("PeritagemForm: Usando setor existente para edição");
     } else if (!isEditing && defaultSector) {
       setFormSector(defaultSector);
-      setDataReady(true);
+      updateDataReady(true);
       console.log("PeritagemForm: Usando setor padrão para criação");
     }
-  }, [sector, defaultSector, isEditing, loading]);
+  }, [sector, defaultSector, isEditing, loading, updateDataReady]);
 
   // Forçar recarregamento da página
   const handleForceRefresh = () => {
