@@ -15,7 +15,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("ProtectedRoute: Verificando autenticação...");
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error("Erro ao verificar sessão:", error);
@@ -23,20 +24,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           toast.error("Erro de autenticação", {
             description: "Ocorreu um erro ao verificar sua sessão. Por favor, faça login novamente."
           });
+          navigate('/login');
           return;
         }
         
         // Se temos uma sessão válida, o usuário está autenticado
-        if (session) {
-          console.log("Sessão válida encontrada");
+        if (data.session) {
+          console.log("ProtectedRoute: Sessão válida encontrada");
           setIsUserAuthenticated(true);
         } else {
-          console.log("Nenhuma sessão encontrada");
+          console.log("ProtectedRoute: Nenhuma sessão encontrada");
           setIsUserAuthenticated(false);
+          navigate('/login');
         }
       } catch (error) {
         console.error("Erro ao verificar sessão:", error);
         setIsUserAuthenticated(false);
+        navigate('/login');
       } finally {
         setIsCheckingAuth(false);
       }
@@ -44,21 +48,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     checkAuth();
     
-    // Adicionar listener para mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          setIsUserAuthenticated(true);
-        } else {
-          setIsUserAuthenticated(false);
-          navigate('/login');
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [navigate]);
 
   // Show loading when auth is being checked

@@ -9,6 +9,8 @@ import Register from './pages/Register';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import FallbackRoot from './components/FallbackRoot';
+import { Toaster } from 'sonner';
+import { AuthProvider } from './contexts/AuthContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +61,15 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </FallbackRoot>
+      <Toaster 
+        richColors 
+        position="top-right" 
+        closeButton
+        expand={false}
+        toastOptions={{
+          duration: 5000,
+        }}
+      />
     </QueryClientProvider>
   );
 }

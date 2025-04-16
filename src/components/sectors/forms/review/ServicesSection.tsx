@@ -1,95 +1,55 @@
-
 import React from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { Service } from "@/types";
-import ServiceCheckbox from "../../ServiceCheckbox";
+import { Service } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from "@/components/ui/scroll-area"
+import ServiceCheckbox from './ServiceCheckbox';
 
 interface ServicesSectionProps {
   services: Service[];
-  handleServiceChange: (id: string, checked: boolean) => void;
-  handleQuantityChange: (id: string, quantity: number) => void;
-  handleObservationChange: (id: string, observations: string) => void;
-  handlePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
-  onCameraCapture: (e: React.MouseEvent, serviceId: string) => void;
-  formErrors: {
-    services?: boolean;
-    photos?: boolean;
-  };
-  photoRequired: boolean;
-  servicesWithoutPhotos?: string[];
+  onChecked: (id: string, selected: boolean) => void;
+  onQuantityChange: (id: string, quantity: number) => void;
+  onObservationChange: (id: string, observation: string) => void;
+  onPhotoUpload: (id: string, photo: File, photoType: 'before' | 'after') => void;
+  editMode: boolean;
 }
 
-export default function ServicesSection({
-  services,
-  handleServiceChange,
-  handleQuantityChange,
-  handleObservationChange,
-  handlePhotoUpload,
-  onCameraCapture,
-  formErrors,
-  photoRequired,
-  servicesWithoutPhotos = []
-}: ServicesSectionProps) {
-  const hasServicesWithoutPhotos = servicesWithoutPhotos.length > 0;
-
+const ServicesSection: React.FC<ServicesSectionProps> = ({ 
+  services, 
+  onChecked, 
+  onQuantityChange,
+  onObservationChange,
+  onPhotoUpload,
+  editMode
+}) => {
   return (
-    <Card>
+    <Card className="col-span-2">
       <CardHeader>
-        <CardTitle>Serviços Necessários</CardTitle>
+        <CardTitle>Serviços</CardTitle>
+        <CardDescription>
+          Selecione os serviços realizados e adicione informações relevantes.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {formErrors.services && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>Selecione pelo menos um serviço</AlertDescription>
-          </Alert>
-        )}
-        
-        {formErrors.photos && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Cada serviço selecionado deve ter pelo menos uma foto
-              {hasServicesWithoutPhotos && (
-                <div className="mt-1">
-                  <strong>Serviços sem fotos:</strong>
-                  <ul className="list-disc pl-5 mt-1">
-                    {servicesWithoutPhotos.map((serviceName, index) => (
-                      <li key={index}>{serviceName}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {services.length === 0 ? (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Nenhum serviço disponível. Entre em contato com o administrador.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          services.map((service) => (
-            <ServiceCheckbox
-              key={service.id}
-              service={service}
-              checked={service.selected}
-              onChecked={handleServiceChange}
-              onQuantityChange={handleQuantityChange}
-              onObservationChange={handleObservationChange}
-              onPhotoUpload={handlePhotoUpload}
-              photoType="before"
-              required={photoRequired}
-              onCameraCapture={(e) => onCameraCapture(e, service.id)}
-            />
-          ))
-        )}
+      <CardContent className="p-0">
+        <ScrollArea className="h-[400px] w-full rounded-md">
+          <div className="p-4 space-y-2">
+            {services.map((service) => (
+              <ServiceCheckbox
+                key={service.id}
+                service={service}
+                selected={service.selected} // Instead of 'checked'
+                onSelect={(id, selected) => onChecked(id, selected)} // Instead of 'onChecked'
+                onQuantityChange={onQuantityChange}
+                onObservationChange={onObservationChange}
+                onPhotoUpload={onPhotoUpload}
+                photoType="before"
+                editMode={editMode}
+              />
+            ))}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
-}
+};
+
+export default ServicesSection;

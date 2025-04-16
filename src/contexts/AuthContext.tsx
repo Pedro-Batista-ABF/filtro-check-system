@@ -2,13 +2,14 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextProps {
   session: Session | null;
   user: User | null;
   loading: boolean;
   error: string | null;
-  isAuthenticated: boolean; // Adicionado para compatibilidade
+  isAuthenticated: boolean;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   // Aliases para compatibilidade
@@ -36,7 +37,6 @@ export const useAuth = () => {
   return useContext(AuthContext);
 };
 
-// Aprimorar o contexto de autenticação para lidar melhor com erros de conexão
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -47,11 +47,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithOtp({ email });
+      const { error } = await supabase.auth.signInWithOtp({ 
+        email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      
       if (error) throw error;
-      alert('Verifique seu email para o link de login mágico!');
+      
+      toast.success('Link de acesso enviado!', {
+        description: 'Verifique seu email para o link de login'
+      });
+      
     } catch (error: any) {
       setError(error.message);
+      toast.error('Erro ao enviar link de acesso', {
+        description: error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -64,8 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setUser(null);
       setIsAuthenticated(false);
+      toast.info('Você saiu do sistema');
     } catch (error: any) {
       setError(error.message);
+      toast.error('Erro ao sair', {
+        description: error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -79,22 +96,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getSession = async () => {
       try {
         setLoading(true);
+        console.log("AuthContext: Verificando sessão...");
         
         // Adicionando timeout para evitar bloqueio indefinido
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Timeout ao buscar sessão")), 8000);
+        const timeoutPromise = new Promise<{data: {session: Session | null}}>((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout ao buscar sessão")), 5000);
         });
         
         const sessionPromise = supabase.auth.getSession();
         
         // Race entre o timeout e a busca da sessão
-        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        const session = data?.session;
+        const { data } = await Promise.race([sessionPromise, timeoutPromise]);
         
-        if (session) {
+        if (data.session) {
           console.log("AuthContext: Sessão encontrada, usuário autenticado");
-          setSession(session);
-          setUser(session.user);
+          setSession(data.session);
+          setUser(data.session.user);
           setIsAuthenticated(true);
         } else {
           console.log("AuthContext: Nenhuma sessão ativa encontrada");
@@ -117,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     getSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    // Listener para mudanças de estado de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log("AuthContext: Evento de alteração de estado de autenticação:", event);
         
@@ -125,6 +143,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(newSession);
           setUser(newSession?.user || null);
           setIsAuthenticated(!!newSession?.user);
+          
+          // Adicionar toast para confirmação visual
+          if (event === "SIGNED_IN") {
+            toast.success('Login realizado com sucesso!');
+          }
         } else if (event === "SIGNED_OUT") {
           setSession(null);
           setUser(null);
@@ -134,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

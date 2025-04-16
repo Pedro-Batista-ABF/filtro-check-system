@@ -10,9 +10,8 @@ import { toast } from 'sonner';
 
 const Login = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
@@ -29,10 +28,20 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
+      if (!email || !email.includes('@')) {
+        throw new Error('Por favor, insira um email válido');
+      }
+
       await login(email);
-      toast.success("Link de login enviado para seu email");
-    } catch (err) {
-      setError('Falha no login. Verifique suas credenciais.');
+      toast.success("Link de login enviado para seu email", {
+        description: "Verifique sua caixa de entrada e clique no link para acessar"
+      });
+    } catch (err: any) {
+      const errorMessage = err.message || 'Falha no login. Verifique suas credenciais.';
+      setError(errorMessage);
+      toast.error("Erro no login", {
+        description: errorMessage
+      });
       console.error('Login error:', err);
     } finally {
       setIsSubmitting(false);
@@ -43,8 +52,8 @@ const Login = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Login</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
+          <CardDescription className="text-center">
             Entre com seu email para receber um link de acesso
           </CardDescription>
         </CardHeader>

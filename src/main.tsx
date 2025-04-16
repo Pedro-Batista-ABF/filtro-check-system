@@ -6,7 +6,6 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { ApiProvider } from './contexts/ApiContext'
 import { ApiContextExtendedProvider } from './contexts/ApiContextExtended'
-import { Toaster } from "sonner";
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -38,13 +37,11 @@ window.fetch = function timeoutFetch(url, options = {}) {
 // Interceptar erros não capturados na aplicação
 window.addEventListener('error', (event) => {
   console.error('Uncaught error:', event.error);
-  // Poderia adicionar uma métrica ou enviar para um serviço de monitoramento
 });
 
 // Interceptar promessas rejeitadas não capturadas
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
-  // Poderia adicionar uma métrica ou enviar para um serviço de monitoramento
 });
 
 root.render(
@@ -53,16 +50,6 @@ root.render(
       <ApiProvider>
         <ApiContextExtendedProvider>
           <App />
-          <Toaster 
-            richColors 
-            position="top-right" 
-            closeButton
-            expand={false}
-            toastOptions={{
-              duration: 5000,
-              className: "my-toast-class"
-            }}
-          />
         </ApiContextExtendedProvider>
       </ApiProvider>
     </AuthProvider>

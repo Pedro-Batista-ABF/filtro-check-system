@@ -1,399 +1,488 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from "@/hooks/use-toast";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { CalendarIcon } from "lucide-react"
+import ServicesList from './ServicesList';
+import {
+  Service,
+  ServiceType,
+  Sector,
+  SectorFormValues,
+  CycleOutcome,
+  Photo,
+  ServicePhotoType
+} from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { loadServicesOptimized } from '@/utils/serviceUtils';
+import ErrorMessage from '../peritagem/ErrorMessage';
+import PhotoUpload from './PhotoUpload';
 
-import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { Service, Sector } from '@/types';
-import { useSectorFormState } from '@/hooks/useSectorFormState';
-import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
-import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
-import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { FormValidationAlert } from '@/components/sectors/form-parts/FormValidationAlert';
-import { EntryFormSection } from '@/components/sectors/form-sections/EntryFormSection';
-import ServicesList from '@/components/sectors/ServicesList';
-import FormActions from '@/components/sectors/forms/FormActions';
-import QualityForm from './forms/QualityForm';
-import ScrapToggle from './forms/ScrapToggle';
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "O nome do setor deve ter pelo menos 2 caracteres.",
+  }),
+  description: z.string().optional(),
+  cycle: z.enum(['interno', 'externo']),
+  cycle_outcome: z.enum(['Aprovado', 'Reprovado', 'Garantia', 'Sucateado']).optional(),
+  date: z.date().optional(),
+  location: z.string().optional(),
+  responsible: z.string().optional(),
+  services: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    selected: z.boolean(),
+    type: z.string(),
+    photos: z.array(z.object({
+      id: z.string(),
+      url: z.string(),
+      type: z.enum(['before', 'after']),
+    })),
+    quantity: z.number(),
+    observation: z.string().optional(),
+  })).optional(),
+});
 
 interface SectorFormProps {
-  sector: Sector;
-  onSubmit: (data: Partial<Sector>) => void;
-  mode?: 'review' | 'production' | 'quality' | 'scrap';
-  photoRequired?: boolean;
-  isLoading?: boolean;
-  disableEntryFields?: boolean;
-  hasAfterPhotosForAllServices?: boolean;
+  formType: 'create' | 'edit' | 'quality';
 }
 
-const SectorForm: React.FC<SectorFormProps> = ({
-  sector,
-  onSubmit,
-  mode = 'review',
-  photoRequired = true,
-  isLoading = false,
-  disableEntryFields = false,
-  hasAfterPhotosForAllServices = false
-}) => {
-  const {
-    tagNumber,
-    setTagNumber,
-    entryInvoice,
-    setEntryInvoice,
-    entryDate,
-    setEntryDate,
-    tagPhotoUrl,
-    setTagPhotoUrl,
-    entryObservations,
-    setEntryObservations,
-    services,
-    setServices,
-    formErrors,
-    setFormErrors,
-    isScrap,
-    setIsScrap,
-    scrapObservations,
-    setScrapObservations,
-    scrapDate,
-    setScrapDate,
-    scrapInvoice,
-    setScrapInvoice,
-    // Campos específicos para checagem final
-    exitDate,
-    setExitDate,
-    exitInvoice,
-    setExitInvoice,
-    exitObservations,
-    setExitObservations,
-    qualityCompleted,
-    setQualityCompleted,
-    selectedTab,
-    setSelectedTab
-  } = useSectorFormState(sector);
+export default function SectorForm({ formType }: SectorFormProps) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [sectorId, setSectorId] = useState(id || uuidv4());
+  const [services, setServices] = useState<Service[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [photoRequired, setPhotoRequired] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const {
-    handleServiceChange,
-    handleQuantityChange,
-    handleObservationChange
-  } = useSectorServiceHandling();
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      cycle: 'interno',
+      cycle_outcome: undefined,
+      date: undefined,
+      location: undefined,
+      responsible: undefined,
+      services: [],
+    },
+    mode: "onChange"
+  });
 
-  const {
-    handleTagPhotoUpload,
-    handleServicePhotoUpload
-  } = useSectorPhotoHandling();
+  const { isLoading: isSectorLoading, data: sectorData } = useQuery({
+    queryKey: ['sector', sectorId],
+    queryFn: async () => {
+      if (formType === 'create') return null;
+      if (!sectorId) throw new Error("ID do setor não fornecido");
 
-  const { validateForm, prepareFormData } = useSectorFormSubmit();
+      const { data, error } = await supabase
+        .from('sectors')
+        .select('*')
+        .eq('id', sectorId)
+        .single();
 
-  // Initialize services from sector if available
-  useEffect(() => {
-    console.log("🔄 SectorForm useEffect - Atualizando services do sector", Date.now());
-    console.log("🔄 sector:", sector?.id || "não definido");
-    console.log("🔄 services length:", sector?.services?.length || 0);
-    
-    if (sector && Array.isArray(sector.services)) {
-      setServices(sector.services);
-    }
-  }, [sector, setServices]);
-
-  const handleSubmitForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("📝 SectorForm handleSubmitForm - Iniciando submissão", Date.now());
-
-    // Verificações específicas para o modo de qualidade
-    if (mode === 'quality') {
-      const qualityErrors = {
-        exitInvoice: !exitInvoice.trim(),
-        exitDate: !exitDate,
-        photos: false
-      };
-
-      // Verificar se todos os serviços têm fotos "after"
-      const selectedServices = services.filter(s => s.selected);
-      const servicesWithoutAfterPhotos = selectedServices.filter(service => {
-        const afterPhotos = service.photos?.filter(p => p.type === "after") || [];
-        return afterPhotos.length === 0;
-      });
-
-      qualityErrors.photos = servicesWithoutAfterPhotos.length > 0;
-
-      setFormErrors({
-        ...formErrors,
-        ...qualityErrors
-      });
-
-      if (Object.values(qualityErrors).some(error => error)) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+      if (error) {
+        console.error("Erro ao carregar dados do setor:", error);
+        throw new Error(`Erro ao carregar setor: ${error.message}`);
       }
 
-      // Preparar dados para o modo de qualidade
-      const qualityData: Partial<Sector> = {
-        exitInvoice,
-        exitDate: exitDate ? format(exitDate, 'yyyy-MM-dd') : undefined,
-        exitObservations,
-        checagemDate: format(new Date(), 'yyyy-MM-dd'),
-        status: qualityCompleted ? 'concluido' : 'checagemFinalPendente',
-        // Incluir fotos "after" de todos os serviços
-        afterPhotos: services.flatMap(service => 
-          (service.photos?.filter(p => p.type === "after") || []).map(photo => ({
-            ...photo,
-            serviceId: service.id
-          }))
-        )
+      return data as Sector;
+    },
+    enabled: formType !== 'create' && !!sectorId,
+    onError: (err: any) => {
+      setError(err.message || 'Erro ao carregar dados do setor.');
+    }
+  });
+
+  const { mutate: saveSector } = useMutation({
+    mutationFn: async (data: SectorFormValues) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const sectorData = {
+        ...data,
+        id: sectorId,
+        user_id: user.id,
       };
 
-      onSubmit(qualityData);
-      return;
-    }
+      const { data: responseData, error } = await supabase
+        .from('sectors')
+        .upsert([sectorData], { onConflict: 'id' })
+        .select()
+        .single();
 
-    // Para outros modos (review, production, scrap)
-    const formData = {
-      tagNumber,
-      tagPhotoUrl,
-      entryInvoice,
-      entryDate,
-      entryObservations,
-      services,
-      isScrap,
-      scrapObservations,
-      scrapDate,
-      scrapInvoice
+      if (error) {
+        console.error("Erro ao salvar setor:", error);
+        throw new Error(`Erro ao salvar setor: ${error.message}`);
+      }
+
+      return responseData as Sector;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sectors'] });
+      toast({
+        title: "Sucesso",
+        description: "Setor salvo com sucesso!",
+      });
+      navigate('/peritagem');
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Erro ao salvar o setor.');
+    },
+    onSettled: () => {
+      setIsSaving(false);
+    }
+  });
+
+  useEffect(() => {
+    const loadInitialServices = async () => {
+      setLoadingServices(true);
+      try {
+        const loadedServices = await loadServicesOptimized();
+        setServices(loadedServices);
+        form.setValue("services", loadedServices);
+      } catch (err: any) {
+        setError(err.message || 'Erro ao carregar serviços.');
+      } finally {
+        setLoadingServices(false);
+      }
     };
 
-    // Validações específicas para sucateamento
-    if (isScrap) {
-      const scrapErrors = {
-        tagNumber: !tagNumber.trim(),
-        tagPhoto: !tagPhotoUrl,
-        entryInvoice: !entryInvoice.trim(),
-        entryDate: !entryDate,
-        scrapObservations: !scrapObservations.trim(),
-        services: false,
-        photos: false,
-        exitDate: false,
-        exitInvoice: false
-      };
+    loadInitialServices();
+  }, []);
 
-      setFormErrors(scrapErrors);
-
-      if (Object.values(scrapErrors).some(error => error)) {
-        console.log("❌ SectorForm - Erros de validação para sucateamento encontrados:", scrapErrors);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-
-      // Preparar dados para sucateamento
-      const scrapData: Partial<Sector> = {
-        tagNumber,
-        tagPhotoUrl,
-        entryInvoice,
-        entryDate: entryDate ? format(entryDate, 'yyyy-MM-dd') : undefined,
-        entryObservations,
-        peritagemDate: format(new Date(), 'yyyy-MM-dd'),
-        scrapObservations,
-        status: 'sucateadoPendente',
-        outcome: 'sucateado',
-        services: []
-      };
-
-      onSubmit(scrapData);
-      return;
+  useEffect(() => {
+    if (sectorData) {
+      form.reset({
+        name: sectorData.name,
+        description: sectorData.description,
+        cycle: sectorData.cycle,
+        cycle_outcome: sectorData.cycle_outcome,
+        date: sectorData.date ? new Date(sectorData.date) : undefined,
+        location: sectorData.location,
+        responsible: sectorData.responsible,
+        services: sectorData.services,
+      });
+      setServices(sectorData.services || []);
     }
+  }, [sectorData, form]);
 
-    // Validação normal (não sucateamento)
-    const errors = validateForm(formData);
-    setFormErrors(errors);
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setIsSaving(true);
+    const outcome: CycleOutcome = "Sucateado"; // Use the correct enum value
 
-    const hasErrors = Object.values(errors).some(error => error);
-    if (hasErrors) {
-      console.log("❌ SectorForm - Erros de validação encontrados:", errors);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    console.log("✅ SectorForm - Validação passou, preparando dados", Date.now());
-    // Update sector with form data
-    const updatedSector = prepareFormData(formData, mode !== 'review', sector?.id);
-    console.log("✅ SectorForm - Enviando dados para onSubmit", Date.now());
-    onSubmit(updatedSector);
+    saveSector({
+      ...values,
+      id: sectorId,
+      cycle_outcome: values.cycle_outcome || outcome,
+      services: services
+    });
   };
 
-  const onServiceChange = (id: string, checked: boolean) => {
-    // No modo de qualidade ou se for sucateamento, não permitimos mudar a seleção dos serviços
-    if (mode === 'quality' || isScrap) return;
-    
-    setServices(handleServiceChange(services, id, checked));
+  const handleServiceSelect = (serviceId: string, selected: boolean) => {
+    setServices(prevServices => {
+      return prevServices.map(service => {
+        if (service.id === serviceId) {
+          return { ...service, selected: selected };
+        }
+        return service;
+      });
+    });
   };
 
-  const onQuantityChange = (id: string, quantity: number) => {
-    // No modo de qualidade ou se for sucateamento, não permitimos mudar a quantidade
-    if (mode === 'quality' || isScrap) return;
-    
-    setServices(handleQuantityChange(services, id, quantity));
+  const handleQuantityChange = (serviceId: string, quantity: number) => {
+    setServices(prevServices => {
+      return prevServices.map(service => {
+        if (service.id === serviceId) {
+          return { ...service, quantity: quantity };
+        }
+        return service;
+      });
+    });
   };
 
-  const onObservationChange = (id: string, observations: string) => {
-    // Se for sucateamento, não permitimos editar observações de serviços
-    if (isScrap) return;
-    
-    setServices(handleObservationChange(services, id, observations));
+  const handleObservationChange = (serviceId: string, observation: string) => {
+    setServices(prevServices => {
+      return prevServices.map(service => {
+        if (service.id === serviceId) {
+          return { ...service, observation: observation };
+        }
+        return service;
+      });
+    });
   };
 
-  const onServicePhotoUpload = async (serviceId: string, files: FileList, type: "before" | "after") => {
-    // No modo de qualidade, sempre usamos "after" independente do parâmetro passado
-    // Se for sucateamento, não permitimos adicionar fotos a serviços
-    if (isScrap) return;
-    
-    const photoType = mode === 'quality' ? "after" : type;
-    
-    setServices(await handleServicePhotoUpload(serviceId, files, photoType, services));
+  const handlePhotoUpload = async (
+    serviceId: string,
+    photoUrl: string,
+    photoType: ServicePhotoType
+  ) => {
+    setServices(prevServices => {
+      return prevServices.map(service => {
+        if (service.id === serviceId) {
+          const newPhoto: Photo = {
+            id: uuidv4(),
+            url: photoUrl,
+            type: photoType,
+          };
+          return {
+            ...service,
+            photos: [...service.photos, newPhoto],
+          };
+        }
+        return service;
+      });
+    });
   };
 
-  const onTagPhotoUpload = async (files: FileList) => {
-    // No modo de qualidade, não permitimos alterar a foto da TAG
-    if (mode === 'quality') return;
-    
-    const url = await handleTagPhotoUpload(files);
-    if (url) {
-      setTagPhotoUrl(url);
-    }
+  const handleDeletePhoto = (serviceId: string, photoId: string) => {
+    setServices(prevServices => {
+      return prevServices.map(service => {
+        if (service.id === serviceId) {
+          return {
+            ...service,
+            photos: service.photos.filter(photo => photo.id !== photoId),
+          };
+        }
+        return service;
+      });
+    });
   };
-
-  console.log("🖥️ SectorForm render - Estado atual", Date.now());
-  console.log("🖥️ sector:", sector?.id || "não definido");
-  console.log("🖥️ services:", services?.length || 0);
-  console.log("🖥️ formErrors:", formErrors);
-  console.log("🖥️ isScrap:", isScrap);
 
   return (
-    <form onSubmit={handleSubmitForm} className="space-y-8">
-      {Object.values(formErrors).some(error => error) && (
-        <FormValidationAlert 
-          tagNumber={formErrors.tagNumber}
-          tagPhoto={formErrors.tagPhoto}
-          entryInvoice={formErrors.entryInvoice}
-          entryDate={formErrors.entryDate}
-          services={formErrors.services}
-          photos={formErrors.photos}
-          exitDate={formErrors.exitDate}
-          exitInvoice={formErrors.exitInvoice}
-          scrapObservations={formErrors.scrapObservations}
-        />
-      )}
-
-      {mode === 'quality' ? (
-        <>
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">Informações do Setor (somente leitura)</h3>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>{formType === 'create' ? 'Criar Setor' : formType === 'edit' ? 'Editar Setor' : 'Visualizar Setor'}</CardTitle>
+        <CardDescription>Preencha os detalhes do setor.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ErrorMessage message={error} />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500">TAG</p>
-                <p className="font-medium">{tagNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Nota Fiscal de Entrada</p>
-                <p className="font-medium">{entryInvoice}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Data de Entrada</p>
-                <p className="font-medium">{entryDate ? format(entryDate, 'dd/MM/yyyy') : 'Não informado'}</p>
-              </div>
-              {tagPhotoUrl && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Foto da TAG</p>
-                  <img 
-                    src={tagPhotoUrl} 
-                    alt="Foto da TAG" 
-                    className="mt-1 w-32 h-32 object-cover rounded-md border"
-                  />
-                </div>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Setor</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome" {...field} disabled={formType === 'quality'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Descrição" {...field} disabled={formType === 'quality'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cycle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ciclo</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formType === 'quality'}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o ciclo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="interno">Interno</SelectItem>
+                        <SelectItem value="externo">Externo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("cycle") === "externo" && (
+                <FormField
+                  control={form.control}
+                  name="cycle_outcome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Resultado do Ciclo</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formType === 'quality'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o resultado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Aprovado">Aprovado</SelectItem>
+                          <SelectItem value="Reprovado">Reprovado</SelectItem>
+                          <SelectItem value="Garantia">Garantia</SelectItem>
+                          <SelectItem value="Sucateado">Sucateado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
             </div>
-          </Card>
-          
-          <QualityForm
-            services={services}
-            selectedTab={selectedTab}
-            setSelectedTab={setSelectedTab}
-            exitDate={exitDate}
-            setExitDate={setExitDate}
-            exitInvoice={exitInvoice}
-            setExitInvoice={setExitInvoice}
-            exitObservations={exitObservations}
-            setExitObservations={setExitObservations}
-            qualityCompleted={qualityCompleted}
-            setQualityCompleted={setQualityCompleted}
-            handlePhotoUpload={onServicePhotoUpload}
-            formErrors={{
-              photos: formErrors.photos,
-              exitDate: formErrors.exitDate,
-              exitInvoice: formErrors.exitInvoice
-            }}
-            hasAfterPhotosForAllServices={hasAfterPhotosForAllServices || false}
-          />
-        </>
-      ) : (
-        <>
-          {/* Opção de sucateamento no modo review */}
-          {mode === 'review' && (
-            <ScrapToggle
-              isScrap={isScrap}
-              setIsScrap={setIsScrap}
-              scrapObservations={scrapObservations}
-              setScrapObservations={setScrapObservations}
-              error={formErrors.scrapObservations}
-              disabled={disableEntryFields}
-            />
-          )}
 
-          <EntryFormSection
-            tagNumber={tagNumber}
-            setTagNumber={setTagNumber}
-            entryInvoice={entryInvoice}
-            setEntryInvoice={setEntryInvoice}
-            entryDate={entryDate}
-            setEntryDate={setEntryDate}
-            tagPhotoUrl={tagPhotoUrl}
-            onPhotoUpload={onTagPhotoUpload}
-            entryObservations={entryObservations}
-            setEntryObservations={setEntryObservations}
-            errors={{
-              tagNumber: formErrors.tagNumber || false,
-              tagPhoto: formErrors.tagPhoto || false,
-              entryInvoice: formErrors.entryInvoice || false,
-              entryDate: formErrors.entryDate || false
-            }}
-            photoRequired={photoRequired || isScrap}
-            disabled={disableEntryFields || (mode === 'production' && isScrap)}
-          />
-
-          {!isScrap && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Serviços a Executar</h2>
-              <ServicesList
-                services={services}
-                error={formErrors.services || formErrors.photos || false}
-                photoRequired={photoRequired}
-                onServiceChange={onServiceChange}
-                onQuantityChange={onQuantityChange}
-                onObservationChange={onObservationChange}
-                onServicePhotoUpload={onServicePhotoUpload}
-                disabled={disableEntryFields || (mode === 'production' && isScrap)}
-                readOnly={mode === 'quality'}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-[240px] pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            disabled={formType === 'quality'}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Selecione a data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={formType === 'quality'}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </Card>
-          )}
-        </>
-      )}
 
-      <FormActions
-        loading={isLoading}
-        mode={mode}
-        isScrap={isScrap}
-        qualityCompleted={qualityCompleted}
-      />
-    </form>
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Localização</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Localização" {...field} disabled={formType === 'quality'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="responsible"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Responsável</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Responsável" {...field} disabled={formType === 'quality'} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Separator />
+
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <Label htmlFor="services">Serviços</Label>
+                {formType !== 'quality' && (
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setPhotoRequired(!photoRequired)}>
+                    {photoRequired ? 'Remover Foto Obrigatória' : 'Tornar Foto Obrigatória'}
+                  </Button>
+                )}
+              </div>
+
+              {services && services.length > 0 ? (
+                <ServicesList
+                  services={services}
+                  error={error}
+                  photoRequired={photoRequired}
+                  onServiceChange={handleServiceSelect}
+                  onQuantityChange={handleQuantityChange}
+                  onObservationChange={handleObservationChange}
+                  onPhotoUpload={handlePhotoUpload}
+                  onDeletePhoto={handleDeletePhoto}
+                  editMode={formType !== 'quality'}
+                />
+              ) : (
+                <p className="text-gray-500 text-center py-4">Nenhum serviço selecionado</p>
+              )}
+            </div>
+
+            {formType !== 'quality' && (
+              <CardFooter className="justify-end">
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </CardFooter>
+            )}
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
-};
-
-export default SectorForm;
+}
