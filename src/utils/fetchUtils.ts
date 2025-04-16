@@ -25,7 +25,7 @@ export async function fetchWithSession<T>(
     }
     
     // Executar a consulta personalizada
-    const { data, error } = await query(supabase.from(table));
+    const { data, error } = await query(supabase.from(table as any));
     
     if (error) {
       // Se for erro 401, tentar refresh do token
@@ -33,13 +33,13 @@ export async function fetchWithSession<T>(
         const refreshed = await refreshAuthSession();
         if (refreshed) {
           // Tentar novamente após refresh
-          const { data: refreshedData, error: refreshedError } = await query(supabase.from(table));
+          const { data: refreshedData, error: refreshedError } = await query(supabase.from(table as any));
           
           if (refreshedError) {
             throw refreshedError;
           }
           
-          return refreshedData;
+          return refreshedData as T[];
         } else {
           throw new Error("Erro de autenticação persistente. Por favor, faça login novamente.");
         }
@@ -48,7 +48,7 @@ export async function fetchWithSession<T>(
       }
     }
     
-    return data;
+    return data as T[];
   } catch (error: any) {
     console.error(`FetchUtils: Erro ao buscar dados da tabela ${table}:`, error);
     throw error;
@@ -62,7 +62,7 @@ export async function fetchById<T>(table: string, id: string): Promise<T | null>
       query.select("*").eq("id", id).single()
     );
     
-    return Array.isArray(data) ? data[0] : data;
+    return Array.isArray(data) ? data[0] as T : data as T;
   } catch (error) {
     console.error(`FetchUtils: Erro ao buscar item por ID (${id}) na tabela ${table}:`, error);
     return null;
@@ -82,24 +82,24 @@ export async function saveWithSession<T>(
     if (id) {
       // Atualizar registro existente
       const { data: updatedData, error } = await supabase
-        .from(table)
+        .from(table as any)
         .update(data)
         .eq("id", id)
         .select()
         .single();
       
       if (error) throw error;
-      return updatedData;
+      return updatedData as T;
     } else {
       // Inserir novo registro
       const { data: insertedData, error } = await supabase
-        .from(table)
+        .from(table as any)
         .insert(data)
         .select()
         .single();
       
       if (error) throw error;
-      return insertedData;
+      return insertedData as T;
     }
   } catch (error: any) {
     console.error(`FetchUtils: Erro ao salvar dados na tabela ${table}:`, error);

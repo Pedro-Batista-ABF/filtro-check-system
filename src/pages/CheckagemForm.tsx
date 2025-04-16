@@ -1,14 +1,15 @@
 
-import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import SectorForm from "@/components/sectors/SectorForm";
+import { useState, useEffect } from "react";
 import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
+
+import SectorForm from "@/components/sectors/SectorForm";
+import { Card } from "@/components/ui/card";
+import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { useApi } from "@/contexts/ApiContextExtended";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import { checkSupabaseConnection } from "@/utils/connectionUtils";
 import { refreshAuthSession } from "@/integrations/supabase/client";
