@@ -1,139 +1,140 @@
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Clipboard, ClipboardCheck, AlertTriangle, CheckCircle } from 'lucide-react';
 import FeatureCard from './FeatureCard';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ClipboardList, AlertTriangle, CheckCircle, Wrench, InfinityIcon } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface CountResult {
-  count: number;
-}
-
-export default function SummaryCards() {
-  const [summaryData, setSummaryData] = useState({
-    peritagem: 0,
-    execucao: 0,
-    checagem: 0,
-    sucateamento: 0,
-    concluidos: 0
+export function SummaryCards() {
+  const [counts, setCounts] = useState({
+    peritagemPendente: 0,
+    emExecucao: 0,
+    execucaoConcluida: 0,
+    emChecagem: 0,
+    concluido: 0,
+    total: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: countData, isLoading, error } = useQuery({
-    queryKey: ['sectorCounts'],
-    queryFn: async () => {
-      // Peritagems pendentes
-      const { data: peritagemData, error: peritagemError } = await supabase
-        .from('sectors')
-        .select('id', { count: 'exact', head: true })
-        .eq('current_status', 'peritagemPendente');
-      
-      // Setores em execução
-      const { data: execucaoData, error: execucaoError } = await supabase
-        .from('sectors')
-        .select('id', { count: 'exact', head: true })
-        .eq('current_status', 'emExecucao');
-      
-      // Setores pendentes de checagem
-      const { data: checagemData, error: checagemError } = await supabase
-        .from('sectors')
-        .select('id', { count: 'exact', head: true })
-        .eq('current_status', 'checagemFinalPendente');
-      
-      // Setores para sucateamento
-      const { data: sucateamentoData, error: sucateamentoError } = await supabase
-        .from('sectors')
-        .select('id', { count: 'exact', head: true })
-        .eq('current_status', 'sucateadoPendente');
-      
-      // Setores concluídos
-      const { data: concluidosData, error: concluidosError } = await supabase
-        .from('sectors')
-        .select('id', { count: 'exact', head: true })
-        .eq('current_status', 'concluido');
-      
-      if (peritagemError || execucaoError || checagemError || sucateamentoError || concluidosError) {
-        throw new Error('Erro ao buscar dados');
-      }
-      
-      return {
-        peritagem: peritagemData?.count || 0,
-        execucao: execucaoData?.count || 0,
-        checagem: checagemData?.count || 0,
-        sucateamento: sucateamentoData?.count || 0,
-        concluidos: concluidosData?.count || 0
-      };
-    },
-    refetchInterval: 30000 // Atualiza a cada 30 segundos
-  });
-  
   useEffect(() => {
-    if (countData) {
-      setSummaryData(countData);
+    async function fetchCounts() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Buscar contagem de setores com status "peritagemPendente"
+        const { data: peritagemPendente, error: peritagemError } = await supabase
+          .from('sectors')
+          .select('id', { count: 'exact', head: true })
+          .eq('current_status', 'peritagemPendente');
+
+        // Buscar contagem de setores com status "emExecucao"
+        const { data: emExecucao, error: execucaoError } = await supabase
+          .from('sectors')
+          .select('id', { count: 'exact', head: true })
+          .eq('current_status', 'emExecucao');
+
+        // Buscar contagem de setores com status "execucaoConcluida"
+        const { data: execucaoConcluida, error: concluidaError } = await supabase
+          .from('sectors')
+          .select('id', { count: 'exact', head: true })
+          .eq('current_status', 'execucaoConcluida');
+
+        // Buscar contagem de setores com status "emChecagem"
+        const { data: emChecagem, error: checagemError } = await supabase
+          .from('sectors')
+          .select('id', { count: 'exact', head: true })
+          .eq('current_status', 'emChecagem');
+
+        // Buscar contagem de setores com status "concluido"
+        const { data: concluido, error: concluidoError } = await supabase
+          .from('sectors')
+          .select('id', { count: 'exact', head: true })
+          .eq('current_status', 'concluido');
+
+        // Buscar contagem total de setores
+        const { data: total, error: totalError } = await supabase
+          .from('sectors')
+          .select('id', { count: 'exact', head: true });
+
+        if (peritagemError || execucaoError || concluidaError || checagemError || concluidoError || totalError) {
+          throw new Error("Erro ao buscar contagens");
+        }
+
+        setCounts({
+          peritagemPendente: peritagemPendente?.count || 0,
+          emExecucao: emExecucao?.count || 0,
+          execucaoConcluida: execucaoConcluida?.count || 0,
+          emChecagem: emChecagem?.count || 0,
+          concluido: concluido?.count || 0,
+          total: total?.count || 0
+        });
+      } catch (err) {
+        console.error("Erro ao buscar contagens:", err);
+        setError("Falha ao carregar dados do dashboard");
+        toast.error("Erro ao carregar dashboard", {
+          description: "Não foi possível obter os dados atualizados dos setores."
+        });
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [countData]);
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-32">
-            <Skeleton className="h-full w-full" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 p-4 rounded-md text-red-600">
-        <p className="font-medium">Erro ao carregar resumo</p>
-        <p className="text-sm">Tente recarregar a página</p>
-      </div>
-    );
-  }
+    fetchCounts();
+    // Recarregar a cada 5 minutos
+    const interval = setInterval(fetchCounts, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <FeatureCard
-        title="Peritagias"
-        description="Setores aguardando análise inicial"
-        icon={<Clipboard />}
+        title="Peritagem Pendente"
+        description="Setores aguardando peritagem inicial"
+        icon={<ClipboardList />}
         to="/peritagem"
-        count={summaryData.peritagem}
+        count={counts.peritagemPendente}
       />
       
       <FeatureCard
         title="Em Execução"
-        description="Setores em processo de recuperação"
-        icon={<ClipboardCheck />}
+        description="Setores em fase de produção"
+        icon={<Wrench />}
         to="/execucao"
-        count={summaryData.execucao}
+        count={counts.emExecucao}
       />
       
       <FeatureCard
-        title="Checagem Final"
-        description="Setores aguardando verificação"
-        icon={<CheckCircle />}
-        to="/checagem-final"
-        count={summaryData.checagem}
-      />
-      
-      <FeatureCard
-        title="Sucateamento"
-        description="Setores com solicitação de sucateamento"
+        title="Aguardando Checagem"
+        description="Setores concluídos pela produção"
         icon={<AlertTriangle />}
-        to="/sucateamento"
-        count={summaryData.sucateamento}
+        to="/checagem"
+        count={counts.execucaoConcluida}
+      />
+      
+      <FeatureCard
+        title="Em Checagem"
+        description="Setores em processo de checagem final"
+        icon={<AlertTriangle />}
+        to="/checagem"
+        count={counts.emChecagem}
       />
       
       <FeatureCard
         title="Concluídos"
-        description="Setores com processo finalizado"
+        description="Setores completamente finalizados"
         icon={<CheckCircle />}
         to="/concluidos"
-        count={summaryData.concluidos}
+        count={counts.concluido}
+      />
+      
+      <FeatureCard
+        title="Total de Setores"
+        description="Todos os setores registrados no sistema"
+        icon={<InfinityIcon />}
+        to="/concluidos"
+        count={counts.total}
       />
     </div>
   );

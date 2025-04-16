@@ -59,7 +59,13 @@ export function useSectorStatus() {
         return;
       }
 
-      if (!checkData || checkData.current_status !== 'sucateadoPendente') {
+      // Verificar se o resultado possui a propriedade current_status
+      if (!checkData || !('current_status' in checkData)) {
+        console.error("Resposta inválida ao verificar status");
+        return;
+      }
+
+      if (checkData.current_status !== 'sucateadoPendente') {
         const { error: forceError } = await supabase
           .from('sectors')
           .update({

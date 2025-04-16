@@ -8,10 +8,12 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
     if (files.length > 0) {
       try {
         const file = files[0];
+        console.log("Iniciando upload da foto da TAG...");
         // Usar o serviço de foto real em vez de URL temporária
         const uploadResult = await photoService.uploadPhoto(file, 'tags');
         
         if (uploadResult) {
+          console.log("URL da foto da TAG:", uploadResult);
           toast.success("Foto da TAG capturada com sucesso");
           return uploadResult;
         } else {
@@ -30,6 +32,7 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
     if (!Array.isArray(services) || files.length === 0) return;
     
     try {
+      console.log(`Iniciando upload de ${files.length} foto(s) para o serviço ${serviceId}...`);
       const updatedServices = [...services];
       const serviceIndex = updatedServices.findIndex(service => service.id === serviceId);
       
@@ -46,6 +49,7 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
         
         try {
           const uploadPath = `services/${serviceId}/${type}`;
+          console.log(`Enviando foto ${i+1} para ${uploadPath}...`);
           const photoUrl = await photoService.uploadPhoto(file, uploadPath);
           
           if (photoUrl) {
@@ -56,7 +60,7 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
               serviceId,
               file
             });
-            console.log(`Foto adicionada com sucesso. URL: ${photoUrl}`);
+            console.log(`Foto ${i+1} adicionada com sucesso. URL: ${photoUrl}`);
           } else {
             console.error('URL de foto retornada inválida');
             toast.error(`Erro ao processar foto ${i + 1}`);
@@ -73,6 +77,7 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
         photos: newPhotos
       };
       
+      console.log(`Atualizando serviço com ${newPhotos.length} foto(s)...`);
       setServices(updatedServices);
       
       if (newPhotos.length > (service.photos?.length || 0)) {
