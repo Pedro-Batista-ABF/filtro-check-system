@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,8 +8,14 @@ interface AuthContextProps {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isAuthenticated: boolean; // Adicionado para compatibilidade
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  // Aliases para compatibilidade
+  login: (email: string) => Promise<void>;
+  registerUser: (email: string) => Promise<void>;
+  getUserMetadata: () => Record<string, any> | null;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -16,8 +23,13 @@ const AuthContext = createContext<AuthContextProps>({
   user: null,
   loading: false,
   error: null,
+  isAuthenticated: false,
   signIn: async () => {},
   signOut: async () => {},
+  login: async () => {},
+  registerUser: async () => {},
+  getUserMetadata: () => null,
+  logout: async () => {},
 });
 
 export const useAuth = () => {
@@ -30,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const signIn = async (email: string) => {
     try {
@@ -50,11 +63,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase.auth.signOut();
       setSession(null);
       setUser(null);
+      setIsAuthenticated(false);
     } catch (error: any) {
       setError(error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getUserMetadata = () => {
+    return user?.user_metadata || null;
   };
 
   useEffect(() => {
@@ -77,15 +95,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("AuthContext: Sessão encontrada, usuário autenticado");
           setSession(session);
           setUser(session.user);
+          setIsAuthenticated(true);
         } else {
           console.log("AuthContext: Nenhuma sessão ativa encontrada");
           setSession(null);
           setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("AuthContext: Erro ao buscar sessão:", error);
         setSession(null);
         setUser(null);
+        setIsAuthenticated(false);
         setError(
           error instanceof Error ? error.message : "Erro ao verificar autenticação"
         );
@@ -103,9 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
           setSession(newSession);
           setUser(newSession?.user || null);
+          setIsAuthenticated(!!newSession?.user);
         } else if (event === "SIGNED_OUT") {
           setSession(null);
           setUser(null);
+          setIsAuthenticated(false);
         }
       }
     );
@@ -120,8 +143,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     error,
+    isAuthenticated,
     signIn,
     signOut,
+    // Aliases para compatibilidade
+    login: signIn,
+    registerUser: signIn,
+    getUserMetadata,
+    logout: signOut,
   };
 
   return (

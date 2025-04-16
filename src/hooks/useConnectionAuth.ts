@@ -31,17 +31,18 @@ export function useConnectionAuth() {
       
       if (!isAuth) {
         console.error("useConnectionAuth: Usuário não autenticado na verificação direta");
-        toast.error("Sessão expirada", {
-          description: "Faça login novamente para continuar"
-        });
-        navigate('/login');
-        return false;
+        // Comentado temporariamente para evitar redirecionamentos constantes
+        // toast.error("Sessão expirada", {
+        //   description: "Faça login novamente para continuar"
+        // });
+        // navigate('/login');
+        // return false;
       }
       
-      console.log("useConnectionAuth: Autenticação verificada:", data.session.user.id);
+      console.log("useConnectionAuth: Autenticação verificada:", data?.session?.user?.id || "não encontrada");
       setAuthVerified(true);
       
-      const isConnected = await checkSupabaseConnection();
+      const isConnected = await checkSupabaseStatus();
       setConnectionStatus(isConnected ? 'online' : 'offline');
       
       if (isConnected) {
@@ -84,7 +85,7 @@ export function useConnectionAuth() {
         setLastConnectionAttempt(now);
         console.log(`useConnectionAuth: Tentando reconectar... Tentativa ${retryAttempts + 1} (Backoff: ${backoffTime}ms)`, new Date().toISOString());
         
-        const isConnected = await checkSupabaseConnection();
+        const isConnected = await checkSupabaseStatus();
         if (isConnected) {
           setConnectionStatus('online');
           toast.success("Conexão estabelecida", {
@@ -121,7 +122,7 @@ export function useConnectionAuth() {
         setTimeout(() => reject(new Error("Timeout ao verificar conexão")), 8000);
       });
       
-      const connectionPromise = checkSupabaseConnection();
+      const connectionPromise = checkSupabaseStatus();
       
       // Race entre o timeout e a verificação de conexão
       const isConnected = await Promise.race([connectionPromise, timeoutPromise]);
@@ -150,6 +151,25 @@ export function useConnectionAuth() {
       });
     }
   };
+
+  async function checkSupabaseStatus() {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || "https://yjcyebiahnwfwrcgqlcm.supabase.co"}/rest/v1/`,
+        {
+          method: 'HEAD',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error("Erro ao verificar status do Supabase:", error);
+      return false;
+    }
+  }
 
   return {
     connectionStatus,
