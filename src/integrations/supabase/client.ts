@@ -79,8 +79,8 @@ supabase.auth.getSession().then(async ({ data, error }) => {
     if (timeToExpire < 300000) { // menos de 5 minutos
       console.log("Token próximo de expirar, renovando...");
       // Use imported function from utils instead of referring to itself
-      const refreshAuthSessionUtil = await import('@/utils/connectionUtils').then(module => module.refreshAuthSession);
-      refreshAuthSessionUtil().then(refreshed => {
+      const { refreshAuthSession } = await import('@/utils/connectionUtils');
+      refreshAuthSession().then(refreshed => {
         console.log(`Renovação automática do token: ${refreshed ? 'SUCESSO' : 'FALHA'}`);
       });
     }
@@ -90,8 +90,8 @@ supabase.auth.getSession().then(async ({ data, error }) => {
       const { error: testError } = await supabase.from('profiles').select('id').limit(1);
       if (testError) {
         console.warn("Sessão inválida ou token expirado, tentando renovar...");
-        const refreshAuthSessionUtil = await import('@/utils/connectionUtils').then(module => module.refreshAuthSession);
-        await refreshAuthSessionUtil();
+        const { refreshAuthSession } = await import('@/utils/connectionUtils');
+        await refreshAuthSession();
       } else {
         console.log("Sessão validada com sucesso");
       }
@@ -103,8 +103,8 @@ supabase.auth.getSession().then(async ({ data, error }) => {
   }
 });
 
-// Export the performFullConnectivityTest function from utils instead of defining it here
-export { 
+// Import and re-export the utility functions
+import {
   checkSupabaseConnection,
   checkSupabaseStatus,
   checkSupabaseAuth,
@@ -112,6 +112,15 @@ export {
   logAuthStatus,
   performFullConnectivityTest
 } from '@/utils/connectionUtils';
+
+export {
+  checkSupabaseConnection,
+  checkSupabaseStatus,
+  checkSupabaseAuth,
+  refreshAuthSession,
+  logAuthStatus,
+  performFullConnectivityTest
+};
 
 // Criar uma função que obtenha os headers de autenticação atuais
 export const getAuthHeaders = async () => {
