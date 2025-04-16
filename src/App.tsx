@@ -1,16 +1,16 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ApiProvider } from "@/contexts/ApiContext";
 import { ApiContextExtendedProvider } from "@/contexts/ApiContextExtended";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { createConsole, ConsoleProvider } from "@/contexts/ConsoleProvider";
 
 // Pages
 import HomePage from "@/pages/Home";
@@ -34,18 +34,6 @@ import ReportPreview from "@/pages/ReportPreview";
 // Importar temas
 import "./index.css";
 
-// Permitir que o console seja acessado pela janela
-declare global {
-  interface Window {
-    createConsole: typeof createConsole;
-  }
-}
-
-window.createConsole = createConsole;
-
-// Inicializar console do sistema
-const systemConsole = createConsole();
-
 // Função principal do App
 export default function App() {
   const [status, setStatus] = useState<
@@ -53,9 +41,9 @@ export default function App() {
   >("loading");
 
   return (
-    <ConsoleProvider console={systemConsole}>
-      <TooltipProvider>
-        <AuthProvider>
+    <TooltipProvider>
+      <AuthProvider>
+        <ApiProvider>
           <ApiContextExtendedProvider>
             <Toaster position="top-right" />
             <Routes>
@@ -197,8 +185,8 @@ export default function App() {
               />
             </Routes>
           </ApiContextExtendedProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </ConsoleProvider>
+        </ApiProvider>
+      </AuthProvider>
+    </TooltipProvider>
   );
 }

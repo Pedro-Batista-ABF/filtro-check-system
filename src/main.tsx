@@ -1,8 +1,8 @@
+
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
-import { Toaster } from 'sonner';
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -154,18 +154,9 @@ if (import.meta.env.DEV) {
   window.addEventListener('DOMContentLoaded', createDebugButton);
 }
 
-// Manter apenas um Router na aplicação, passando o BrowserRouter aqui
+// Render the app with BrowserRouter
 root.render(
   <BrowserRouter>
     <App />
-    <Toaster 
-      position="top-right"
-      richColors 
-      closeButton
-      expand={false}
-      toastOptions={{
-        duration: 5000,
-      }}
-    />
   </BrowserRouter>
 );
