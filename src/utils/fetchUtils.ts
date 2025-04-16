@@ -1,56 +1,33 @@
-
 import { supabase, refreshAuthSession } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Função genérica para fetch seguro com Supabase
 export async function fetchWithSession<T>(
   table: string, 
   query: (supabaseQuery: any) => any
 ): Promise<T[] | null> {
   try {
-    // Primeiro, verificar e atualizar a sessão se necessário
+    // Primeiro verificar se há sessão
     const { data: sessionData } = await supabase.auth.getSession();
     
-    if (!sessionData?.session?.user) {
-      console.error("FetchUtils: Nenhuma sessão ativa para buscar dados");
-      
-      // Tentar atualizar a sessão automaticamente
-      const refreshed = await refreshAuthSession();
-      if (!refreshed) {
-        toast.error("Erro de autenticação", {
-          description: "Sem sessão ativa. Por favor, faça login novamente."
-        });
-        return null;
-      }
+    if (!sessionData?.session) {
+      console.error("FetchUtils: Sem sessão ativa");
+      toast.error("Erro de autenticação", {
+        description: "Por favor, faça login novamente"
+      });
+      return null;
     }
     
-    // Executar a consulta personalizada
+    // Executar a consulta
     const { data, error } = await query(supabase.from(table as any));
     
     if (error) {
-      // Se for erro 401, tentar refresh do token
-      if (error.code === "PGRST301" || error.code === 401) {
-        const refreshed = await refreshAuthSession();
-        if (refreshed) {
-          // Tentar novamente após refresh
-          const { data: refreshedData, error: refreshedError } = await query(supabase.from(table as any));
-          
-          if (refreshedError) {
-            throw refreshedError;
-          }
-          
-          return refreshedData as T[];
-        } else {
-          throw new Error("Erro de autenticação persistente. Por favor, faça login novamente.");
-        }
-      } else {
-        throw error;
-      }
+      console.error(`FetchUtils: Erro na consulta:`, error);
+      throw error;
     }
     
     return data as T[];
   } catch (error: any) {
-    console.error(`FetchUtils: Erro ao buscar dados da tabela ${table}:`, error);
+    console.error(`FetchUtils: Erro ao buscar dados:`, error);
     throw error;
   }
 }
