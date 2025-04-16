@@ -12,11 +12,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import { checkSupabaseConnection } from "@/utils/connectionUtils";
+import { refreshAuthSession } from "@/integrations/supabase/client";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { updateSector } = useApi();
+  const { updateSector, getSectorById } = useApi();
   const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,12 +50,17 @@ export default function ScrapValidationForm() {
 
       setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sectors/${id}`);
-        if (!response.ok) {
-          throw new Error(`Erro ao buscar setor: ${response.status}`);
+        // Forçar refresh da sessão antes de buscar o setor
+        await refreshAuthSession();
+        
+        // Buscar o setor
+        const sectorData = await getSectorById(id);
+        
+        if (!sectorData) {
+          throw new Error("Setor não encontrado");
         }
-        const data = await response.json();
-        setSector(data);
+        
+        setSector(sectorData);
       } catch (error) {
         console.error("Erro ao buscar setor:", error);
         toast.error("Erro ao buscar informações do setor.");
@@ -64,7 +70,7 @@ export default function ScrapValidationForm() {
     };
 
     fetchSector();
-  }, [id]);
+  }, [id, getSectorById]);
 
   const handleSubmit = async (data: Partial<Sector>) => {
     if (!sector?.id) {
@@ -74,6 +80,9 @@ export default function ScrapValidationForm() {
 
     setSaving(true);
     try {
+      // Forçar refresh da sessão antes de atualizar o setor
+      await refreshAuthSession();
+      
       // Ensure that the status is set to 'sucateado' with proper type
       const updatedData = { 
         ...data, 
@@ -93,7 +102,9 @@ export default function ScrapValidationForm() {
   if (loading || !sector) {
     return (
       <PageLayoutWrapper>
-        <p>Carregando informações do setor...</p>
+        <div className="p-6 flex justify-center items-center">
+          <p>Carregando informações do setor...</p>
+        </div>
       </PageLayoutWrapper>
     );
   }
@@ -116,17 +127,15 @@ export default function ScrapValidationForm() {
         </div>
         <Card className="border-none shadow-lg">
           <div className="p-6">
-            {sector && (
-              <SectorForm 
-                sector={sector}
-                onSubmit={handleSubmit}
-                mode="scrap"
-                photoRequired={false}
-                isLoading={saving}
-                disableEntryFields={true}
-                hasAfterPhotosForAllServices={false}
-              />
-            )}
+            <SectorForm 
+              initialSector={sector}
+              onSubmit={handleSubmit}
+              mode="scrap"
+              photoRequired={false}
+              isLoading={saving}
+              disableEntryFields={true}
+              hasAfterPhotosForAllServices={false}
+            />
           </div>
         </Card>
       </div>

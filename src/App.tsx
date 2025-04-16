@@ -11,12 +11,16 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import FallbackRoot from './components/FallbackRoot';
 import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
+import { runConnectionDiagnostics } from './utils/connectionUtils';
 
+// Configuração do cliente de consulta com retry mais tolerante e cache mais longo
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutos
+      retry: 3,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 10 * 60 * 1000, // 10 minutos
+      cacheTime: 30 * 60 * 1000, // 30 minutos
       refetchOnWindowFocus: false,
     },
   },
@@ -27,6 +31,7 @@ const queryClient = new QueryClient({
  */
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [diagnosticsRun, setDiagnosticsRun] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -34,42 +39,67 @@ function App() {
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    
+    // Executar diagnóstico no carregamento inicial
+    if (!diagnosticsRun) {
+      runConnectionDiagnostics().then(() => {
+        setDiagnosticsRun(true);
+      });
+    }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [diagnosticsRun]);
   
   return (
     <QueryClientProvider client={queryClient}>
-      <FallbackRoot>
-        <Routes>
-          {/* Rotas de autenticação */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Rota raiz - redirecionando para peritagem */}
-          <Route path="/" element={<Peritagem />} />
-          
-          {/* Rotas de peritagem */}
-          <Route path="/peritagem" element={<Peritagem />} />
-          <Route path="/peritagem/novo" element={<PeritagemForm />} />
-          <Route path="/peritagem/:id" element={<PeritagemForm />} />
-          
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </FallbackRoot>
-      <Toaster 
-        richColors 
-        position="top-right" 
-        closeButton
-        expand={false}
-        toastOptions={{
-          duration: 5000,
-        }}
-      />
+      <AuthProvider>
+        <FallbackRoot>
+          <Routes>
+            {/* Rotas de autenticação */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Rota raiz - redirecionando para peritagem */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Peritagem />
+              </ProtectedRoute>
+            } />
+            
+            {/* Rotas de peritagem */}
+            <Route path="/peritagem" element={
+              <ProtectedRoute>
+                <Peritagem />
+              </ProtectedRoute>
+            } />
+            <Route path="/peritagem/novo" element={
+              <ProtectedRoute>
+                <PeritagemForm />
+              </ProtectedRoute>
+            } />
+            <Route path="/peritagem/:id" element={
+              <ProtectedRoute>
+                <PeritagemForm />
+              </ProtectedRoute>
+            } />
+            
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </FallbackRoot>
+        <Toaster 
+          richColors 
+          position="top-right" 
+          closeButton
+          expand={false}
+          toastOptions={{
+            duration: 5000,
+          }}
+        />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

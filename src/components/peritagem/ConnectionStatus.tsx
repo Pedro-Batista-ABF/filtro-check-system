@@ -1,8 +1,10 @@
 
-import { Wifi, WifiOff, Loader2, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useNavigate } from "react-router-dom";
+import { checkSupabaseStatus, logAuthStatus, refreshAuthSession } from "@/integrations/supabase/client";
 
 interface ConnectionStatusProps {
   status: 'checking' | 'online' | 'offline';
@@ -17,11 +19,24 @@ export default function ConnectionStatus({
 }: ConnectionStatusProps) {
   const [lastStatusChange, setLastStatusChange] = useState(Date.now());
   const [pingTime, setPingTime] = useState<number | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<'checking' | 'valid' | 'invalid'>('checking');
+  const navigate = useNavigate();
   
   // Rastrear mudanças de status para animar a transição
   useEffect(() => {
     setLastStatusChange(Date.now());
   }, [status]);
+  
+  // Verificar a sessão quando o componente montar
+  useEffect(() => {
+    const checkSession = async () => {
+      setSessionStatus('checking');
+      const userId = await logAuthStatus();
+      setSessionStatus(userId ? 'valid' : 'invalid');
+    };
+    
+    checkSession();
+  }, [status]); // Verificar novamente quando o status de conexão mudar
   
   // Quando estiver online, verificar o tempo de ping periodicamente
   useEffect(() => {
@@ -29,16 +44,14 @@ export default function ConnectionStatus({
       const checkPing = async () => {
         const startTime = Date.now();
         try {
-          await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
-            method: 'HEAD',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4'
-            },
-            cache: 'no-store',
-          });
-          setPingTime(Date.now() - startTime);
+          // Usar a função checkSupabaseStatus para verificar a conexão com Supabase
+          const isConnected = await checkSupabaseStatus();
+          
+          if (isConnected) {
+            setPingTime(Date.now() - startTime);
+          } else {
+            setPingTime(null);
+          }
         } catch {
           setPingTime(null);
         }
@@ -51,6 +64,21 @@ export default function ConnectionStatus({
       setPingTime(null);
     }
   }, [status]);
+  
+  const handleRefreshSession = async () => {
+    setSessionStatus('checking');
+    const refreshed = await refreshAuthSession();
+    
+    if (refreshed) {
+      setSessionStatus('valid');
+      if (onRetryConnection) {
+        onRetryConnection();
+      }
+    } else {
+      setSessionStatus('invalid');
+      navigate('/login');
+    }
+  };
   
   const statusDisplay = () => {
     return (
@@ -81,6 +109,13 @@ export default function ConnectionStatus({
   
   return (
     <div className="flex items-center gap-2">
+      {sessionStatus === 'invalid' && (
+        <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 mr-1">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Sessão Inválida
+        </div>
+      )}
+      
       {showDetails && pingTime ? (
         <TooltipProvider>
           <Tooltip>
@@ -89,6 +124,7 @@ export default function ConnectionStatus({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>Ping: {pingTime}ms</p>
+              <p>Sessão: {sessionStatus === 'valid' ? 'Válida' : sessionStatus === 'invalid' ? 'Inválida' : 'Verificando'}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -105,6 +141,18 @@ export default function ConnectionStatus({
         >
           <RefreshCw className="h-3 w-3 mr-1" />
           Reconectar
+        </Button>
+      )}
+      
+      {sessionStatus === 'invalid' && (
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          className="h-7 px-2 text-xs" 
+          onClick={handleRefreshSession}
+        >
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Renovar Sessão
         </Button>
       )}
     </div>

@@ -39,11 +39,17 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
     
-    // Tentativa de conexão simplificada
+    // Primeiro, obter a sessão atual para garantir autenticação
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authHeader = sessionData?.session ? 
+      `Bearer ${sessionData.session.access_token}` : 
+      `Bearer ${SUPABASE_PUBLISHABLE_KEY}`;
+    
+    // Tentativa de conexão com headers adequados
     const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: 'HEAD',
       headers: {
-        'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Authorization': authHeader,
         'apikey': SUPABASE_PUBLISHABLE_KEY,
         'Content-Type': 'application/json',
       },
@@ -55,9 +61,77 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
     const elapsedTime = Date.now() - startTime;
     console.log(`Verificação de status do Supabase completada em ${elapsedTime}ms (Status: ${response.status})`);
     
+    if (response.status === 401) {
+      console.warn("Erro de autenticação (401) detectado. Tentando atualizar a sessão...");
+      await refreshAuthSession();
+      return false;
+    }
+    
     return response.ok;
   } catch (error) {
     console.error("Erro ao verificar status do Supabase:", error);
     return false;
+  }
+};
+
+// Função para forçar atualização do token
+export const refreshAuthSession = async (): Promise<boolean> => {
+  try {
+    console.log("Tentando atualizar a sessão do usuário...");
+    const { data, error } = await supabase.auth.refreshSession();
+    
+    if (error || !data.session) {
+      console.error("Falha ao atualizar sessão:", error);
+      return false;
+    }
+    
+    console.log("Sessão atualizada com sucesso:", data.session.user?.id);
+    return true;
+  } catch (error) {
+    console.error("Erro crítico ao atualizar sessão:", error);
+    return false;
+  }
+};
+
+// Adiciona middleware para todas as chamadas supabase
+export const withAuthRefresh = async <T>(
+  operation: () => Promise<T>
+): Promise<T> => {
+  try {
+    // Tenta a operação normalmente
+    return await operation();
+  } catch (error: any) {
+    // Se for erro 401, tenta renovar o token e tenta a operação novamente
+    if (error.status === 401 || error.code === 'PGRST301') {
+      console.warn("Erro 401 detectado, tentando renovar sessão...");
+      const refreshed = await refreshAuthSession();
+      
+      if (refreshed) {
+        console.log("Sessão renovada, tentando operação novamente...");
+        return await operation();
+      }
+    }
+    
+    // Se não for erro 401 ou não conseguir renovar, propaga o erro
+    throw error;
+  }
+};
+
+// Função para verificar e logar o status da autenticação
+export const logAuthStatus = async (): Promise<string | null> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const userId = data.session?.user?.id;
+    
+    if (userId) {
+      console.log(`✅ Usuário autenticado: ${userId.substring(0, 8)}...`);
+      return userId;
+    } else {
+      console.warn("⚠️ Nenhum usuário autenticado!");
+      return null;
+    }
+  } catch (error) {
+    console.error("❌ Erro ao verificar autenticação:", error);
+    return null;
   }
 };
