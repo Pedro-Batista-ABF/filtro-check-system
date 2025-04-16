@@ -2,7 +2,7 @@
 import React from 'react';
 import { Service } from "@/types";
 import SectorInfoSection from './review/SectorInfoSection';
-import ServicesSection from './review/ServicesSection';
+import { ServicesSection } from './review/ServicesSection';
 
 interface ReviewFormProps {
   tagNumber: string;

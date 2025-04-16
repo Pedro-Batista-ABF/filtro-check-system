@@ -1,25 +1,34 @@
 
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App.tsx'
-import './index.css'
-import { AuthProvider } from './contexts/AuthContext'
-import { ApiProvider } from './contexts/ApiContext'
-import { ApiContextExtendedProvider } from './contexts/ApiContextExtended'
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App.tsx';
+import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
+import { ApiProvider } from './contexts/ApiContext';
+import { ApiContextExtendedProvider } from './contexts/ApiContextExtended';
+import { Toaster } from 'sonner';
 
 const root = createRoot(document.getElementById("root")!);
 
 // Configuração global para fazer fetch timeouts
 const originalFetch = window.fetch;
 window.fetch = function timeoutFetch(url, options = {}) {
-  const timeout = 15000; // 15 segundos timeout global
+  const timeout = 10000; // 10 segundos timeout global
   
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
   
+  // Se já existe um signal, precisamos combiná-lo com nosso controller
+  let signal = controller.signal;
+  if (options.signal) {
+    signal = options.signal;
+    // Adicionar um listener ao original signal para abortar nosso controller
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
+  
   const fetchOptions = {
     ...options,
-    signal: controller.signal,
+    signal
   };
   
   return originalFetch(url, fetchOptions)
@@ -29,10 +38,40 @@ window.fetch = function timeoutFetch(url, options = {}) {
     })
     .catch(error => {
       clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error(`Fetch timeout for ${url}: Limite de tempo excedido (${timeout}ms)`);
+        // Facilitar o debug adicionando informação de timeout
+        const timeoutError = new Error(`Timeout de ${timeout}ms excedido para ${url}`);
+        timeoutError.name = 'FetchTimeoutError';
+        throw timeoutError;
+      }
+      
       console.error(`Fetch error for ${url}:`, error);
       throw error;
     });
 };
+
+// Implementando detector de status de conexão
+function setupConnectionMonitoring() {
+  const updateOnlineStatus = () => {
+    const isOnline = navigator.onLine;
+    document.body.classList.toggle('app-offline', !isOnline);
+    
+    if (isOnline) {
+      console.log('🟢 Conexão restabelecida');
+    } else {
+      console.log('🔴 Conexão perdida');
+    }
+  };
+  
+  // Monitoramento de status de conexão
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  
+  // Verificar status inicial
+  updateOnlineStatus();
+}
 
 // Interceptar erros não capturados na aplicação
 window.addEventListener('error', (event) => {
@@ -44,12 +83,68 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
 });
 
+// Iniciar monitoramento de conexão
+setupConnectionMonitoring();
+
+// Botão de diagnóstico para testes de conexão (apenas em desenvolvimento)
+if (import.meta.env.DEV) {
+  const createDebugButton = () => {
+    const button = document.createElement('button');
+    button.innerText = 'Testar Conexão';
+    button.style.position = 'fixed';
+    button.style.bottom = '10px';
+    button.style.right = '10px';
+    button.style.zIndex = '9999';
+    button.style.padding = '8px 12px';
+    button.style.background = '#4f46e5';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.borderRadius = '4px';
+    button.style.cursor = 'pointer';
+    button.onclick = async () => {
+      try {
+        const startTime = Date.now();
+        const response = await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
+          method: 'HEAD',
+          cache: 'no-cache',
+        });
+        const endTime = Date.now();
+        const elapsed = endTime - startTime;
+        
+        if (response.ok) {
+          console.log(`✅ Conexão OK (${elapsed}ms)`);
+          alert(`Conexão OK! Tempo: ${elapsed}ms`);
+        } else {
+          console.error(`❌ Erro de conexão: ${response.status} (${elapsed}ms)`);
+          alert(`Erro de conexão: ${response.status} - Tempo: ${elapsed}ms`);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao testar conexão:', error);
+        alert(`Falha no teste: ${error.message}`);
+      }
+    };
+    document.body.appendChild(button);
+  };
+  
+  // Adicionar botão após o carregamento do DOM
+  window.addEventListener('DOMContentLoaded', createDebugButton);
+}
+
 root.render(
   <BrowserRouter>
     <AuthProvider>
       <ApiProvider>
         <ApiContextExtendedProvider>
           <App />
+          <Toaster 
+            position="top-right"
+            richColors 
+            closeButton
+            expand={false}
+            toastOptions={{
+              duration: 5000,
+            }}
+          />
         </ApiContextExtendedProvider>
       </ApiProvider>
     </AuthProvider>

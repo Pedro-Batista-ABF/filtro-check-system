@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
+import OfflineWarning from "@/components/peritagem/OfflineWarning";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function CheckagemForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [retryCount, setRetryCount] = useState(0);
 
   // Verificar conexão
   useEffect(() => {
@@ -30,9 +32,14 @@ export default function CheckagemForm() {
         const response = await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
           method: 'HEAD',
           cache: 'no-cache',
+          signal: AbortSignal.timeout(5000), // Timeout de 5 segundos
         });
         setConnectionStatus(response.ok ? 'online' : 'offline');
+        if (response.ok) {
+          setRetryCount(0); // Reset retry count on success
+        }
       } catch (error) {
+        console.error("Erro ao verificar conexão:", error);
         setConnectionStatus('offline');
       }
     };
@@ -40,7 +47,13 @@ export default function CheckagemForm() {
     checkConnection();
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [retryCount]);
+
+  const handleRetryConnection = () => {
+    setRetryCount(prev => prev + 1);
+    setConnectionStatus('checking');
+    toast.info("Tentando reconectar...");
+  };
 
   useEffect(() => {
     const fetchSector = async () => {
@@ -74,8 +87,10 @@ export default function CheckagemForm() {
       }
     };
 
-    fetchSector();
-  }, [id, getSectorById, navigate]);
+    if (connectionStatus === 'online') {
+      fetchSector();
+    }
+  }, [id, getSectorById, navigate, connectionStatus]);
 
   const handleSubmit = async (data: Partial<Sector>) => {
     if (!sector?.id) {
@@ -114,6 +129,14 @@ export default function CheckagemForm() {
         status: 'concluido' as SectorStatus
       };
       
+      if (connectionStatus === 'offline') {
+        // Salvar dados localmente para sincronização posterior
+        localStorage.setItem(`pending_update_${sector.id}`, JSON.stringify(updatedData));
+        toast.success("Dados salvos localmente. Serão sincronizados quando a conexão for restabelecida.");
+        navigate('/checagem');
+        return;
+      }
+      
       await updateSector(sector.id, updatedData);
       toast.success("Setor concluído com sucesso!");
       navigate('/checagem');
@@ -125,7 +148,7 @@ export default function CheckagemForm() {
     }
   };
 
-  if (loading || !sector) {
+  if (loading && connectionStatus === 'online') {
     return (
       <PageLayoutWrapper>
         <p>Carregando detalhes do setor...</p>
@@ -134,7 +157,7 @@ export default function CheckagemForm() {
   }
 
   // Verificar se existem fotos do tipo "after" para todos os serviços
-  const selectedServices = sector.services.filter(s => s.selected);
+  const selectedServices = sector?.services.filter(s => s.selected) || [];
   const servicesWithAfterPhotos = selectedServices.filter(service => {
     const afterPhotos = service.photos?.filter(p => p.type === "after") || [];
     return afterPhotos.length > 0;
@@ -149,7 +172,7 @@ export default function CheckagemForm() {
           <div className="flex items-center gap-2">
             <ConnectionStatus 
               status={connectionStatus} 
-              onRetryConnection={() => setConnectionStatus('checking')}
+              onRetryConnection={handleRetryConnection}
             />
             <Button variant="outline" size="sm" onClick={() => navigate('/checagem')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -159,26 +182,33 @@ export default function CheckagemForm() {
         </div>
 
         {connectionStatus === 'offline' && (
-          <Alert className="bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-800" />
-            <AlertTitle>Sem conexão</AlertTitle>
-            <AlertDescription>
-              Você está trabalhando no modo offline. Suas alterações serão salvas quando a conexão for restaurada.
-            </AlertDescription>
-          </Alert>
+          <OfflineWarning onRetryConnection={handleRetryConnection} />
         )}
 
         <Card className="border-none shadow-lg">
           <div className="p-6">
-            <SectorForm 
-              sector={sector}
-              onSubmit={handleSubmit}
-              mode="quality"
-              photoRequired={true}
-              isLoading={saving}
-              disableEntryFields={true}  // Nova prop para desabilitar campos de entrada
-              hasAfterPhotosForAllServices={hasAfterPhotosForAllServices}
-            />
+            {sector && (
+              <SectorForm 
+                sector={sector}
+                onSubmit={handleSubmit}
+                mode="quality"
+                photoRequired={true}
+                isLoading={saving}
+                disableEntryFields={true}
+                hasAfterPhotosForAllServices={hasAfterPhotosForAllServices}
+              />
+            )}
+            {!sector && connectionStatus === 'offline' && (
+              <div className="text-center p-6">
+                <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Não foi possível carregar os dados</h3>
+                <p className="text-gray-600 mb-4">
+                  Os dados do setor não puderam ser carregados devido a problemas de conexão. Por favor, 
+                  verifique sua conexão com a internet e tente novamente.
+                </p>
+                <Button onClick={handleRetryConnection}>Tentar novamente</Button>
+              </div>
+            )}
           </div>
         </Card>
       </div>

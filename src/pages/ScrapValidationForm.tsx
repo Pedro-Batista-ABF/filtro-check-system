@@ -10,6 +10,7 @@ import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,27 @@ export default function ScrapValidationForm() {
   const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  // Verificar conexão
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        setConnectionStatus('checking');
+        const response = await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
+          method: 'HEAD',
+          cache: 'no-cache',
+        });
+        setConnectionStatus(response.ok ? 'online' : 'offline');
+      } catch (error) {
+        setConnectionStatus('offline');
+      }
+    };
+    
+    checkConnection();
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchSector = async () => {
@@ -82,20 +104,28 @@ export default function ScrapValidationForm() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="page-title">Validar Sucateamento</h1>
-          <Button variant="outline" onClick={() => navigate('/sucateamento')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
+          <div className="flex items-center gap-2">
+            <ConnectionStatus 
+              status={connectionStatus} 
+              onRetryConnection={() => setConnectionStatus('checking')}
+            />
+            <Button variant="outline" onClick={() => navigate('/sucateamento')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
         </div>
         <Card className="border-none shadow-lg">
           <div className="p-6">
-            <SectorForm 
-              sector={sector}
-              onSubmit={handleSubmit}
-              mode="scrap"
-              photoRequired={false}
-              isLoading={saving}
-            />
+            {sector && (
+              <SectorForm 
+                sector={sector}
+                onSubmit={handleSubmit}
+                mode="scrap"
+                photoRequired={false}
+                isLoading={saving}
+              />
+            )}
           </div>
         </Card>
       </div>
