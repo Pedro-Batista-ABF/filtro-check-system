@@ -1,6 +1,6 @@
 
 import { Service, ServiceType } from "@/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { handleDatabaseError } from "@/utils/errorHandlers";
@@ -11,6 +11,7 @@ export function useServicesManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [loadStartTime] = useState(Date.now());
 
   const fetchDefaultServices = async () => {
     // Registrar o início da operação
@@ -27,17 +28,18 @@ export function useServicesManagement() {
         setError("Usuário não autenticado");
         setServices([]);
         setLoading(false);
+        // Garantir retorno de array vazio em caso de falha
         return [];
       }
       
-      console.log("useServicesManagement: UID confirmado, buscando tipos de serviço");
+      console.log(`useServicesManagement: UID confirmado (${sessionData.session.user.id}), buscando tipos de serviço`);
       
       // Buscar tipos de serviço
       let serviceTypes: Service[] = [];
       try {
         serviceTypes = await serviceTypeService.getServiceTypes();
         
-        // Verificar se os dados são válidos
+        // Verificação rigorosa para garantir array válido
         if (!Array.isArray(serviceTypes)) {
           console.error("useServicesManagement: serviceTypes não é um array");
           throw new Error("Formato de dados inválido");
@@ -75,7 +77,8 @@ export function useServicesManagement() {
       setInitialized(true);
       setLoading(false);
       
-      console.log("useServicesManagement: 🔥 Carregamento de serviços finalizado com sucesso");
+      const elapsedTime = Date.now() - loadStartTime;
+      console.log(`useServicesManagement: 🔥 Carregamento de serviços finalizado com sucesso em ${elapsedTime}ms`);
       return processedServices;
     } catch (error) {
       console.error("useServicesManagement: Erro geral:", error);
@@ -92,6 +95,13 @@ export function useServicesManagement() {
       console.log("useServicesManagement: Finalizando busca de serviços (finally)");
     }
   };
+
+  // Inicialização automática para garantir que os dados existam
+  useEffect(() => {
+    if (!initialized && loading) {
+      fetchDefaultServices();
+    }
+  }, [initialized, loading]);
 
   return {
     services,

@@ -12,6 +12,8 @@ export const serviceTypeService = {
    * Busca os serviços disponíveis
    */
   getServiceTypes: async (): Promise<Service[]> => {
+    console.log("serviceTypeService: Iniciando busca de tipos de serviço");
+    
     try {
       // Verificar autenticação primeiro
       const { data: session } = await supabase.auth.getSession();
@@ -20,8 +22,31 @@ export const serviceTypeService = {
         throw new Error("Usuário não autenticado ao buscar tipos de serviço");
       }
 
-      console.log("serviceTypeService: Buscando tipos de serviço");
+      const uid = session.session.user.id;
+      if (!uid) {
+        console.error("serviceTypeService: UID ausente");
+        throw new Error("UID ausente ao buscar tipos de serviço");
+      }
+
+      console.log(`serviceTypeService: Autenticado como ${uid}, buscando tipos de serviço`);
       
+      // Verificar se a tabela service_types existe
+      try {
+        const { error: tableCheckError } = await supabase
+          .from('service_types')
+          .select('count(*)', { count: 'exact', head: true });
+          
+        if (tableCheckError) {
+          console.error("serviceTypeService: Erro ao verificar tabela service_types:", tableCheckError);
+          throw handleDatabaseError(tableCheckError, "Erro ao verificar tabela service_types");
+        }
+      } catch (tableError) {
+        console.error("serviceTypeService: Erro ao verificar tabela:", tableError);
+        // Em caso de erro de tabela, retornar array vazio para não travar o fluxo
+        return [];
+      }
+      
+      // Buscar tipos de serviço
       const { data, error } = await supabase
         .from('service_types')
         .select('*')
@@ -32,8 +57,8 @@ export const serviceTypeService = {
         throw handleDatabaseError(error, "Erro ao buscar tipos de serviço");
       }
       
-      if (!data) {
-        console.warn("serviceTypeService: Resposta vazia da tabela service_types");
+      if (!data || !Array.isArray(data)) {
+        console.warn("serviceTypeService: Resposta vazia ou inválida da tabela service_types");
         return [];
       }
       
@@ -57,7 +82,7 @@ export const serviceTypeService = {
       // Log de verificação
       console.log(`serviceTypeService: ${services.length} serviços mapeados`);
       
-      // Verificação final do formato de retorno
+      // Verificação extra
       if (!Array.isArray(services)) {
         console.error("serviceTypeService: Erro crítico - services não é um array");
         return [];

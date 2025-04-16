@@ -11,7 +11,9 @@ import LoadingState from "@/components/peritagem/LoadingState";
 import { useEffect, useState } from "react";
 import { Sector } from "@/types";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw, Bug } from "lucide-react";
+import { AlertCircle, RefreshCw, Bug, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +39,33 @@ export default function PeritagemForm() {
   const [dataReady, setDataReady] = useState(false);
   const [hasTimeout, setHasTimeout] = useState(false);
   const [mountTime] = useState(Date.now());
+  const [forceRefreshing, setForceRefreshing] = useState(false);
+  const [authVerified, setAuthVerified] = useState(false);
+
+  // Verificação extra de autenticação
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const isAuth = !!data.session?.user;
+        setAuthVerified(isAuth);
+        
+        if (!isAuth) {
+          console.error("PeritagemForm: Usuário não autenticado na verificação direta");
+          toast.error("Sessão expirada", {
+            description: "Faça login novamente para continuar"
+          });
+          navigate('/login');
+        } else {
+          console.log("PeritagemForm: Autenticação verificada diretamente:", data.session.user.id);
+        }
+      } catch (error) {
+        console.error("PeritagemForm: Erro ao verificar autenticação:", error);
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   // Definir timeout de segurança para evitar loading infinito
   useEffect(() => {
@@ -61,13 +90,26 @@ export default function PeritagemForm() {
       temSector: !!sector,
       isEditing,
       hasValidData,
-      tempoDecorrido: `${Date.now() - mountTime}ms`
+      tempoDecorrido: `${Date.now() - mountTime}ms`,
+      authVerified
     });
-  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime]);
+  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime, authVerified]);
 
   // Garantir que temos um setor válido para o formulário
   useEffect(() => {
     if (loading) return;
+    
+    // Verificar se temos dados válidos para mostrar o formulário
+    const hasValidSectorData = isEditing ? !!sector : !!defaultSector;
+    const hasValidServiceData = Array.isArray(services) && services.length > 0;
+    
+    if (!hasValidSectorData || !hasValidServiceData) {
+      console.error("PeritagemForm: Dados insuficientes para renderizar formulário", {
+        hasValidSectorData,
+        hasValidServiceData
+      });
+      return;
+    }
     
     if (isEditing && sector) {
       setFormSector(sector);
@@ -81,15 +123,31 @@ export default function PeritagemForm() {
       setDataReady(false);
       console.log("PeritagemForm: Sem dados de setor válidos");
     }
-  }, [sector, defaultSector, isEditing, loading]);
+  }, [sector, defaultSector, isEditing, loading, services]);
+
+  // Forçar recarregamento da página
+  const handleForceRefresh = () => {
+    setForceRefreshing(true);
+    window.location.reload();
+  };
 
   // Componente de carregamento
   if (loading && !hasTimeout) {
-    return <LoadingState />;
+    return (
+      <PageLayoutWrapper>
+        <div className="space-y-4">
+          <PeritagemHeader isEditing={isEditing} />
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+            <h1 className="text-xl font-semibold">Carregando...</h1>
+          </div>
+        </div>
+      </PageLayoutWrapper>
+    );
   }
 
   // Caso o carregamento esteja demorando muito
-  if (hasTimeout) {
+  if (hasTimeout || forceRefreshing) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
@@ -98,21 +156,30 @@ export default function PeritagemForm() {
             <div className="p-6">
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <RefreshCw className="h-10 w-10 text-amber-500 mb-4 animate-spin" />
-                <h2 className="text-xl font-bold mb-2">Carregamento prolongado</h2>
+                <h2 className="text-xl font-bold mb-2">
+                  {forceRefreshing ? "Recarregando página..." : "Carregamento prolongado"}
+                </h2>
                 <p className="text-gray-600 mb-4">
-                  O carregamento está demorando mais do que o esperado. Você pode aguardar mais um pouco ou tentar novamente.
+                  {forceRefreshing 
+                    ? "Aguarde enquanto a página é recarregada..." 
+                    : "O carregamento está demorando mais do que o esperado. Você pode aguardar mais um pouco ou tentar novamente."}
                 </p>
                 <div className="space-y-2 w-full max-w-md">
-                  <Button onClick={() => window.location.reload()} variant="default" className="w-full">
-                    Tentar novamente
-                  </Button>
-                  <Button onClick={() => navigate('/peritagem')} variant="outline" className="w-full">
-                    Voltar para Peritagem
-                  </Button>
+                  {!forceRefreshing && (
+                    <>
+                      <Button onClick={handleForceRefresh} variant="default" className="w-full">
+                        Tentar novamente
+                      </Button>
+                      <Button onClick={() => navigate('/peritagem')} variant="outline" className="w-full">
+                        Voltar para Peritagem
+                      </Button>
+                    </>
+                  )}
                   <details className="mt-4 text-left border p-2 rounded-md">
                     <summary className="font-medium cursor-pointer">Informações de diagnóstico</summary>
                     <div className="text-xs mt-2 whitespace-pre-wrap bg-gray-50 p-2 rounded">
                       <p>Tempo: {Date.now() - mountTime}ms</p>
+                      <p>Autenticado: {authVerified ? 'Sim' : 'Não'}</p>
                       <p>Serviços: {services?.length || 0}</p>
                       <p>Default Sector: {defaultSector ? 'Sim' : 'Não'}</p>
                       <p>Setor em Edição: {sector ? 'Sim' : 'Não'}</p>
@@ -134,12 +201,23 @@ export default function PeritagemForm() {
       <PageLayoutWrapper>
         <div className="space-y-4">
           <PeritagemHeader isEditing={isEditing} />
-          <ErrorMessage message={errorMessage} />
-          <div className="flex justify-center mt-4">
-            <Button onClick={() => navigate('/peritagem')} variant="outline">
-              Voltar para Peritagem
-            </Button>
-          </div>
+          <Card className="border-none shadow-lg">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold mb-2">Erro ao carregar</h2>
+                <p className="text-gray-600 mb-4">{errorMessage}</p>
+                <div className="flex gap-4 mt-2">
+                  <Button onClick={handleForceRefresh} variant="default">
+                    Tentar novamente
+                  </Button>
+                  <Button onClick={() => navigate('/peritagem')} variant="outline">
+                    Voltar para Peritagem
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </PageLayoutWrapper>
     );
@@ -163,7 +241,7 @@ export default function PeritagemForm() {
                     " Ocorreu um erro ao preparar o formulário."}
                 </p>
                 <div className="flex gap-4 mt-2">
-                  <Button onClick={() => window.location.reload()} variant="default">
+                  <Button onClick={handleForceRefresh} variant="default">
                     Tentar novamente
                   </Button>
                   <Button onClick={() => navigate('/peritagem')} variant="outline">
@@ -175,9 +253,12 @@ export default function PeritagemForm() {
                     <Bug className="h-4 w-4 mr-2" /> Detalhes técnicos
                   </summary>
                   <div className="text-xs mt-2 whitespace-pre-wrap bg-gray-50 p-2 rounded">
-                    <p>Serviços: {JSON.stringify(services)}</p>
-                    <p>Estado do formulário: {JSON.stringify({formSector: !!formSector, dataReady})}</p>
+                    <p>Serviços: {services ? JSON.stringify(services.length) : 'undefined'}</p>
+                    <p>FormSector: {formSector ? 'definido' : 'undefined'}</p>
+                    <p>DataReady: {dataReady ? 'true' : 'false'}</p>
+                    <p>AuthVerified: {authVerified ? 'true' : 'false'}</p>
                     <p>Tempo: {Date.now() - mountTime}ms</p>
+                    <p>UID verificado: {authVerified ? 'sim' : 'não'}</p>
                   </div>
                 </details>
               </div>
