@@ -5,14 +5,22 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle } from "lucide-react";
+import PhotoUpload from "../PhotoUpload";
+import { PhotoWithFile } from "@/types";
 
 interface ScrapToggleProps {
   isScrap: boolean;
   setIsScrap: (value: boolean) => void;
   scrapObservations: string;
   setScrapObservations: (value: string) => void;
-  error?: boolean;
+  scrapPhotos: PhotoWithFile[];
+  handleScrapPhotoUpload: (files: FileList) => void;
+  error?: {
+    observations?: boolean;
+    photos?: boolean;
+  };
   disabled?: boolean;
+  onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
 const ScrapToggle: React.FC<ScrapToggleProps> = ({
@@ -20,8 +28,11 @@ const ScrapToggle: React.FC<ScrapToggleProps> = ({
   setIsScrap,
   scrapObservations,
   setScrapObservations,
-  error = false,
-  disabled = false
+  scrapPhotos,
+  handleScrapPhotoUpload,
+  error = {},
+  disabled = false,
+  onCameraCapture
 }) => {
   return (
     <Card className="mb-6">
@@ -46,24 +57,47 @@ const ScrapToggle: React.FC<ScrapToggleProps> = ({
           </div>
           
           {isScrap && (
-            <div className="space-y-2 pl-6 pt-2">
-              <Label 
-                htmlFor="scrap-observations" 
-                className={`text-sm ${error ? 'text-red-500' : ''}`}
-              >
-                Motivo do sucateamento*
-              </Label>
-              <Textarea
-                id="scrap-observations"
-                value={scrapObservations}
-                onChange={(e) => setScrapObservations(e.target.value)}
-                placeholder="Descreva o motivo pelo qual este setor não pode ser recuperado..."
-                className={`resize-none ${error ? 'border-red-500' : ''}`}
-                disabled={disabled}
-              />
-              {error && (
-                <p className="text-xs text-red-500">O motivo do sucateamento é obrigatório</p>
-              )}
+            <div className="space-y-4 pl-6 pt-2">
+              <div className="space-y-2">
+                <Label 
+                  htmlFor="scrap-observations" 
+                  className={`text-sm ${error.observations ? 'text-red-500' : ''}`}
+                >
+                  Motivo do sucateamento*
+                </Label>
+                <Textarea
+                  id="scrap-observations"
+                  value={scrapObservations}
+                  onChange={(e) => setScrapObservations(e.target.value)}
+                  placeholder="Descreva o motivo pelo qual este setor não pode ser recuperado..."
+                  className={`resize-none ${error.observations ? 'border-red-500' : ''}`}
+                  disabled={disabled}
+                />
+                {error.observations && (
+                  <p className="text-xs text-red-500">O motivo do sucateamento é obrigatório</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label 
+                  className={`text-sm ${error.photos ? 'text-red-500' : ''}`}
+                >
+                  Fotos do estado de sucateamento*
+                </Label>
+                <PhotoUpload 
+                  photos={scrapPhotos} 
+                  onChange={handleScrapPhotoUpload}
+                  disabled={disabled}
+                  title="Adicionar fotos do sucateamento"
+                  required={true}
+                  onCameraCapture={onCameraCapture}
+                />
+                {error.photos && (
+                  <p className="text-xs text-red-500">
+                    É necessário adicionar pelo menos uma foto do estado de sucateamento
+                  </p>
+                )}
+              </div>
               
               <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200 mt-2">
                 <p className="text-sm text-yellow-800">

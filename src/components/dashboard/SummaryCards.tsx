@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import FeatureCard from './FeatureCard';
 import { ClipboardList, AlertTriangle, CheckCircle, Wrench, InfinityIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { SectorStatus } from '@/types';
 
 export function SummaryCards() {
   const [counts, setCounts] = useState({
@@ -24,37 +25,37 @@ export function SummaryCards() {
         setError(null);
 
         // Buscar contagem de setores com status "peritagemPendente"
-        const { data: peritagemPendente, error: peritagemError } = await supabase
+        const { count: peritagemCount, error: peritagemError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'peritagemPendente');
+          .eq('current_status', 'peritagemPendente' as SectorStatus);
 
         // Buscar contagem de setores com status "emExecucao"
-        const { data: emExecucao, error: execucaoError } = await supabase
+        const { count: execucaoCount, error: execucaoError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'emExecucao');
+          .eq('current_status', 'emExecucao' as SectorStatus);
 
         // Buscar contagem de setores com status "execucaoConcluida"
-        const { data: execucaoConcluida, error: concluidaError } = await supabase
+        const { count: concluidaCount, error: concluidaError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'execucaoConcluida');
+          .eq('current_status', 'execucaoConcluida' as SectorStatus);
 
         // Buscar contagem de setores com status "emChecagem"
-        const { data: emChecagem, error: checagemError } = await supabase
+        const { count: checagemCount, error: checagemError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'emChecagem');
+          .eq('current_status', 'emChecagem' as SectorStatus);
 
         // Buscar contagem de setores com status "concluido"
-        const { data: concluido, error: concluidoError } = await supabase
+        const { count: concluidoCount, error: concluidoError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'concluido');
+          .eq('current_status', 'concluido' as SectorStatus);
 
         // Buscar contagem total de setores
-        const { data: total, error: totalError } = await supabase
+        const { count: totalCount, error: totalError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true });
 
@@ -63,12 +64,12 @@ export function SummaryCards() {
         }
 
         setCounts({
-          peritagemPendente: peritagemPendente?.count || 0,
-          emExecucao: emExecucao?.count || 0,
-          execucaoConcluida: execucaoConcluida?.count || 0,
-          emChecagem: emChecagem?.count || 0,
-          concluido: concluido?.count || 0,
-          total: total?.count || 0
+          peritagemPendente: peritagemCount || 0,
+          emExecucao: execucaoCount || 0,
+          execucaoConcluida: concluidaCount || 0,
+          emChecagem: checagemCount || 0,
+          concluido: concluidoCount || 0,
+          total: totalCount || 0
         });
       } catch (err) {
         console.error("Erro ao buscar contagens:", err);

@@ -43,6 +43,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
     
     setUploading(true);
     try {
+      console.log(`Iniciando upload de ${e.target.files.length} fotos para o serviço ${service.id}`);
       // Processar as imagens
       await onPhotoUpload(service.id, e.target.files, photoType);
       

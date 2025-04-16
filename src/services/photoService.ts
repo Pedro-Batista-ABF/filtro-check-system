@@ -31,6 +31,24 @@ export const photoService = {
       
       console.log(`Nome de arquivo gerado: ${fileName}`);
       
+      // Tentar criar bucket se não existir
+      try {
+        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('photos');
+        if (bucketError && bucketError.message.includes('not found')) {
+          const { error: createError } = await supabase.storage.createBucket('photos', {
+            public: true,
+            fileSizeLimit: 5242880, // 5MB
+          });
+          if (createError) {
+            console.error("Erro ao criar bucket:", createError);
+          } else {
+            console.log("Bucket 'photos' criado com sucesso");
+          }
+        }
+      } catch (bucketErr) {
+        console.error("Erro ao verificar bucket:", bucketErr);
+      }
+      
       // Fazer upload para o bucket 'photos'
       const { data, error } = await supabase.storage
         .from('photos')
@@ -51,6 +69,10 @@ export const photoService = {
         .from('photos')
         .getPublicUrl(filePath);
         
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error("Não foi possível obter URL pública da imagem");
+      }
+      
       console.log(`URL pública gerada: ${urlData.publicUrl}`);
       
       return urlData.publicUrl;
@@ -72,7 +94,7 @@ export const photoService = {
     try {
       // Obter o usuário atual
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
+      if (!userData?.user) {
         console.error("Usuário não autenticado");
         return false;
       }

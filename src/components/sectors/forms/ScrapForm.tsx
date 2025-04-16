@@ -1,16 +1,16 @@
 
-import React from "react";
+import React, { useRef } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ImageIcon, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { PhotoWithFile } from "@/types";
 
 interface ScrapFormProps {
   tagNumber: string;
@@ -27,6 +27,8 @@ interface ScrapFormProps {
   setScrapDate: (date: Date | undefined) => void;
   scrapInvoice: string;
   setScrapInvoice: (value: string) => void;
+  scrapPhotos: PhotoWithFile[];
+  handleScrapPhotoUpload: (files: FileList) => void;
   formErrors: {
     tagNumber?: boolean;
     tagPhoto?: boolean;
@@ -35,6 +37,7 @@ interface ScrapFormProps {
     scrapObservations?: boolean;
     scrapDate?: boolean;
     scrapInvoice?: boolean;
+    scrapPhotos?: boolean;
   };
   onCameraCapture: (e: React.MouseEvent) => void;
   disabled?: boolean;
@@ -55,10 +58,21 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
   setScrapDate,
   scrapInvoice,
   setScrapInvoice,
+  scrapPhotos,
+  handleScrapPhotoUpload,
   formErrors,
   onCameraCapture,
   disabled = false
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleClick = () => {
+    if (disabled) return;
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -88,6 +102,66 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
               />
               {formErrors.scrapObservations && (
                 <p className="text-xs text-red-500">Motivo do sucateamento é obrigatório</p>
+              )}
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Fotos do Estado de Sucateamento*</h3>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {scrapPhotos.map((photo, index) => (
+                  <div key={photo.id || `temp-${index}`} className="relative">
+                    <img
+                      src={photo.url || (photo.file ? URL.createObjectURL(photo.file) : '')}
+                      alt={`Foto ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-md border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </div>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-24 border-dashed flex flex-col items-center justify-center"
+                  onClick={handleClick}
+                  disabled={disabled}
+                >
+                  <ImageIcon className="h-6 w-6 mb-1" />
+                  <span className="text-xs">Adicionar foto</span>
+                </Button>
+              </div>
+              
+              <div className="flex space-x-2 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCameraCapture}
+                  disabled={disabled}
+                  className="text-xs"
+                >
+                  <Camera className="h-3 w-3 mr-1" />
+                  Usar câmera
+                </Button>
+              </div>
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => e.target.files && handleScrapPhotoUpload(e.target.files)}
+                accept="image/*"
+                className="hidden"
+                multiple
+                disabled={disabled}
+              />
+              
+              {formErrors.scrapPhotos && (
+                <p className="text-xs text-red-500 mt-1">
+                  É necessário adicionar pelo menos uma foto do estado de sucateamento
+                </p>
               )}
             </div>
           </div>
@@ -150,6 +224,6 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
       </Card>
     </div>
   );
-};
+}
 
 export default ScrapForm;

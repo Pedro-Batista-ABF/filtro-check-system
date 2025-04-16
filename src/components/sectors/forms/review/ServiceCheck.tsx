@@ -6,22 +6,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Camera, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 interface ServiceCheckProps {
   service: Service;
   onChange: (service: Service) => void;
   beforePhotos?: Photo[];
   readOnly?: boolean;
+  onPhotoUpload?: (serviceId: string, files: FileList, type: "before" | "after") => void;
 }
 
 export default function ServiceCheck({ 
   service, 
   onChange, 
   beforePhotos = [],
-  readOnly = false 
+  readOnly = false,
+  onPhotoUpload
 }: ServiceCheckProps) {
   const [quantity, setQuantity] = useState(service.quantity || 1);
   const [observations, setObservations] = useState(service.observations || "");
+  const [uploading, setUploading] = useState(false);
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newQuantity = parseInt(e.target.value) || 1;
@@ -34,10 +38,21 @@ export default function ServiceCheck({
     onChange({ ...service, observations: e.target.value });
   };
 
-  // Esta é uma função mock - normalmente a foto seria carregada
-  const handlePhotoUpload = () => {
-    // No componente real, isso seria implementado
-    alert("Funcionalidade de upload não implementada neste componente");
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!onPhotoUpload || !e.target.files || e.target.files.length === 0) {
+      return;
+    }
+    
+    setUploading(true);
+    try {
+      onPhotoUpload(service.id, e.target.files, "before");
+      toast.success("Foto adicionada com sucesso");
+    } catch (error) {
+      console.error("Erro ao fazer upload da foto:", error);
+      toast.error("Erro ao fazer upload da foto");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -97,21 +112,18 @@ export default function ServiceCheck({
               type="button"
               variant="outline"
               size="sm"
-              onClick={handlePhotoUpload}
-              className="flex items-center"
+              component="label"
+              className="flex items-center cursor-pointer"
             >
               <Upload className="h-4 w-4 mr-1" />
               Carregar foto
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handlePhotoUpload}
-              className="flex items-center"
-            >
-              <Camera className="h-4 w-4 mr-1" />
-              Tirar foto
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+                multiple
+              />
             </Button>
           </div>
         )}
