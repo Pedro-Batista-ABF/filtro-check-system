@@ -17,6 +17,7 @@ interface ServicesListProps {
   onServicePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
   disabled?: boolean;
   readOnly?: boolean;
+  onCameraCapture?: (e: React.MouseEvent, serviceId?: string) => void;
 }
 
 const ServicesList: React.FC<ServicesListProps> = ({
@@ -28,11 +29,15 @@ const ServicesList: React.FC<ServicesListProps> = ({
   onObservationChange,
   onServicePhotoUpload,
   disabled = false,
-  readOnly = false
+  readOnly = false,
+  onCameraCapture
 }) => {
   console.log("🔄 ServicesList render", Date.now());
-  console.log("🔄 services:", services.length);
+  console.log("🔄 services:", Array.isArray(services) ? services.length : 'não é array');
   console.log("🔄 error:", error);
+
+  // Verificar se services é um array
+  const safeServices = Array.isArray(services) ? services : [];
 
   return (
     <div className="space-y-4">
@@ -42,13 +47,13 @@ const ServicesList: React.FC<ServicesListProps> = ({
         </div>
       )}
 
-      {services.length === 0 ? (
+      {safeServices.length === 0 ? (
         <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-center">
           Nenhum serviço disponível.
         </div>
       ) : (
         <ul className="space-y-4">
-          {services.map((service) => (
+          {safeServices.map((service) => (
             <li key={service.id} className="border rounded-md p-4">
               <div className="space-y-4">
                 <div className="flex items-start justify-between gap-2">
@@ -87,6 +92,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
                       required={photoRequired}
                       onPhotoUpload={onServicePhotoUpload}
                       disabled={!service.selected || disabled}
+                      onCameraCapture={onCameraCapture ? (e) => onCameraCapture(e, service.id) : undefined}
                     />
                   </>
                 )}

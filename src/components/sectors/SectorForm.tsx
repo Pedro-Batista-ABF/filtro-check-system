@@ -4,7 +4,6 @@ import { useSectorFormState } from '@/hooks/useSectorFormState';
 import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit';
 import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
 import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
-import { useTagPhotoUpload } from '@/hooks/useTagPhotoUpload';
 import { Sector, Service } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -43,17 +42,13 @@ const SectorForm: React.FC<SectorFormProps> = ({
     handleServiceChange, 
     handleQuantityChange, 
     handleObservationChange 
-  } = useSectorServiceHandling(sectorState.services, sectorState.setServices);
+  } = useSectorServiceHandling();
   
   const { 
+    handleTagPhotoUpload,
     handlePhotoUpload,
     handleCameraCapture 
   } = useSectorPhotoHandling(sectorState.services, sectorState.setServices);
-  
-  const { 
-    handleTagPhotoUpload, 
-    isUploading: isTagPhotoUploading 
-  } = useTagPhotoUpload();
   
   // Atualizar o estado inicial quando mudar o setor
   useEffect(() => {
@@ -72,17 +67,6 @@ const SectorForm: React.FC<SectorFormProps> = ({
       sectorState.setScrapInvoice(initialSector.scrapReturnInvoice || '');
     }
   }, [initialSector]);
-  
-  // Função para lidar com upload de foto da TAG
-  const handleTagPhotoUploadLocal = async (files: FileList) => {
-    if (files && files.length > 0) {
-      const file = files[0];
-      const url = await handleTagPhotoUpload(file);
-      if (url) {
-        sectorState.setTagPhotoUrl(url);
-      }
-    }
-  };
   
   // Função para submeter o formulário
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -121,6 +105,30 @@ const SectorForm: React.FC<SectorFormProps> = ({
       await onSubmit(formData);
     } catch (error) {
       console.error("Erro ao submeter formulário:", error);
+    }
+  };
+
+  // Funções para lidar com a mudança de serviços adaptadas para a interface esperada
+  const onServiceChange = (id: string, checked: boolean) => {
+    const updatedServices = handleServiceChange(sectorState.services, id, checked);
+    sectorState.setServices(updatedServices);
+  };
+
+  const onQuantityChange = (id: string, quantity: number) => {
+    const updatedServices = handleQuantityChange(sectorState.services, id, quantity);
+    sectorState.setServices(updatedServices);
+  };
+
+  const onObservationChange = (id: string, observations: string) => {
+    const updatedServices = handleObservationChange(sectorState.services, id, observations);
+    sectorState.setServices(updatedServices);
+  };
+
+  // Função para lidar com upload de foto da TAG
+  const handleTagPhotoUploadLocal = async (files: FileList) => {
+    const url = await handleTagPhotoUpload(files);
+    if (url) {
+      sectorState.setTagPhotoUrl(url);
     }
   };
   
@@ -178,9 +186,9 @@ const SectorForm: React.FC<SectorFormProps> = ({
                 entryObservations={sectorState.entryObservations}
                 setEntryObservations={sectorState.setEntryObservations}
                 services={[]} // Apenas serviços na aba de serviços
-                handleServiceChange={handleServiceChange}
-                handleQuantityChange={handleQuantityChange}
-                handleObservationChange={handleObservationChange}
+                handleServiceChange={onServiceChange}
+                handleQuantityChange={onQuantityChange}
+                handleObservationChange={onObservationChange}
                 handlePhotoUpload={handlePhotoUpload}
                 formErrors={sectorState.formErrors}
                 photoRequired={photoRequired}
@@ -200,9 +208,9 @@ const SectorForm: React.FC<SectorFormProps> = ({
                 entryObservations={sectorState.entryObservations}
                 setEntryObservations={sectorState.setEntryObservations}
                 services={sectorState.services}
-                handleServiceChange={handleServiceChange}
-                handleQuantityChange={handleQuantityChange}
-                handleObservationChange={handleObservationChange}
+                handleServiceChange={onServiceChange}
+                handleQuantityChange={onQuantityChange}
+                handleObservationChange={onObservationChange}
                 handlePhotoUpload={handlePhotoUpload}
                 formErrors={sectorState.formErrors}
                 photoRequired={photoRequired}
@@ -224,9 +232,9 @@ const SectorForm: React.FC<SectorFormProps> = ({
             entryObservations={sectorState.entryObservations}
             setEntryObservations={sectorState.setEntryObservations}
             services={sectorState.services}
-            handleServiceChange={handleServiceChange}
-            handleQuantityChange={handleQuantityChange}
-            handleObservationChange={handleObservationChange}
+            handleServiceChange={onServiceChange}
+            handleQuantityChange={onQuantityChange}
+            handleObservationChange={onObservationChange}
             handlePhotoUpload={handlePhotoUpload}
             formErrors={sectorState.formErrors}
             photoRequired={photoRequired}
@@ -245,7 +253,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
       
       {/* Botões de ação */}
       <FormActions 
-        loading={isLoading || isTagPhotoUploading} 
+        loading={isLoading} 
         mode={mode} 
         isScrap={sectorState.isScrap}
       />

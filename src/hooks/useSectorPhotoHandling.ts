@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import { Service } from "@/types";
 
-export function useSectorPhotoHandling() {
+export function useSectorPhotoHandling(services: Service[], setServices: (services: Service[]) => void) {
   const handleTagPhotoUpload = async (files: FileList) => {
     if (files.length > 0) {
       const tempUrl = URL.createObjectURL(files[0]);
@@ -12,15 +12,10 @@ export function useSectorPhotoHandling() {
     return undefined;
   };
 
-  const handleServicePhotoUpload = (
-    serviceId: string,
-    files: FileList,
-    type: "before" | "after",
-    services: Service[]
-  ): Service[] => {
-    if (files.length === 0) return services;
+  const handlePhotoUpload = (serviceId: string, files: FileList, type: "before" | "after") => {
+    if (!Array.isArray(services) || files.length === 0) return;
 
-    return services.map(service => {
+    const updatedServices = services.map(service => {
       if (service.id === serviceId) {
         const newPhotos = [...(service.photos || [])];
         
@@ -42,10 +37,19 @@ export function useSectorPhotoHandling() {
       }
       return service;
     });
+    
+    setServices(updatedServices);
+  };
+
+  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
+    e.preventDefault();
+    // Camera functionality would go here in a real implementation
+    toast.info("Captura de câmera não implementada nesta versão");
   };
 
   return {
     handleTagPhotoUpload,
-    handleServicePhotoUpload
+    handlePhotoUpload,
+    handleCameraCapture
   };
 }
