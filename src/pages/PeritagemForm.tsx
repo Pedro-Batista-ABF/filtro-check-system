@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import SectorForm from "@/components/sectors/SectorForm";
 import { Card } from "@/components/ui/card";
@@ -11,9 +10,10 @@ import LoadingState from "@/components/peritagem/LoadingState";
 import { useEffect, useState } from "react";
 import { Sector } from "@/types";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw, Bug, Loader2 } from "lucide-react";
+import { AlertCircle, RefreshCw, Bug, Loader2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { checkSupabaseConnection } from "@/utils/serviceUtils";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -41,8 +41,9 @@ export default function PeritagemForm() {
   const [hasTimeout, setHasTimeout] = useState(false);
   const [mountTime] = useState(Date.now());
   const [forceRefreshing, setForceRefreshing] = useState(false);
-  const [authVerified, setAuthVerified] = useState(false);
+  const [authVerified] = useState(false);
   const [maxLoadTime] = useState(12000); // 12 segundos máximo para carregamento
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
   // Verificação extra de autenticação
   useEffect(() => {
@@ -50,7 +51,6 @@ export default function PeritagemForm() {
       try {
         const { data } = await supabase.auth.getSession();
         const isAuth = !!data.session?.user;
-        setAuthVerified(isAuth);
         
         if (!isAuth) {
           console.error("PeritagemForm: Usuário não autenticado na verificação direta");
@@ -60,14 +60,48 @@ export default function PeritagemForm() {
           navigate('/login');
         } else {
           console.log("PeritagemForm: Autenticação verificada diretamente:", data.session.user.id);
+          
+          // Verificar conexão com Supabase
+          const isConnected = await checkSupabaseConnection();
+          setConnectionStatus(isConnected ? 'online' : 'offline');
+          
+          if (!isConnected) {
+            toast.error("Problemas de conexão", {
+              description: "Não foi possível estabelecer uma conexão estável com o servidor"
+            });
+          }
         }
       } catch (error) {
         console.error("PeritagemForm: Erro ao verificar autenticação:", error);
+        setConnectionStatus('offline');
       }
     };
     
     checkAuth();
-  }, []);
+  }, [navigate]);
+
+  // Tentativas de reconexão periódicas se estiver offline
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    
+    if (connectionStatus === 'offline') {
+      interval = setInterval(async () => {
+        console.log("PeritagemForm: Tentando reconectar...");
+        const isConnected = await checkSupabaseConnection();
+        if (isConnected) {
+          setConnectionStatus('online');
+          toast.success("Conexão estabelecida", {
+            description: "A conexão com o servidor foi restaurada"
+          });
+          clearInterval(interval);
+        }
+      }, 10000); // Tentar a cada 10 segundos
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [connectionStatus]);
 
   // Definir timeout máximo absoluto
   useEffect(() => {
@@ -136,7 +170,7 @@ export default function PeritagemForm() {
     }, 15000);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [loading]);
 
   // Log para diagnóstico
   useEffect(() => {
@@ -150,9 +184,10 @@ export default function PeritagemForm() {
       hasValidData,
       tempoDecorrido: `${Date.now() - mountTime}ms`,
       authVerified,
-      temFormSector: !!formSector
+      temFormSector: !!formSector,
+      connectionStatus
     });
-  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime, authVerified, formSector]);
+  }, [loading, errorMessage, services, defaultSector, sector, isEditing, hasValidData, mountTime, authVerified, formSector, connectionStatus]);
 
   // Garantir que temos um setor válido para o formulário
   useEffect(() => {
@@ -176,12 +211,41 @@ export default function PeritagemForm() {
     window.location.reload();
   };
 
+  // Componente para mostrar status de conexão
+  const ConnectionStatus = () => (
+    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+      connectionStatus === 'online' ? 'bg-green-100 text-green-800' : 
+      connectionStatus === 'offline' ? 'bg-red-100 text-red-800' : 
+      'bg-yellow-100 text-yellow-800'
+    }`}>
+      {connectionStatus === 'online' ? (
+        <>
+          <Wifi className="h-3 w-3 mr-1" />
+          Conectado
+        </>
+      ) : connectionStatus === 'offline' ? (
+        <>
+          <WifiOff className="h-3 w-3 mr-1" />
+          Desconectado
+        </>
+      ) : (
+        <>
+          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          Verificando
+        </>
+      )}
+    </div>
+  );
+
   // Se temos os dados necessários, mostrar formulário mesmo com erro
   if (!loading && formSector) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-6">
-          <PeritagemHeader isEditing={isEditing} />
+          <div className="flex justify-between items-center">
+            <PeritagemHeader isEditing={isEditing} />
+            <ConnectionStatus />
+          </div>
           
           {errorMessage && (
             <ErrorMessage message={errorMessage} />
@@ -189,6 +253,22 @@ export default function PeritagemForm() {
           
           {submitError && (
             <ErrorMessage message={submitError} />
+          )}
+          
+          {connectionStatus === 'offline' && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <WifiOff className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    Você está trabalhando no modo offline. Suas alterações serão salvas localmente,
+                    mas não serão sincronizadas com o servidor até que a conexão seja restaurada.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
           
           <Card className="border-none shadow-lg">
@@ -212,11 +292,16 @@ export default function PeritagemForm() {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
-          <PeritagemHeader isEditing={isEditing} />
+          <div className="flex justify-between items-center">
+            <PeritagemHeader isEditing={isEditing} />
+            <ConnectionStatus />
+          </div>
           <LoadingState 
             message="Carregando formulário de peritagem" 
             showTiming={true} 
-            details="Buscando tipos de serviços e preparando formulário..."
+            details={connectionStatus === 'offline' ? 
+              "Tentando reconectar ao servidor..." : 
+              "Buscando tipos de serviços e preparando formulário..."}
           />
         </div>
       </PageLayoutWrapper>
@@ -228,7 +313,10 @@ export default function PeritagemForm() {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
-          <PeritagemHeader isEditing={isEditing} />
+          <div className="flex justify-between items-center">
+            <PeritagemHeader isEditing={isEditing} />
+            <ConnectionStatus />
+          </div>
           <Card className="border-none shadow-lg">
             <div className="p-6">
               <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -258,6 +346,7 @@ export default function PeritagemForm() {
                       <p>Tempo: {Date.now() - mountTime}ms</p>
                       <p>Autenticado: {authVerified ? 'Sim' : 'Não'}</p>
                       <p>Serviços: {services?.length || 0}</p>
+                      <p>Conexão: {connectionStatus}</p>
                       <p>Default Sector: {defaultSector ? 'Sim' : 'Não'}</p>
                       <p>Setor em Edição: {sector ? 'Sim' : 'Não'}</p>
                       <p>Erro: {errorMessage || 'Nenhum'}</p>
@@ -277,7 +366,10 @@ export default function PeritagemForm() {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">
-          <PeritagemHeader isEditing={isEditing} />
+          <div className="flex justify-between items-center">
+            <PeritagemHeader isEditing={isEditing} />
+            <ConnectionStatus />
+          </div>
           <Card className="border-none shadow-lg">
             <div className="p-6">
               <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -304,7 +396,10 @@ export default function PeritagemForm() {
   return (
     <PageLayoutWrapper>
       <div className="space-y-4">
-        <PeritagemHeader isEditing={isEditing} />
+        <div className="flex justify-between items-center">
+          <PeritagemHeader isEditing={isEditing} />
+          <ConnectionStatus />
+        </div>
         <Card className="border-none shadow-lg">
           <div className="p-6">
             <div className="flex flex-col items-center justify-center py-8 text-center">

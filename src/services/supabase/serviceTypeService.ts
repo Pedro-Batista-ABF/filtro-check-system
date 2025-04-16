@@ -2,11 +2,23 @@
 import { Service } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
+// Cache em memória para serviços
+let serviceTypesCache: Service[] | null = null;
+let lastCacheTime: number = 0;
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+
 export const serviceTypeService = {
   getServiceTypes: async (): Promise<Service[]> => {
     console.log("serviceTypeService: Iniciando busca de tipos de serviço");
     
     try {
+      // Verificar se temos um cache válido
+      const now = Date.now();
+      if (serviceTypesCache && lastCacheTime > 0 && (now - lastCacheTime) < CACHE_TTL) {
+        console.log("serviceTypeService: Usando cache de serviços", serviceTypesCache.length);
+        return [...serviceTypesCache]; // Retornar cópia do cache
+      }
+      
       // Verificar autenticação primeiro
       const { data: session } = await supabase.auth.getSession();
       if (!session || !session.session?.user) {
@@ -16,11 +28,12 @@ export const serviceTypeService = {
 
       console.log("serviceTypeService: Buscando tipos de serviço da tabela");
       
-      // Buscar tipos de serviço da tabela service_types
+      // Buscar tipos de serviço da tabela service_types com timeout explícito
       const { data, error } = await supabase
         .from('service_types')
         .select('*')
-        .order('name');
+        .order('name')
+        .timeout(3000);
         
       if (error) {
         console.error("serviceTypeService: Erro ao buscar tipos de serviço:", error);
@@ -55,11 +68,28 @@ export const serviceTypeService = {
         quantity: 1
       }));
       
+      // Atualizar o cache
+      serviceTypesCache = [...services];
+      lastCacheTime = now;
+      
       console.log("serviceTypeService: Serviços mapeados com sucesso:", services);
       return services;
     } catch (error) {
       console.error('serviceTypeService: Erro crítico:', error);
+      
+      // Se temos um cache antigo, usar como fallback em caso de erro
+      if (serviceTypesCache) {
+        console.warn('serviceTypeService: Usando cache expirado como fallback');
+        return [...serviceTypesCache];
+      }
+      
       throw error;
     }
+  },
+  
+  clearCache: () => {
+    serviceTypesCache = null;
+    lastCacheTime = 0;
+    console.log("serviceTypeService: Cache limpo");
   }
 };
