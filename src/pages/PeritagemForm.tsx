@@ -26,7 +26,8 @@ export default function PeritagemForm() {
     errorMessage, 
     isEditing,
     services,
-    hasValidData
+    hasValidData,
+    setLoading: updateLoadingState
   } = usePeritagemData(id);
   
   const { 
