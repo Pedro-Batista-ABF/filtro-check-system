@@ -6,11 +6,11 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import AuthProvider from "@/contexts/AuthContext";
-import ApiContextProvider from "@/contexts/ApiContextExtended";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ApiContextExtendedProvider } from "@/contexts/ApiContextExtended";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { createConsole, ConsoleProvider } from "@/contexts/ConsoleProvider";
 
 // Pages
@@ -36,6 +36,12 @@ import ReportPreview from "@/pages/ReportPreview";
 import "./index.css";
 
 // Permitir que o console seja acessado pela janela
+declare global {
+  interface Window {
+    createConsole: typeof createConsole;
+  }
+}
+
 window.createConsole = createConsole;
 
 // Inicializar console do sistema
@@ -52,7 +58,7 @@ export default function App() {
       <TooltipProvider>
         <Router>
           <AuthProvider setStatus={setStatus}>
-            <ApiContextProvider>
+            <ApiContextExtendedProvider>
               <Toaster position="top-right" />
               <Routes>
                 <Route path="/" element={<LandingPage />} />
@@ -192,7 +198,7 @@ export default function App() {
                   element={<NotFound />}
                 />
               </Routes>
-            </ApiContextProvider>
+            </ApiContextExtendedProvider>
           </AuthProvider>
         </Router>
       </TooltipProvider>

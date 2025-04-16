@@ -25,8 +25,10 @@ const SectorFormWrapper: React.FC<SectorFormWrapperProps> = ({
     <SectorForm
       initialSector={initialSector}
       onSubmit={onSubmit}
-      mode={mode as "peritagem" | "sucateamento" | "scrap" | "quality"}
+      mode={mode}
       isLoading={isLoading}
+      photoRequired={photoRequired}
+      disableEntryFields={disableEntryFields}
     />
   );
 };

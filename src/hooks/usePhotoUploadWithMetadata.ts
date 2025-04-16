@@ -23,7 +23,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as unknown as string)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();

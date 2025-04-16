@@ -11,8 +11,8 @@ export function usePhotosManagement() {
       const { data, error } = await supabase
         .from('photos')
         .select('*')
-        .eq('cycle_id', cycleId as unknown as string)
-        .eq('type', type as unknown as string);
+        .eq('cycle_id', cycleId)
+        .eq('type', type);
         
       if (error) {
         throw error;
@@ -53,7 +53,7 @@ export function usePhotosManagement() {
         cycle_id: cycleId,
         service_id: serviceId,
         url: url,
-        type: type as unknown as string,
+        type: type,
         metadata: metadata,
         created_by: userData.user.id
       };

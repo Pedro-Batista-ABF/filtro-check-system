@@ -103,6 +103,6 @@ const ServicesList: React.FC<ServicesListProps> = ({
       )}
     </div>
   );
-};
+}
 
 export default ServicesList;
