@@ -29,12 +29,8 @@ export function TagPhotoField({
     
     setUploading(true);
     try {
-      const result = await onPhotoUpload(e.target.files);
-      if (result) {
-        setPreviewError(false);
-      } else {
-        setPreviewError(true);
-      }
+      await onPhotoUpload(e.target.files);
+      setPreviewError(false);
     } catch (error) {
       console.error('Erro ao fazer upload da foto da TAG:', error);
       toast.error("Erro ao fazer upload da foto da TAG");

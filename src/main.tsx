@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
+import { ApiProvider } from './contexts/ApiContext';
+import { ApiContextExtendedProvider } from './contexts/ApiContextExtended';
+import { Toaster } from 'sonner';
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -154,9 +158,23 @@ if (import.meta.env.DEV) {
   window.addEventListener('DOMContentLoaded', createDebugButton);
 }
 
-// Render the app with BrowserRouter
 root.render(
   <BrowserRouter>
-    <App />
+    <AuthProvider>
+      <ApiProvider>
+        <ApiContextExtendedProvider>
+          <App />
+          <Toaster 
+            position="top-right"
+            richColors 
+            closeButton
+            expand={false}
+            toastOptions={{
+              duration: 5000,
+            }}
+          />
+        </ApiContextExtendedProvider>
+      </ApiProvider>
+    </AuthProvider>
   </BrowserRouter>
 );

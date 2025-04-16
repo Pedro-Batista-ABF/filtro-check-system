@@ -31,32 +31,22 @@ export const photoService = {
       
       console.log(`Nome de arquivo gerado: ${fileName}`);
       
-      // Verificar se o bucket existe ou criar
+      // Tentar criar bucket se não existir
       try {
-        const { data: buckets } = await supabase.storage.listBuckets();
-        
-        // Verificar se o bucket 'photos' existe
-        const bucketExists = buckets && buckets.some(b => b.name === 'photos');
-        
-        if (!bucketExists) {
-          console.log("Bucket 'photos' não encontrado, tentando criar...");
-          const { data, error } = await supabase.storage.createBucket('photos', {
+        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('photos');
+        if (bucketError && bucketError.message.includes('not found')) {
+          const { error: createError } = await supabase.storage.createBucket('photos', {
             public: true,
             fileSizeLimit: 5242880, // 5MB
           });
-          
-          if (error) {
-            console.error("Erro ao criar bucket:", error);
-            // Continuar mesmo com erro, tentando usar o upload
+          if (createError) {
+            console.error("Erro ao criar bucket:", createError);
           } else {
             console.log("Bucket 'photos' criado com sucesso");
           }
-        } else {
-          console.log("Bucket 'photos' já existe");
         }
       } catch (bucketErr) {
         console.error("Erro ao verificar bucket:", bucketErr);
-        // Continuar mesmo com erro
       }
       
       // Fazer upload para o bucket 'photos'
@@ -69,21 +59,7 @@ export const photoService = {
         
       if (error) {
         console.error("Erro no upload para o Supabase:", error);
-        
-        // Método alternativo - usar um URL de dados temporário
-        const reader = new FileReader();
-        return new Promise((resolve, reject) => {
-          reader.onload = (e) => {
-            if (e.target && e.target.result) {
-              console.log("Usando URL de dados temporário como fallback");
-              resolve(e.target.result as string);
-            } else {
-              reject(new Error("Falha ao gerar URL de dados para a imagem"));
-            }
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        throw error;
       }
       
       console.log("Upload para Supabase concluído com sucesso");
@@ -102,24 +78,6 @@ export const photoService = {
       return urlData.publicUrl;
     } catch (error) {
       console.error("Erro no upload da foto:", error);
-      
-      // Método alternativo - usar um URL de dados temporário
-      if (file) {
-        const reader = new FileReader();
-        return new Promise((resolve, reject) => {
-          reader.onload = (e) => {
-            if (e.target && e.target.result) {
-              console.log("Usando URL de dados temporário como fallback após erro");
-              resolve(e.target.result as string);
-            } else {
-              reject(new Error("Falha ao gerar URL de dados para a imagem após erro"));
-            }
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
-      
       throw error;
     }
   },
@@ -148,31 +106,29 @@ export const photoService = {
         .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .single();
         
-      if (cycleError || !cycleData) {
+      if (cycleError) {
         console.error("Erro ao encontrar ciclo para foto:", cycleError);
         return false;
       }
       
       // Inserir a foto com associação ao serviço e ID do usuário
-      const photoData = {
-        cycle_id: cycleData.id,
-        service_id: serviceId,
-        url: photoUrl,
-        type,
-        created_by: userData.user.id,
-        metadata: {
-          sector_id: sectorId,
-          service_id: serviceId,
-          stage: type === 'before' ? 'peritagem' : 'checagem',
-          type
-        }
-      };
-      
       const { error: photoError } = await supabase
         .from('photos')
-        .insert(photoData);
+        .insert({
+          cycle_id: cycleData.id,
+          service_id: serviceId,
+          url: photoUrl,
+          type,
+          created_by: userData.user.id,
+          metadata: {
+            sector_id: sectorId,
+            service_id: serviceId,
+            stage: type === 'before' ? 'peritagem' : 'checagem',
+            type
+          }
+        });
         
       if (photoError) {
         console.error("Erro ao inserir foto do serviço:", photoError);
@@ -198,9 +154,9 @@ export const photoService = {
         .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .single();
         
-      if (cycleError || !cycleData) {
+      if (cycleError) {
         console.error("Erro ao encontrar ciclo para fotos:", cycleError);
         return [];
       }

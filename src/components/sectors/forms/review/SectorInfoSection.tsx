@@ -4,11 +4,12 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Camera } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TagPhotoField } from "../../form-fields/TagPhotoField";
 
 interface SectorInfoSectionProps {
   tagNumber: string;
@@ -44,11 +45,6 @@ export default function SectorInfoSection({
   onCameraCapture,
   formErrors
 }: SectorInfoSectionProps) {
-  const wrappedPhotoUpload = async (files: FileList) => {
-    handleTagPhotoUpload(files);
-    return files.length > 0 ? URL.createObjectURL(files[0]) : undefined;
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -136,45 +132,13 @@ export default function SectorInfoSection({
           </div>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="tagPhoto" className={formErrors.tagPhoto ? "text-red-500" : ""}>
-            Foto da TAG*
-          </Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="tagPhoto"
-              type="file"
-              accept="image/*"
-              onChange={(e) => e.target.files && handleTagPhotoUpload(e.target.files)}
-              className={formErrors.tagPhoto ? "border-red-500" : ""}
-            />
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onCameraCapture}
-            >
-              Câmera
-            </Button>
-          </div>
-          
-          {tagPhotoUrl && (
-            <div className="mt-2">
-              <img 
-                src={tagPhotoUrl} 
-                alt="TAG do Setor" 
-                className="w-32 h-32 object-cover rounded-md border"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholder.svg';
-                }}
-              />
-            </div>
-          )}
-          
-          {formErrors.tagPhoto && (
-            <p className="text-xs text-red-500">Foto da TAG é obrigatória</p>
-          )}
-        </div>
+        <TagPhotoField
+          tagPhotoUrl={tagPhotoUrl}
+          onPhotoUpload={handleTagPhotoUpload}
+          onCameraCapture={onCameraCapture}
+          error={formErrors.tagPhoto}
+          required={true}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="entryObservations">

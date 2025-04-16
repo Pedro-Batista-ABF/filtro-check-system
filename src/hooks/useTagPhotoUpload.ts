@@ -4,41 +4,35 @@ import { SectorStatus } from "@/types";
 
 export function useTagPhotoUpload() {
   const handleTagPhoto = async (tagPhotoUrl: string, cycleId: string, sectorId: string, userId: string) => {
-    try {
-      // Verificar se a foto já existe para evitar duplicação
-      const { data: existingTagPhoto, error: checkError } = await supabase
-        .from('photos')
-        .select('id')
-        .eq('url', tagPhotoUrl)
-        .eq('type', 'tag')
-        .maybeSingle();
-        
-      if (checkError) {
-        console.error("Erro ao verificar foto existente:", checkError);
-      }
-        
-      if (existingTagPhoto) {
-        console.log("Foto da TAG já existe, ignorando:", tagPhotoUrl);
-        return;
-      }
-
-      // Inserir a foto da TAG no banco de dados
-      const photoData = {
-        cycle_id: cycleId,
-        service_id: null,
-        url: tagPhotoUrl,
-        type: 'tag',
-        created_by: userId,
-        metadata: {
-          sector_id: sectorId,
-          stage: 'peritagem',
-          type: 'tag'
-        }
-      };
+    // Verificar se a foto já existe para evitar duplicação
+    const { data: existingTagPhoto } = await supabase
+      .from('photos')
+      .select('id')
+      .eq('url', tagPhotoUrl)
+      .eq('type', 'tag' as any)
+      .maybeSingle();
       
+    if (existingTagPhoto) {
+      console.log("Foto da TAG já existe, ignorando:", tagPhotoUrl);
+      return;
+    }
+
+    try {
+      // Inserir a foto da TAG no banco de dados
       const { error: tagPhotoError } = await supabase
         .from('photos')
-        .insert(photoData);
+        .insert({
+          cycle_id: cycleId,
+          service_id: null,
+          url: tagPhotoUrl,
+          type: 'tag',
+          created_by: userId,
+          metadata: {
+            sector_id: sectorId,
+            stage: 'peritagem',
+            type: 'tag'
+          }
+        });
         
       if (tagPhotoError) {
         console.error('Erro ao inserir foto da TAG:', tagPhotoError);

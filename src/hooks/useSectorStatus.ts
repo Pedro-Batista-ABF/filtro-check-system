@@ -13,17 +13,14 @@ export function useSectorStatus() {
         throw new Error("ID do setor inválido");
       }
 
-      // Criar um objeto com tipos específicos para o update
-      const updateData = {
-        current_status: status as unknown as string,
-        current_outcome: (data.outcome || 'EmAndamento') as unknown as string,
-        updated_at: new Date().toISOString()
-      };
-
       const { error } = await supabase
         .from('sectors')
-        .update(updateData)
-        .eq('id', sectorId as unknown as string);
+        .update({
+          current_status: status,
+          current_outcome: data.outcome || 'EmAndamento',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sectorId);
         
       if (error) {
         console.error(`Erro ao atualizar tabela sectors para o setor ${sectorId}:`, error);
@@ -34,7 +31,7 @@ export function useSectorStatus() {
       const { data: cycleData, error: cycleQueryError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as unknown as string)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -48,24 +45,18 @@ export function useSectorStatus() {
         throw new Error("Ciclo não encontrado");
       }
       
-      const cycleId = cycleData[0]?.id;
-      if (!cycleId) {
-        throw new Error("ID do ciclo não encontrado");
-      }
+      const cycleId = cycleData[0].id;
       
-      // Necessário usar casting para resolver problemas de tipos
-      const cycleUpdateData = {
-        status: status as unknown as string,
-        outcome: (data.outcome || 'EmAndamento') as unknown as string,
-        updated_at: new Date().toISOString(),
-        entry_invoice: data.entryInvoice || '',
-        tag_number: data.tagNumber || '',
-        peritagem_date: data.peritagemDate || ''
-      };
-
       const { error: cycleError } = await supabase
         .from('cycles')
-        .update(cycleUpdateData)
+        .update({
+          status: status,
+          outcome: data.outcome || 'EmAndamento',
+          updated_at: new Date().toISOString(),
+          entry_invoice: data.entryInvoice,
+          tag_number: data.tagNumber,
+          peritagem_date: data.peritagemDate
+        })
         .eq('id', cycleId);
         
       if (cycleError) {
@@ -90,7 +81,7 @@ export function useSectorStatus() {
       const { data: checkData, error: checkError } = await supabase
         .from('sectors')
         .select('current_status')
-        .eq('id', sectorId as unknown as string)
+        .eq('id', sectorId)
         .single();
         
       if (checkError) {
@@ -105,16 +96,13 @@ export function useSectorStatus() {
       }
 
       if (checkData.current_status !== 'sucateadoPendente') {
-        // Cast necessário para resolver problemas de tipo
-        const forceUpdateData = {
-          current_status: 'sucateadoPendente' as unknown as string,
-          updated_at: new Date().toISOString()
-        };
-
         const { error: forceError } = await supabase
           .from('sectors')
-          .update(forceUpdateData)
-          .eq('id', sectorId as unknown as string);
+          .update({
+            current_status: 'sucateadoPendente',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sectorId);
           
         if (forceError) {
           console.error("Erro ao forçar status:", forceError);

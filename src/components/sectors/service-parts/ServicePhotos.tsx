@@ -1,69 +1,97 @@
 
-import React, { useRef } from 'react';
-import { Service } from '@/types';
+import React, { useRef, useState } from 'react';
+import { Camera, Trash2, Image, Loader2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Camera, Plus } from 'lucide-react';
+import { Service, Photo } from '@/types';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface ServicePhotosProps {
   service: Service;
-  photoType: 'before' | 'after';
-  required?: boolean;
-  onPhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
+  photoType: "before" | "after";
+  required: boolean;
+  onPhotoUpload: (serviceId: string, files: FileList, type: "before" | "after") => void;
   disabled?: boolean;
-  onCameraCapture?: (e: React.MouseEvent) => void;
+  onCameraCapture?: (e: React.MouseEvent, serviceId: string) => void;
 }
 
-export default function ServicePhotos({
+const ServicePhotos: React.FC<ServicePhotosProps> = ({
   service,
-  photoType = 'before',
-  required = false,
+  photoType,
+  required,
   onPhotoUpload,
   disabled = false,
   onCameraCapture
-}: ServicePhotosProps) {
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleUploadClick = () => {
+  const [uploading, setUploading] = useState(false);
+  
+  // Garantir que photos é um array
+  const photos = Array.isArray(service.photos) ? service.photos : [];
+  // Filtrar fotos pelo tipo correto
+  const typePhotos = photos.filter(photo => photo.type === photoType);
+  
+  const handleClick = () => {
+    if (disabled) return;
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    onPhotoUpload(service.id, e.target.files, photoType);
-  };
-
-  const handleCameraClick = (e: React.MouseEvent) => {
-    if (onCameraCapture) {
-      onCameraCapture(e);
+  
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled || !e.target.files || e.target.files.length === 0) return;
+    
+    setUploading(true);
+    try {
+      console.log(`Iniciando upload de ${e.target.files.length} fotos para o serviço ${service.id}`);
+      // Processar as imagens
+      await onPhotoUpload(service.id, e.target.files, photoType);
+      
+      // Limpar o input para permitir selecionar o mesmo arquivo novamente
+      if (e.target.value) {
+        e.target.value = '';
+      }
+    } catch (error) {
+      console.error('Erro ao fazer upload da foto:', error);
+      toast.error("Falha ao enviar foto. Tente novamente.");
+    } finally {
+      setUploading(false);
     }
   };
 
-  // Filtrar fotos pelo tipo (antes/depois)
-  const photos = service.photos?.filter(photo => photo.type === photoType) || [];
-  const hasPhotos = photos.length > 0;
-
+  const handleCameraCaptureClick = (e: React.MouseEvent) => {
+    if (disabled || !onCameraCapture) return;
+    onCameraCapture(e, service.id);
+  };
+  
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center">
-        <Label className="text-sm">
-          Fotos do {photoType === 'before' ? 'defeito' : 'serviço executado'}
+    <div className="mt-2">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm font-medium">
+          Fotos {photoType === 'before' ? 'antes' : 'depois'}
           {required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
+        </span>
         
         <div className="flex space-x-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={handleUploadClick}
-            disabled={disabled}
+            onClick={handleClick}
+            disabled={disabled || uploading}
             className="text-xs"
           >
-            <Plus className="h-3 w-3 mr-1" />
-            Adicionar foto
+            {uploading ? (
+              <span className="flex items-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </span>
+            ) : (
+              <>
+                <Image className="h-3 w-3 mr-1" />
+                Adicionar foto
+              </>
+            )}
           </Button>
           
           {onCameraCapture && (
@@ -71,8 +99,8 @@ export default function ServicePhotos({
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleCameraClick}
-              disabled={disabled}
+              onClick={handleCameraCaptureClick}
+              disabled={disabled || uploading}
               className="text-xs"
             >
               <Camera className="h-3 w-3 mr-1" />
@@ -80,42 +108,62 @@ export default function ServicePhotos({
             </Button>
           )}
         </div>
+        
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          className="hidden"
+          multiple
+          disabled={disabled || uploading}
+        />
       </div>
       
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFileChange}
-        className="hidden"
-      />
-      
-      {hasPhotos ? (
-        <div className="grid grid-cols-4 gap-2">
-          {photos.map((photo, index) => (
-            <div key={photo.id || `temp-${index}`} className="relative">
-              <img
-                src={photo.url}
-                alt={`Foto ${index + 1}`}
-                className="w-full h-20 object-cover rounded-md border"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholder.svg';
-                }}
-              />
-            </div>
+      {typePhotos.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {typePhotos.map((photo, index) => (
+            <Dialog key={photo.id || `photo-${index}`}>
+              <DialogTrigger asChild>
+                <div className="relative border rounded-md overflow-hidden h-24 cursor-pointer">
+                  <img
+                    src={photo.url}
+                    alt={`Foto ${index + 1} do serviço ${service.name}`}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      // Fallback para imagem quebrada
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                      target.classList.add('bg-gray-100');
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 flex items-center justify-center transition-all">
+                    <Eye className="h-5 w-5 text-white opacity-0 hover:opacity-100" />
+                  </div>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl p-0">
+                <img
+                  src={photo.url}
+                  alt={`Foto ${index + 1} do serviço ${service.name}`}
+                  className="w-full h-auto max-h-[80vh] object-contain"
+                />
+              </DialogContent>
+            </Dialog>
           ))}
         </div>
       ) : (
-        <div className="bg-gray-50 border border-dashed rounded-md p-4 text-center">
-          <p className="text-sm text-gray-500">
-            {required
-              ? 'É necessário adicionar pelo menos uma foto'
-              : 'Nenhuma foto adicionada'}
+        <div className="bg-gray-50 rounded-md p-4 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-300">
+          <Image className="h-8 w-8 mb-2" />
+          <p className="text-xs text-center">
+            {disabled
+              ? "Não há fotos disponíveis"
+              : "Clique no botão acima para adicionar fotos"}
           </p>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default ServicePhotos;

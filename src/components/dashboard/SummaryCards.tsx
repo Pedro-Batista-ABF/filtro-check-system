@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import FeatureCard from './FeatureCard';
 import { ClipboardList, AlertTriangle, CheckCircle, Wrench, InfinityIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { SectorStatus } from '@/types';
 
 export function SummaryCards() {
   const [counts, setCounts] = useState({
@@ -23,48 +24,35 @@ export function SummaryCards() {
         setLoading(true);
         setError(null);
 
-        // Usando estrutura de tipo explícita para evitar erros de tipo
-        type StatusTypes = 'peritagemPendente' | 'emExecucao' | 'execucaoConcluida' | 'emChecagem' | 'concluido';
-        type CountsResult = Record<StatusTypes | 'total', number>;
-        
-        const result: CountsResult = {
-          peritagemPendente: 0,
-          emExecucao: 0,
-          execucaoConcluida: 0,
-          emChecagem: 0,
-          concluido: 0,
-          total: 0
-        };
-
         // Buscar contagem de setores com status "peritagemPendente"
         const { count: peritagemCount, error: peritagemError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'peritagemPendente');
+          .eq('current_status', 'peritagemPendente' as SectorStatus);
 
         // Buscar contagem de setores com status "emExecucao"
         const { count: execucaoCount, error: execucaoError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'emExecucao');
+          .eq('current_status', 'emExecucao' as SectorStatus);
 
         // Buscar contagem de setores com status "execucaoConcluida"
         const { count: concluidaCount, error: concluidaError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'execucaoConcluida');
+          .eq('current_status', 'execucaoConcluida' as SectorStatus);
 
         // Buscar contagem de setores com status "emChecagem"
         const { count: checagemCount, error: checagemError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'emChecagem');
+          .eq('current_status', 'emChecagem' as SectorStatus);
 
         // Buscar contagem de setores com status "concluido"
         const { count: concluidoCount, error: concluidoError } = await supabase
           .from('sectors')
           .select('id', { count: 'exact', head: true })
-          .eq('current_status', 'concluido');
+          .eq('current_status', 'concluido' as SectorStatus);
 
         // Buscar contagem total de setores
         const { count: totalCount, error: totalError } = await supabase
@@ -75,14 +63,14 @@ export function SummaryCards() {
           throw new Error("Erro ao buscar contagens");
         }
 
-        result.peritagemPendente = peritagemCount || 0;
-        result.emExecucao = execucaoCount || 0;
-        result.execucaoConcluida = concluidaCount || 0;
-        result.emChecagem = checagemCount || 0;
-        result.concluido = concluidoCount || 0;
-        result.total = totalCount || 0;
-
-        setCounts(result);
+        setCounts({
+          peritagemPendente: peritagemCount || 0,
+          emExecucao: execucaoCount || 0,
+          execucaoConcluida: concluidaCount || 0,
+          emChecagem: checagemCount || 0,
+          concluido: concluidoCount || 0,
+          total: totalCount || 0
+        });
       } catch (err) {
         console.error("Erro ao buscar contagens:", err);
         setError("Falha ao carregar dados do dashboard");

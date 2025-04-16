@@ -1,82 +1,38 @@
 
+import { Photo, PhotoWithFile } from "@/types";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { supabase } from "@/integrations/supabase/client";
-import { Photo } from "@/types";
 
-export function usePhotosManagement() {
-  /**
-   * Função para buscar todas as fotos de um ciclo por tipo
-   */
-  const getPhotosByCycleAndType = async (cycleId: string, type: string): Promise<Photo[]> => {
+export function usePhotosManagement(cycleId?: string) {
+  const [photos, setPhotos] = useState<PhotoWithFile[]>([]);
+  const { refreshData } = useApi();
+
+  const handlePhotosUpdate = async (photos: Photo[], type: 'before' | 'after' | 'scrap') => {
+    if (!cycleId) return [];
+    
     try {
-      const { data, error } = await supabase
+      const { data: existingPhotos } = await supabase
         .from('photos')
-        .select('*')
+        .select('url')
         .eq('cycle_id', cycleId)
         .eq('type', type);
         
-      if (error) {
-        throw error;
-      }
+      const existingUrls = (existingPhotos || []).map(p => p.url);
+      const newPhotos = photos.filter(photo => !existingUrls.includes(photo.url));
       
-      return data?.map(photo => ({
-        id: photo.id,
-        url: photo.url,
-        type: photo.type,
-        serviceId: photo.service_id || undefined,
-        metadata: photo.metadata || {}
-      })) || [];
+      return newPhotos;
     } catch (error) {
-      console.error('Erro ao buscar fotos:', error);
+      console.error(`Error updating ${type} photos:`, error);
+      toast.error(`Error updating ${type} photos`);
       return [];
     }
   };
-  
-  /**
-   * Função para adicionar foto ao banco de dados
-   */
-  const addPhotoToDB = async (
-    cycleId: string, 
-    serviceId: string | null, 
-    url: string, 
-    type: string,
-    metadata: any = {}
-  ): Promise<string | null> => {
-    try {
-      // Obter o ID do usuário
-      const { data: userData } = await supabase.auth.getUser();
-      
-      if (!userData.user) {
-        throw new Error('Usuário não autenticado');
-      }
-      
-      const photoData = {
-        cycle_id: cycleId,
-        service_id: serviceId,
-        url: url,
-        type: type,
-        metadata: metadata,
-        created_by: userData.user.id
-      };
-      
-      const { data, error } = await supabase
-        .from('photos')
-        .insert(photoData)
-        .select('id')
-        .single();
-        
-      if (error) {
-        throw error;
-      }
-      
-      return data?.id || null;
-    } catch (error) {
-      console.error('Erro ao adicionar foto ao banco de dados:', error);
-      return null;
-    }
-  };
-  
+
   return {
-    getPhotosByCycleAndType,
-    addPhotoToDB
+    photos,
+    setPhotos,
+    handlePhotosUpdate
   };
 }
