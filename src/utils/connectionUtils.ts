@@ -293,7 +293,7 @@ export const ensureValidAuthentication = async (): Promise<boolean> => {
     // Verificar se o token é válido com uma requisição
     try {
       const { error } = await supabase.from('profiles').select('id').limit(1);
-      if (error && (error.code === 'PGRST301' || error.status === 401)) {
+      if (error && (error.code === 'PGRST301' || error.code === '401')) {
         // Token inválido, tentar renovar
         console.log("Token inválido, tentando renovar...");
         return await refreshAuthSession();
