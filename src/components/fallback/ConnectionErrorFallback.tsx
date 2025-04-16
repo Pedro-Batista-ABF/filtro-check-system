@@ -2,8 +2,9 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { WifiOff, RefreshCw, Home, ArrowLeft } from "lucide-react";
+import { WifiOff, RefreshCw, Home, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface ConnectionErrorFallbackProps {
   onRetry?: () => void;
@@ -21,6 +22,7 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
   children
 }) => {
   const navigate = useNavigate();
+  const [showTechnicalInfo, setShowTechnicalInfo] = useState(false);
   
   return (
     <div className="flex items-center justify-center min-h-[70vh]">
@@ -50,6 +52,33 @@ const ConnectionErrorFallback: React.FC<ConnectionErrorFallbackProps> = ({
           
           {children}
           
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowTechnicalInfo(!showTechnicalInfo)} 
+            className="flex items-center mt-4 mx-auto text-xs"
+          >
+            {showTechnicalInfo ? (
+              <>
+                <ChevronUp className="h-3 w-3 mr-1" />
+                Ocultar informações técnicas
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3 mr-1" />
+                Mostrar informações técnicas
+              </>
+            )}
+          </Button>
+          
+          {showTechnicalInfo && (
+            <div className="mt-3 p-3 bg-gray-50 rounded border border-gray-200 text-xs text-left font-mono">
+              <p>URL: {window.location.href}</p>
+              <p>Navegador: {navigator.userAgent}</p>
+              <p>Conectado à internet: {navigator.onLine ? 'Sim' : 'Não'}</p>
+              <p>Timestamp: {new Date().toISOString()}</p>
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between pt-2">
           <div className="flex gap-2">

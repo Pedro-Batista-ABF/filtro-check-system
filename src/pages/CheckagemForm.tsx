@@ -10,6 +10,7 @@ import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
 import { useApi } from "@/contexts/ApiContextExtended";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
+import { checkSupabaseConnection } from "@/utils/connectionUtils";
 
 export default function CheckagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -25,11 +26,8 @@ export default function CheckagemForm() {
     const checkConnection = async () => {
       try {
         setConnectionStatus('checking');
-        const response = await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
-          method: 'HEAD',
-          cache: 'no-cache',
-        });
-        setConnectionStatus(response.ok ? 'online' : 'offline');
+        const isConnected = await checkSupabaseConnection();
+        setConnectionStatus(isConnected ? 'online' : 'offline');
       } catch (error) {
         console.error("Erro ao verificar conexão:", error);
         setConnectionStatus('offline');

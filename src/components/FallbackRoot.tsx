@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import ConnectionErrorFallback from './fallback/ConnectionErrorFallback';
 import { useConnectionAuth } from '@/hooks/useConnectionAuth';
 import { Button } from './ui/button';
-import { RefreshCw, Home, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Home, AlertTriangle, Database, Wifi } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { checkSupabaseConnection, checkInternetConnection } from '@/utils/connectionUtils';
 
 interface FallbackRootProps {
   children: React.ReactNode;
@@ -16,6 +17,11 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
   const navigate = useNavigate();
   const [retryCount, setRetryCount] = useState(0);
   const [showingManualFallback, setShowingManualFallback] = useState(false);
+  const [diagnosisCompleted, setDiagnosisCompleted] = useState(false);
+  const [diagnosisResults, setDiagnosisResults] = useState({
+    internet: false,
+    supabase: false
+  });
   
   // Monitor para detectar se a aplicação está funcionando corretamente
   useEffect(() => {
@@ -71,6 +77,38 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
       toast.error("Erro ao limpar cache");
     }
   };
+
+  const handleRunDiagnosis = async () => {
+    toast.info("Executando diagnóstico de conexão...");
+    
+    // Verificar conexão de internet
+    const hasInternet = await checkInternetConnection();
+    
+    // Verificar conexão com Supabase
+    const hasSupabase = await checkSupabaseConnection();
+    
+    setDiagnosisResults({
+      internet: hasInternet,
+      supabase: hasSupabase
+    });
+    
+    setDiagnosisCompleted(true);
+    
+    if (hasInternet && !hasSupabase) {
+      toast.warning("Problema detectado", {
+        description: "Você tem conexão com a internet, mas o servidor Supabase parece estar indisponível."
+      });
+    } else if (!hasInternet) {
+      toast.error("Problema de conexão", {
+        description: "Não foi detectada conexão com a internet. Verifique sua rede."
+      });
+    } else if (hasInternet && hasSupabase) {
+      toast.success("Diagnóstico concluído", {
+        description: "Todas as conexões estão funcionando. Tentando reconectar..."
+      });
+      handleRetryConnection();
+    }
+  };
   
   if (connectionStatus === 'offline') {
     return (
@@ -89,6 +127,34 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
             <p className="text-sm text-amber-700 mb-3">
               Caso os problemas de conexão persistam, você pode tentar as seguintes opções:
             </p>
+            
+            {!diagnosisCompleted ? (
+              <Button 
+                variant="secondary" 
+                onClick={handleRunDiagnosis} 
+                className="w-full mb-2"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Executar diagnóstico
+              </Button>
+            ) : (
+              <div className="mb-3 p-3 bg-white rounded border border-gray-200">
+                <h4 className="text-sm font-medium mb-2">Resultado do diagnóstico:</h4>
+                <ul className="space-y-1 text-sm">
+                  <li className="flex items-center">
+                    <span className={`w-4 h-4 rounded-full mr-2 ${diagnosisResults.internet ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <Wifi className="h-4 w-4 mr-1" />
+                    Conexão com Internet: {diagnosisResults.internet ? 'OK' : 'Falhou'}
+                  </li>
+                  <li className="flex items-center">
+                    <span className={`w-4 h-4 rounded-full mr-2 ${diagnosisResults.supabase ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <Database className="h-4 w-4 mr-1" />
+                    Conexão com Servidor: {diagnosisResults.supabase ? 'OK' : 'Falhou'}
+                  </li>
+                </ul>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Button 
                 variant="outline" 

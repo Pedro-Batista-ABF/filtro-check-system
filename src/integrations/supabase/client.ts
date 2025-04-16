@@ -12,12 +12,12 @@ const options = {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    storageKey: 'supabase.auth.token',
   },
   global: {
-    // Tempo limite específico do cliente
-    fetch: (...args: any[]) => {
-      // @ts-ignore
-      return fetch(...args);
+    headers: {
+      'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
     },
   },
   realtime: {
@@ -39,18 +39,23 @@ export const checkSupabaseStatus = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
     
-    // Tenta uma query simples para testar a conexão
-    const { data, error } = await supabase
-      .from('service_types')
-      .select('count(*)', { count: 'exact', head: true })
-      .abortSignal(controller.signal);
+    // Tentativa de conexão simplificada
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      method: 'HEAD',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
     
     clearTimeout(timeoutId);
     
     const elapsedTime = Date.now() - startTime;
-    console.log(`Verificação de status do Supabase completada em ${elapsedTime}ms`);
+    console.log(`Verificação de status do Supabase completada em ${elapsedTime}ms (Status: ${response.status})`);
     
-    return !error;
+    return response.ok;
   } catch (error) {
     console.error("Erro ao verificar status do Supabase:", error);
     return false;

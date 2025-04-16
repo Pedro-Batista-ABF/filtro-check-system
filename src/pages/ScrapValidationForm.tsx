@@ -11,6 +11,7 @@ import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
+import { checkSupabaseConnection } from "@/utils/connectionUtils";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -26,11 +27,8 @@ export default function ScrapValidationForm() {
     const checkConnection = async () => {
       try {
         setConnectionStatus('checking');
-        const response = await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
-          method: 'HEAD',
-          cache: 'no-cache',
-        });
-        setConnectionStatus(response.ok ? 'online' : 'offline');
+        const isConnected = await checkSupabaseConnection();
+        setConnectionStatus(isConnected ? 'online' : 'offline');
       } catch (error) {
         console.error("Erro ao verificar conexão:", error);
         setConnectionStatus('offline');

@@ -17,6 +17,8 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
           method: 'HEAD',
           headers: {
             'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4'
           },
           signal: AbortSignal.timeout(timeoutMs),
         }
@@ -35,22 +37,33 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     
     // Se a verificação HTTP passou, tentar uma query real
     try {
-      const { error, count } = await supabase
-        .from('service_types')
-        .select('count(*)', { count: 'exact', head: true })
-        .abortSignal(AbortSignal.timeout(timeoutMs));
+      // Tentamos apenas uma query HEAD para checar permissão de acesso
+      // Sem precisar de uma sessão autenticada
+      const response = await fetch(
+        `https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/service_types?select=count`,
+        {
+          method: 'HEAD',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqY3llYmlhaG53ZndyY2dxbGNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0OTg0MzUsImV4cCI6MjA2MDA3NDQzNX0.MsHyZ9F4nVv0v9q8D7iQK4qgVmxUMdCAxKQun3GuSG4',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          signal: AbortSignal.timeout(timeoutMs),
+        }
+      );
       
       const elapsedTime = Date.now() - startTime;
       
-      if (error) {
-        console.error(`ConnectionUtils: Erro de conexão com Supabase após ${elapsedTime}ms:`, error);
+      if (!response.ok) {
+        console.error(`ConnectionUtils: Erro de conexão com Supabase após ${elapsedTime}ms:`, response.status);
         toast.error("Erro de conexão", {
-          description: `Não foi possível conectar ao banco de dados: ${error.message || "Erro desconhecido"}`
+          description: `Não foi possível conectar ao banco de dados. Status: ${response.status}`
         });
         return false;
       }
       
-      console.log(`ConnectionUtils: Conexão com Supabase OK em ${elapsedTime}ms - ${count || 0} tipos de serviço encontrados`);
+      console.log(`ConnectionUtils: Conexão com Supabase OK em ${elapsedTime}ms`);
       return true;
     } catch (error) {
       const elapsedTime = Date.now() - startTime;
