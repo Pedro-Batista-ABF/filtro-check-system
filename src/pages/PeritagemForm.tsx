@@ -1,5 +1,5 @@
 
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import SectorForm from "@/components/sectors/SectorForm";
 import { Card } from "@/components/ui/card";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
@@ -12,8 +12,7 @@ import { useEffect, useState } from "react";
 import { Sector } from "@/types";
 import { FormValidationAlert } from "@/components/sectors/form-parts/FormValidationAlert";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 export default function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +36,20 @@ export default function PeritagemForm() {
 
   const [formSector, setFormSector] = useState<Sector | null>(null);
   const [dataReady, setDataReady] = useState(false);
+  const [hasTimeout, setHasTimeout] = useState(false);
+
+  // Definir timeout de segurança para evitar loading infinito
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Se ainda estiver carregando após 20 segundos, mostrar opção de recarregar
+      if (loading) {
+        console.warn("Timeout de carregamento de página atingido");
+        setHasTimeout(true);
+      }
+    }, 20000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Log para diagnóstico
   useEffect(() => {
@@ -71,7 +84,39 @@ export default function PeritagemForm() {
 
   // Componente de carregamento
   if (loading) {
-    return <LoadingState />;
+    return (
+      <LoadingState />
+    );
+  }
+
+  // Caso o carregamento esteja demorando muito
+  if (hasTimeout && loading) {
+    return (
+      <PageLayoutWrapper>
+        <div className="space-y-4">
+          <PeritagemHeader isEditing={isEditing} />
+          <Card className="border-none shadow-lg">
+            <div className="p-6">
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <RefreshCw className="h-10 w-10 text-amber-500 mb-4 animate-spin" />
+                <h2 className="text-xl font-bold mb-2">Carregamento prolongado</h2>
+                <p className="text-gray-600 mb-4">
+                  O carregamento está demorando mais do que o esperado. Você pode aguardar mais um pouco ou tentar novamente.
+                </p>
+                <div className="flex gap-4 mt-2">
+                  <Button onClick={() => window.location.reload()} variant="default">
+                    Tentar novamente
+                  </Button>
+                  <Button onClick={() => navigate('/peritagem')} variant="outline">
+                    Voltar para Peritagem
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </PageLayoutWrapper>
+    );
   }
 
   // Componente de erro
@@ -92,7 +137,7 @@ export default function PeritagemForm() {
   }
 
   // Verificação adicional para garantir que temos dados válidos
-  if (!formSector) {
+  if (!formSector || (formSector.services && formSector.services.length === 0)) {
     return (
       <PageLayoutWrapper>
         <div className="space-y-4">

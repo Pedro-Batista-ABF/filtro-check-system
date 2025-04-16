@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { handleDatabaseError } from "@/utils/errorHandlers";
+import { serviceTypeService } from "@/services/supabase/serviceTypeService";
 
 export function useServicesManagement() {
   const [services, setServices] = useState<Service[]>([]);
@@ -13,37 +14,48 @@ export function useServicesManagement() {
   const fetchDefaultServices = async () => {
     try {
       console.log("Iniciando busca de serviços padrão");
+      setLoading(true);
       
-      const { data: serviceTypes, error } = await supabase
-        .from('service_types')
-        .select('*');
-
-      if (error) {
-        throw handleDatabaseError(error, "Erro ao carregar tipos de serviço");
-      }
-
-      if (!serviceTypes || serviceTypes.length === 0) {
-        console.warn("Nenhum tipo de serviço encontrado");
-        setError("Não foram encontrados serviços disponíveis");
+      // Verifica autenticação explicitamente
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        console.error("Usuário não autenticado ao buscar serviços");
+        setError("Você precisa estar logado para acessar esta página");
         setServices([]);
         setLoading(false);
         return [];
       }
-
-      console.log(`${serviceTypes.length} tipos de serviço encontrados`);
       
-      // Process services with proper type casting
-      const processedServices = serviceTypes.map(service => ({
-        id: service.id,
-        name: service.name,
-        selected: false,
-        type: service.id as unknown as ServiceType, // Usando unknown como intermediário para evitar o erro TS2352
-        photos: []
-      }));
-      
-      setServices(processedServices);
-      setLoading(false);
-      return processedServices;
+      // Usar o serviço específico para buscar tipos de serviço com tratamento de erro melhorado
+      try {
+        const serviceTypes = await serviceTypeService.getServiceTypes();
+        console.log(`${serviceTypes.length} tipos de serviço encontrados:`, serviceTypes);
+        
+        if (!serviceTypes || serviceTypes.length === 0) {
+          console.warn("Nenhum tipo de serviço encontrado");
+          setError("Não foram encontrados serviços disponíveis");
+          setServices([]);
+          setLoading(false);
+          return [];
+        }
+        
+        // Process services with proper type casting and create photo arrays
+        const processedServices = serviceTypes.map(service => ({
+          id: service.id,
+          name: service.name,
+          selected: false,
+          type: service.id as unknown as ServiceType,
+          photos: [],
+          quantity: 1  // Adicionar quantidade padrão para evitar erros
+        }));
+        
+        setServices(processedServices);
+        setLoading(false);
+        return processedServices;
+      } catch (serviceError) {
+        console.error("Erro específico ao buscar serviços:", serviceError);
+        throw serviceError; // Repassar para tratamento no bloco catch externo
+      }
     } catch (error) {
       console.error("Error fetching default services:", error);
       setError("Erro ao carregar serviços");
