@@ -1,74 +1,54 @@
 
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
-export interface FormValidationAlertProps {
+interface FormValidationAlertProps {
   tagNumber?: boolean;
   tagPhoto?: boolean;
   entryInvoice?: boolean;
   entryDate?: boolean;
   services?: boolean;
   photos?: boolean;
-  [key: string]: boolean | undefined;
+  exitDate?: boolean;
+  exitInvoice?: boolean;
 }
 
-export const FormValidationAlert: React.FC<FormValidationAlertProps> = ({
-  tagNumber,
-  tagPhoto,
-  entryInvoice,
-  entryDate,
-  services,
-  photos,
-  ...otherErrors
-}) => {
-  console.log("🔄 FormValidationAlert render", Date.now());
-  console.log("🔄 Erros recebidos:", { tagNumber, tagPhoto, entryInvoice, entryDate, services, photos, ...otherErrors });
+export function FormValidationAlert({
+  tagNumber = false,
+  tagPhoto = false,
+  entryInvoice = false,
+  entryDate = false,
+  services = false,
+  photos = false,
+  exitDate = false,
+  exitInvoice = false
+}: FormValidationAlertProps) {
+  const hasEntryErrors = tagNumber || tagPhoto || entryInvoice || entryDate;
+  const hasServiceErrors = services || photos;
+  const hasExitErrors = exitDate || exitInvoice;
   
-  const errors = {
-    tagNumber: tagNumber || false,
-    tagPhoto: tagPhoto || false,
-    entryInvoice: entryInvoice || false,
-    entryDate: entryDate || false,
-    services: services || false,
-    photos: photos || false,
-    ...otherErrors
-  };
-
-  const hasErrors = Object.values(errors).some(error => error === true);
-
-  if (!hasErrors) {
-    console.log("🔄 FormValidationAlert - Sem erros, não renderizando", Date.now());
+  if (!hasEntryErrors && !hasServiceErrors && !hasExitErrors) {
     return null;
   }
 
-  const errorMessages: Record<string, string> = {
-    tagNumber: 'O número da TAG é obrigatório',
-    tagPhoto: 'Uma foto da TAG é obrigatória',
-    entryInvoice: 'O número da nota fiscal de entrada é obrigatório',
-    entryDate: 'A data de entrada é obrigatória',
-    services: 'Pelo menos um serviço deve ser selecionado',
-    photos: 'Cada serviço selecionado deve ter pelo menos uma foto'
-  };
-
-  // Generate error messages for any errors flagged as true
-  const activeErrorMessages = Object.entries(errors)
-    .filter(([key, value]) => value === true)
-    .map(([key]) => errorMessages[key] || `Erro no campo ${key}`);
-
-  console.log("🔄 FormValidationAlert - Erros ativos:", activeErrorMessages);
-  
   return (
-    <Alert variant="destructive" className="mb-6">
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>Erro ao salvar formulário</AlertTitle>
+    <Alert variant="destructive">
+      <AlertTriangle className="h-4 w-4" />
+      <AlertTitle>Atenção</AlertTitle>
       <AlertDescription>
-        <ul className="list-disc pl-5 mt-2 space-y-1">
-          {activeErrorMessages.map((message, index) => (
-            <li key={index}>{message}</li>
-          ))}
+        <p>Por favor, corrija os seguintes erros:</p>
+        <ul className="list-disc ml-5 mt-2">
+          {tagNumber && <li>Número de TAG é obrigatório</li>}
+          {tagPhoto && <li>Foto da TAG é obrigatória</li>}
+          {entryInvoice && <li>Nota fiscal de entrada é obrigatória</li>}
+          {entryDate && <li>Data de entrada é obrigatória</li>}
+          {services && <li>Selecione pelo menos um serviço</li>}
+          {photos && <li>Adicione pelo menos uma foto para cada serviço selecionado</li>}
+          {exitDate && <li>Data de saída é obrigatória</li>}
+          {exitInvoice && <li>Nota fiscal de saída é obrigatória</li>}
         </ul>
       </AlertDescription>
     </Alert>
   );
-};
+}

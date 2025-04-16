@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Service } from "@/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Input } from "@/components/ui/input"; // Added missing import
+import { Input } from "@/components/ui/input";
 
 interface ServicesTabContentProps {
   services: Service[];
@@ -28,7 +28,7 @@ export default function ServicesTabContent({
       <CardHeader>
         <CardTitle>Verificação dos Serviços</CardTitle>
         {formErrors.photos && (
-          <p className="text-sm text-red-500">É necessário adicionar pelo menos uma foto para cada serviço</p>
+          <p className="text-sm text-red-500">É necessário adicionar pelo menos uma foto "DEPOIS" para cada serviço</p>
         )}
       </CardHeader>
       <CardContent className="space-y-6">
@@ -51,7 +51,13 @@ export default function ServicesTabContent({
                 <AccordionContent className="px-3 pt-3 pb-1">
                   <div className="space-y-4">
                     <div>
-                      <Label>Fotos do Serviço Executado</Label>
+                      <Label className="flex items-center">
+                        <span className="font-medium">Fotos do Serviço Executado ("DEPOIS")</span>
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Adicione fotos do serviço após a execução para comparação com as fotos da peritagem
+                      </p>
                       <div className="mt-2">
                         <Input
                           type="file"
@@ -75,7 +81,7 @@ export default function ServicesTabContent({
                     )}
                     
                     <div className="mb-2">
-                      <Label className="mb-2 block">Fotos da Peritagem</Label>
+                      <Label className="mb-2 block">Fotos da Peritagem ("ANTES")</Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                         {service.photos?.filter(p => p.type === "before").map((photo) => (
                           <div key={photo.id} className="relative aspect-square rounded-md overflow-hidden">
@@ -86,7 +92,7 @@ export default function ServicesTabContent({
                             />
                           </div>
                         ))}
-                        {service.photos?.filter(p => p.type === "before").length === 0 && (
+                        {!service.photos?.filter(p => p.type === "before").length && (
                           <p className="text-sm text-gray-500 col-span-full">Nenhuma foto registrada na peritagem</p>
                         )}
                       </div>

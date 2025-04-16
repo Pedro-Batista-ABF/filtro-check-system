@@ -16,6 +16,7 @@ interface ServicePhotosProps {
   required: boolean;
   onPhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
   onCameraCapture?: (e: React.MouseEvent) => void;
+  disabled?: boolean;
 }
 
 export default function ServicePhotos({
@@ -23,7 +24,8 @@ export default function ServicePhotos({
   photoType,
   required,
   onPhotoUpload,
-  onCameraCapture
+  onCameraCapture,
+  disabled = false
 }: ServicePhotosProps) {
   const handlePhotoUpload = (files: FileList) => {
     onPhotoUpload(service.id, files, photoType);
@@ -40,15 +42,22 @@ export default function ServicePhotos({
       })
     : [];
 
+  // Filtrar fotos apenas do tipo correspondente
+  const filteredPhotos = photoWithFiles.filter(photo => photo.type === photoType);
+
+  // Label text based on photoType
+  const labelText = photoType === "before" ? "Fotos do Defeito" : "Fotos da Execução";
+  const buttonText = `Adicionar fotos ${photoType === "before" ? "do defeito" : "da execução"}`;
+
   return (
     <div className="space-y-1">
       <Label className="text-sm flex items-center justify-between">
         <span>
-          Fotos {photoType === "before" ? "do Defeito" : "da Execução"}
+          {labelText}
           {required && <span className="text-red-500 ml-1">*</span>}
         </span>
         
-        {onCameraCapture && (
+        {onCameraCapture && !disabled && (
           <Button
             type="button"
             variant="outline"
@@ -63,10 +72,10 @@ export default function ServicePhotos({
       </Label>
       
       <PhotoUpload
-        photos={photoWithFiles}
+        photos={filteredPhotos}
         onChange={handlePhotoUpload}
-        disabled={!service.selected}
-        title={`Adicionar fotos ${photoType === "before" ? "do defeito" : "da execução"}`}
+        disabled={!service.selected || disabled}
+        title={buttonText}
         required={required}
         onCameraCapture={onCameraCapture}
       />

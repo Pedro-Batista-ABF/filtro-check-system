@@ -55,6 +55,7 @@ export default function ExitTabContent({
             onChange={(e) => setExitInvoice(e.target.value)}
             placeholder="Ex: NF-54321"
             className={formErrors.exitInvoice ? "border-red-500" : ""}
+            required
           />
           {formErrors.exitInvoice && (
             <p className="text-xs text-red-500">Nota fiscal de saída é obrigatória</p>
@@ -112,7 +113,17 @@ export default function ExitTabContent({
             checked={qualityCompleted} 
             onCheckedChange={setQualityCompleted} 
           />
-          <Label htmlFor="qualityCompleted">Marcar checagem como concluída</Label>
+          <Label htmlFor="qualityCompleted" className="font-medium">Marcar checagem como concluída</Label>
+        </div>
+        
+        <div className="rounded-md bg-yellow-50 p-4 mt-4">
+          <div className="flex">
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Marcar como concluído enviará o setor para o status "CONCLUÍDO". Esta ação não pode ser desfeita.
+              </p>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -20,12 +20,27 @@ export function useSectorFormState(sector: Sector) {
     entryInvoice: false,
     entryDate: false,
     services: false,
-    photos: false
+    photos: false,
+    exitDate: false,
+    exitInvoice: false
   });
+  
+  // Estados para sucateamento
   const [isScrap, setIsScrap] = useState(false);
   const [scrapObservations, setScrapObservations] = useState('');
   const [scrapDate, setScrapDate] = useState<Date | undefined>();
   const [scrapInvoice, setScrapInvoice] = useState('');
+  
+  // Estados para checagem final
+  const [exitInvoice, setExitInvoice] = useState(sector.exitInvoice || '');
+  const [exitDate, setExitDate] = useState<Date | undefined>(
+    sector.exitDate ? new Date(sector.exitDate) : undefined
+  );
+  const [exitObservations, setExitObservations] = useState(sector.exitObservations || '');
+  const [qualityCompleted, setQualityCompleted] = useState(
+    sector.status === 'concluido' || false
+  );
+  const [selectedTab, setSelectedTab] = useState('services');
 
   return {
     tagNumber,
@@ -49,6 +64,16 @@ export function useSectorFormState(sector: Sector) {
     scrapDate,
     setScrapDate,
     scrapInvoice,
-    setScrapInvoice
+    setScrapInvoice,
+    exitInvoice,
+    setExitInvoice,
+    exitDate,
+    setExitDate,
+    exitObservations,
+    setExitObservations,
+    qualityCompleted,
+    setQualityCompleted,
+    selectedTab,
+    setSelectedTab
   };
 }
