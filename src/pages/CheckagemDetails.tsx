@@ -9,7 +9,6 @@ import CheckagemFormContent from '@/components/checagem/CheckagemFormContent';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ExitTabContent from '@/components/sectors/forms/quality/ExitTabContent';
 import ServicesTabContent from '@/components/sectors/forms/quality/ServicesTabContent';
-import ConnectionErrorFallback from '@/components/fallback/ConnectionErrorFallback';
 import { Sector } from '@/types';
 import { useApi } from '@/contexts/ApiContextExtended';
 import { toast } from 'sonner';
@@ -18,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function CheckagemDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { sector, fetchSector } = useSectorFetch(id);
+  const { sector, fetchSector, error, loading } = useSectorFetch(id);
   const api = useApi();
   
   const handleSaveQualityCheck = async (updatedSector: Partial<Sector>) => {
@@ -44,11 +43,31 @@ export default function CheckagemDetails() {
     }
   };
   
-  if (sector === null) {
-    return <ConnectionErrorFallback 
-      message="Erro ao carregar dados do setor"
-      onRetry={() => fetchSector()}
-    />;
+  if (loading) {
+    return (
+      <PageLayoutWrapper>
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </PageLayoutWrapper>
+    );
+  }
+  
+  if (error || !sector) {
+    return (
+      <PageLayoutWrapper>
+        <div className="text-center py-8">
+          <p className="text-gray-500">Erro ao carregar setor ou setor não encontrado</p>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/checagem')}
+            className="mt-4"
+          >
+            Voltar para Checagem
+          </Button>
+        </div>
+      </PageLayoutWrapper>
+    );
   }
   
   return (
@@ -70,33 +89,25 @@ export default function CheckagemDetails() {
           </div>
         </div>
         
-        {!sector ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        ) : sector ? (
-          <Tabs defaultValue="services">
-            <TabsList>
-              <TabsTrigger value="services">Serviços</TabsTrigger>
-              <TabsTrigger value="exit">Saída</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="services">
-              <ServicesTabContent sector={sector} />
-            </TabsContent>
-            
-            <TabsContent value="exit">
+        <Tabs defaultValue="services">
+          <TabsList>
+            <TabsTrigger value="services">Serviços</TabsTrigger>
+            <TabsTrigger value="exit">Saída</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="services">
+            {sector && <ServicesTabContent sector={sector} />}
+          </TabsContent>
+          
+          <TabsContent value="exit">
+            {sector && (
               <ExitTabContent 
                 sector={sector}
                 onSave={handleSaveQualityCheck}
               />
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Setor não encontrado</p>
-          </div>
-        )}
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </PageLayoutWrapper>
   );

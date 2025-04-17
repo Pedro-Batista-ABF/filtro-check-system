@@ -96,7 +96,6 @@ export default function ServicesList({
                 onPhotoUpload={(file, photoType) => handleFileListUpload(service.id, file, photoType)}
                 photoType="before"
                 disabled={readOnly}
-                stage={stage}
               />
               
               {stage === 'checagem' && (
@@ -105,7 +104,6 @@ export default function ServicesList({
                   onPhotoUpload={(file, photoType) => handleFileListUpload(service.id, file, photoType)}
                   photoType="after"
                   disabled={readOnly}
-                  stage={stage}
                 />
               )}
             </div>

@@ -24,7 +24,7 @@ export default function Relatorios() {
 
   // Filter sectors based on status and search term
   const completedSectors = sectors.filter(sector => 
-    sector.status === 'checado' && 
+    sector.status === 'concluido' && 
     (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
