@@ -45,7 +45,7 @@ export function usePeritagemData(id?: string) {
     loadServices,
     servicesFetched,
     verifyConnection,
-    services: availableServices
+    availableServices
   } = useServiceDataFetching();
 
   // Improved effect to ensure synchronization between defaultSector and validDefaultSector
@@ -139,7 +139,7 @@ export function usePeritagemData(id?: string) {
       }
       console.log("❌ Erro no loadData", Date.now());
     }
-  }, [isAuthenticated, authLoading, id, isEditing, loadingTimeout, retryCount]);
+  }, [isAuthenticated, authLoading, id, isEditing, loadingTimeout, retryCount, verifyConnection, loadServices, createDefaultSector, setDefaultSector, fetchSector, setErrorMessage]);
 
   useEffect(() => {
     console.log("🚀 useEffect para disparar loadData", Date.now(), {

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Service } from '@/types';
 import ServiceCheckbox from './ServiceCheckbox';
 import ServiceQuantity from './service-parts/ServiceQuantity';
@@ -20,7 +20,7 @@ interface ServicesListProps {
   onCameraCapture?: (e: React.MouseEvent, serviceId?: string) => void;
 }
 
-const ServicesList: React.FC<ServicesListProps> = ({
+const ServicesList: React.FC<ServicesListProps> = memo(({
   services,
   error,
   photoRequired,
@@ -36,7 +36,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
   console.log("🔄 services:", Array.isArray(services) ? services.length : 'não é array');
   console.log("🔄 error:", error);
 
-  // Verificar se services é um array
+  // Garantir que services é um array
   const safeServices = Array.isArray(services) ? services : [];
 
   return (
@@ -90,7 +90,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
                       service={service}
                       photoType={readOnly ? "after" : "before"}
                       required={photoRequired}
-                      onPhotoUpload={onServicePhotoUpload}
+                      onFileInputChange={(files) => onServicePhotoUpload(service.id, files, readOnly ? "after" : "before")}
                       disabled={!service.selected || disabled}
                       onCameraCapture={onCameraCapture ? (e) => onCameraCapture(e, service.id) : undefined}
                     />
@@ -103,6 +103,8 @@ const ServicesList: React.FC<ServicesListProps> = ({
       )}
     </div>
   );
-};
+});
 
-export default ServicesList;
+ServicesList.displayName = 'ServicesList';
+
+export default memo(ServicesList);

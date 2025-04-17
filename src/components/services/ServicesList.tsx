@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Service } from '@/types';
 
 interface ServicesListProps {
@@ -7,7 +7,9 @@ interface ServicesListProps {
   onServiceSelect?: (service: Service) => void;
 }
 
-export const ServicesList: React.FC<ServicesListProps> = ({ services, onServiceSelect }) => {
+const ServicesList: React.FC<ServicesListProps> = memo(({ services, onServiceSelect }) => {
+  console.log("ServicesList rendering");
+  
   if (!services || services.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500">
@@ -32,4 +34,8 @@ export const ServicesList: React.FC<ServicesListProps> = ({ services, onServiceS
       ))}
     </div>
   );
-};
+});
+
+ServicesList.displayName = 'ServicesList';
+
+export { ServicesList };

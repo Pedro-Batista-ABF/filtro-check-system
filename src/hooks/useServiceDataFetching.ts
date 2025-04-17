@@ -1,50 +1,76 @@
 
-import { useState, useCallback } from 'react';
-import { Service } from '@/types';
-import { useServicesManagement } from './useServicesManagement';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback } from "react";
+import { Service } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function useServiceDataFetching() {
   const [servicesFetched, setServicesFetched] = useState(false);
-  const { services, fetchDefaultServices } = useServicesManagement();
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
 
-  const loadServices = useCallback(async () => {
-    if (servicesFetched) return services;
-
+  // Verificar conexão com o Supabase
+  const verifyConnection = useCallback(async (): Promise<boolean> => {
     try {
-      console.log("useServiceDataFetching: Buscando serviços");
-      const loadedServices = await fetchDefaultServices();
-      setServicesFetched(true);
-      return loadedServices;
+      const startTime = Date.now();
+      
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('count')
+        .limit(1)
+        .single();
+        
+      const responseTime = Date.now() - startTime;
+      console.log(`Tempo de resposta do Supabase: ${responseTime}ms`);
+      
+      if (error) {
+        console.error("Erro ao verificar conexão:", error);
+        throw error;
+      }
+      
+      console.log("🟢 Conexão restabelecida");
+      return true;
     } catch (error) {
-      console.error("useServiceDataFetching: Erro ao carregar serviços:", error);
-      return getEmergencyServices();
-    }
-  }, [servicesFetched, services, fetchDefaultServices]);
-
-  const getEmergencyServices = (): Service[] => [{
-    id: "servico_emergencia_load",
-    name: "Serviço de Emergência",
-    selected: false,
-    type: "servico_emergencia_load" as any,
-    photos: [],
-    quantity: 1
-  }];
-
-  const verifyConnection = async () => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      return !!sessionData?.session?.user?.id;
-    } catch (error) {
-      console.error("useServiceDataFetching: Erro ao verificar sessão:", error);
+      console.error("🔴 Erro na verificação de conexão:", error);
       return false;
     }
-  };
+  }, []);
+
+  // Carregar tipos de serviços
+  const loadServices = useCallback(async (): Promise<Service[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        throw error;
+      }
+      
+      const services: Service[] = (data || []).map(service => ({
+        id: service.id,
+        name: service.name,
+        description: service.description || '',
+        selected: false,
+        photos: []
+      }));
+      
+      console.log(`Carregados ${services.length} tipos de serviços`);
+      setServicesFetched(true);
+      setAvailableServices(services);
+      return services;
+    } catch (error) {
+      console.error("Erro ao carregar serviços:", error);
+      toast.error("Erro ao carregar lista de serviços");
+      return [];
+    }
+  }, []);
 
   return {
     loadServices,
     servicesFetched,
     setServicesFetched,
-    verifyConnection
+    verifyConnection,
+    availableServices
   };
 }

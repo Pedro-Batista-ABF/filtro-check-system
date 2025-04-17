@@ -1,16 +1,16 @@
 
-import React, { useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import React from 'react';
 import { Service } from '@/types';
-import { Camera, Image, Plus } from 'lucide-react';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Camera, Trash2, Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ServicePhotosProps {
   service: Service;
-  photoType: 'before' | 'after';
+  photoType: "before" | "after";
   required: boolean;
-  onPhotoUpload: (serviceId: string, files: FileList, type: 'before' | 'after') => void;
+  onFileInputChange: (files: FileList) => void;
   disabled?: boolean;
   onCameraCapture?: (e: React.MouseEvent) => void;
 }
@@ -19,121 +19,109 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   service,
   photoType,
   required,
-  onPhotoUpload,
+  onFileInputChange,
   disabled = false,
   onCameraCapture
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
+  const photoTypeLabel = photoType === "before" ? "Antes" : "Depois";
+  const photos = service.photos || [];
+  const visiblePhotos = photos.filter(p => p.type === photoType);
+  const hasPhotos = visiblePhotos.length > 0;
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onPhotoUpload(service.id, e.target.files, photoType);
-      // Clear the input to allow selecting the same file again
-      e.target.value = '';
+      onFileInputChange(e.target.files);
     }
   };
 
-  // Filter photos by type
-  const photos = (service.photos || []).filter(photo => photo.type === photoType);
-  
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = '/placeholder.svg';
-    target.classList.add('border-red-200');
-    target.classList.add('bg-red-50');
+  const handleDeletePhoto = (photoUrl: string) => {
+    console.log(`Pedido para excluir foto: ${photoUrl}`);
+    // A implementação da exclusão de fotos seria feita em outro componente
   };
 
   return (
-    <div className="space-y-2">
-      <Label className="text-sm flex items-center">
-        Fotos {photoType === 'before' ? 'do defeito' : 'da execução'}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </Label>
-
-      <div className="grid grid-cols-4 gap-2">
-        {photos.map((photo, index) => (
-          <div key={photo.id || `photo-${index}`} className="relative group">
-            <Dialog>
-              <DialogTrigger asChild>
-                <div className="cursor-pointer">
-                  <img
-                    src={photo.url}
-                    alt={`Foto ${index + 1}`}
-                    className="aspect-square w-full object-cover rounded-md border"
-                    onError={handleImageError}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-md">
-                    <Plus className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl p-0 overflow-hidden">
-                <img
-                  src={photo.url}
-                  alt={`Visualização da foto ${index + 1}`}
-                  className="w-full h-auto max-h-[80vh] object-contain"
-                  onError={handleImageError}
-                />
-              </DialogContent>
-            </Dialog>
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <Label className="text-sm font-medium">
+          Fotos {photoTypeLabel}
+          {required && !hasPhotos && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+        
+        <div className="flex space-x-2">
+          {onCameraCapture && (
+            <Button 
+              type="button" 
+              size="sm" 
+              variant="outline"
+              onClick={onCameraCapture}
+              disabled={disabled}
+            >
+              <Camera className="h-4 w-4 mr-1" />
+              Câmera
+            </Button>
+          )}
+          
+          <div className="relative">
+            <Button 
+              type="button" 
+              size="sm" 
+              variant="outline"
+              disabled={disabled}
+              className="relative"
+              asChild
+            >
+              <label htmlFor={`photo-upload-${service.id}-${photoType}`} className="cursor-pointer flex items-center">
+                <Upload className="h-4 w-4 mr-1" />
+                Upload
+              </label>
+            </Button>
+            <input
+              id={`photo-upload-${service.id}-${photoType}`}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={disabled}
+            />
           </div>
-        ))}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="aspect-square flex items-center justify-center border-dashed"
-          onClick={handleClick}
-          disabled={disabled}
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
+        </div>
       </div>
 
-      <div className="flex space-x-2">
-        {onCameraCapture && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onCameraCapture}
-            disabled={disabled}
-            className="text-xs"
-          >
-            <Camera className="h-3 w-3 mr-1" />
-            Usar câmera
-          </Button>
-        )}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleClick}
-          disabled={disabled}
-          className="text-xs"
-        >
-          <Image className="h-3 w-3 mr-1" />
-          Carregar foto
-        </Button>
-      </div>
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        className="hidden"
-        multiple
-        disabled={disabled}
-      />
+      {!hasPhotos ? (
+        <div className={cn(
+          "border-2 border-dashed rounded-md p-4 text-center",
+          required && !hasPhotos ? "border-red-300" : "border-gray-200",
+          "bg-gray-50"
+        )}>
+          <p className="text-sm text-gray-500">
+            {disabled 
+              ? "Upload desativado" 
+              : `Adicione fotos ${photoTypeLabel.toLowerCase()} do serviço`}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {visiblePhotos.map((photo, index) => (
+            <div key={photo.id || index} className="relative group">
+              <img
+                src={photo.url}
+                alt={`Foto ${photoTypeLabel} ${index + 1}`}
+                className="h-24 w-full object-cover rounded-md"
+              />
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => handleDeletePhoto(photo.url)}
+                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
