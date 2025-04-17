@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { SectorStatus, Sector } from "@/types";
 import { useNavigate } from "react-router-dom";
 import SectorStatusCard from "@/components/sectors/SectorStatusCard";

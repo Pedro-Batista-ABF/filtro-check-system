@@ -1,10 +1,11 @@
 
+import React, { useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SectorGrid from "@/components/sectors/SectorGrid";
-import { useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
 
 export default function Concluidos() {
   const { sectors, loading } = useApi();
@@ -21,8 +22,12 @@ export default function Concluidos() {
     <PageLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="page-title">Setores Concluídos</h1>
-          <Button variant="outline" onClick={() => navigate('/checagem')}>
+          <h1 className="text-2xl font-bold">Setores Concluídos</h1>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/checagem')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
         </div>

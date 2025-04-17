@@ -1,9 +1,10 @@
+
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
 import { Sector } from "@/types";
 import { useApiOriginal, ApiContextType } from "./ApiContext";
 import { supabaseService } from "@/services/supabase";
 import { useSectorService } from "@/services/sectorService";
-import { photoService } from "@/services/photoService"; // Changed from usePhotoService to photoService
+import { photoService } from "@/services/photoService";
 import { toast } from "sonner";
 
 /**
@@ -224,4 +225,5 @@ export function useApi() {
   return useContext(ApiContextExtended);
 }
 
+// Export the context
 export { ApiContextExtended };

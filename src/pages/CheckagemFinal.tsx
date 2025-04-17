@@ -5,7 +5,7 @@ import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
-import { useApi } from "@/contexts/ApiContext";
+import { useApi } from "@/contexts/ApiContextExtended";
 import SectorGrid from "@/components/sectors/SectorGrid";
 
 export default function CheckagemFinal() {

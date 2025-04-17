@@ -5,7 +5,7 @@ import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { ApiProvider } from './contexts/ApiContext';
-import { ApiProvider as ApiContextExtendedProvider } from './contexts/ApiContextExtended';
+import { ApiContextExtendedProvider } from './contexts/ApiContextExtended';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
