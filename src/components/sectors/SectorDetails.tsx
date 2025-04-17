@@ -12,7 +12,7 @@ export async function getCycleServices(cycleId: string) {
     const { data } = await supabase
       .from('cycle_services')
       .select('*')
-      .eq('cycle_id', cycleId as any);
+      .eq('cycle_id', cycleId);
       
     return data || [];
   } catch (error) {

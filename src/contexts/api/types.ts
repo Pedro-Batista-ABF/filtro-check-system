@@ -15,8 +15,7 @@ export interface ApiContextType {
   deleteSector: (id: string) => Promise<void>;
   getDefaultServices: () => Promise<Service[]>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
-  refreshData?: () => Promise<void>; // Adicionando como opcional para compatibilidade
-  // Adicionando campos que eram originalmente apenas na interface extendida
+  refreshData?: () => Promise<void>; 
   addSector?: (sectorData: Omit<Sector, 'id'>) => Promise<string>;
   updateServicePhotos?: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
 }

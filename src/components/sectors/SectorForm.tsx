@@ -44,7 +44,7 @@ function SectorForm({
     setEntryObservations,
     services,
     setServices,
-    formErrors: stateFormErrors,
+    formErrors: formValidationErrors,
     setFormErrors,
     isScrap,
     setIsScrap,
@@ -67,7 +67,7 @@ function SectorForm({
   } = useSectorFormState(initialSector);
 
   const { validateForm, prepareFormData } = useSectorFormSubmit();
-  const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling();
+  const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling(services, setServices);
   const { handleTagPhotoUpload, handlePhotoUpload, handleCameraCapture } = useSectorPhotoHandling(services, setServices);
 
   const handleSubmit = async () => {
@@ -76,7 +76,6 @@ function SectorForm({
       tagPhotoUrl,
       entryInvoice,
       entryDate,
-      entryObservations,
       services,
       isScrap,
       scrapObservations,
@@ -111,31 +110,11 @@ function SectorForm({
     setSelectedTab(value);
   };
 
-  // Manipuladores para os serviços
-  const onServiceChange = (id: string, checked: boolean) => {
-    setServices(handleServiceChange(services, id, checked));
-  };
-
-  const onQuantityChange = (id: string, quantity: number) => {
-    setServices(handleQuantityChange(services, id, quantity));
-  };
-
-  const onObservationChange = (id: string, observations: string) => {
-    setServices(handleObservationChange(services, id, observations));
-  };
-
-  // Renderizar o componente baseado no mode
   return (
     <div className="space-y-6">
-      <FormValidationAlert formErrors={stateFormErrors} isScrap={isScrap} />
+      <FormValidationAlert formErrors={formValidationErrors} />
 
-      <ScrapToggle 
-        isScrap={isScrap} 
-        setIsScrap={setIsScrap} 
-        scrapObservations={scrapObservations}
-        setScrapObservations={setScrapObservations}
-        error={{}}
-      />
+      <ScrapToggle isScrap={isScrap} setIsScrap={setIsScrap} />
 
       <Tabs value={selectedTab} onValueChange={handleTabChange}>
         <TabsList>
@@ -158,11 +137,11 @@ function SectorForm({
             entryObservations={entryObservations}
             setEntryObservations={setEntryObservations}
             services={services}
-            handleServiceChange={onServiceChange}
-            handleQuantityChange={onQuantityChange}
-            handleObservationChange={onObservationChange}
+            handleServiceChange={handleServiceChange}
+            handleQuantityChange={handleQuantityChange}
+            handleObservationChange={handleObservationChange}
             handlePhotoUpload={handlePhotoUpload}
-            formErrors={stateFormErrors}
+            formErrors={formValidationErrors}
             photoRequired={photoRequired}
             handleCameraCapture={handleCameraCapture}
           />
@@ -170,12 +149,7 @@ function SectorForm({
 
         {mode === 'production' && (
           <TabsContent value="production">
-            <ProductionForm 
-              services={services} 
-              productionCompleted={false} 
-              handleProductionToggle={() => {}} 
-              sectorStatus="emExecucao"
-            />
+            <ProductionForm />
           </TabsContent>
         )}
 
@@ -190,11 +164,6 @@ function SectorForm({
               setExitObservations={setExitObservations}
               qualityCompleted={qualityCompleted}
               setQualityCompleted={setQualityCompleted}
-              services={services}
-              selectedTab={selectedTab}
-              setSelectedTab={setSelectedTab}
-              handlePhotoUpload={handlePhotoUpload}
-              handleCameraCapture={handleCameraCapture}
             />
           </TabsContent>
         )}
@@ -202,28 +171,19 @@ function SectorForm({
         {isScrap && (
           <TabsContent value="scrap">
             <ScrapForm
-              tagNumber={tagNumber}
-              setTagNumber={setTagNumber}
-              entryInvoice={entryInvoice}
-              setEntryInvoice={setEntryInvoice}
-              entryDate={entryDate}
-              setEntryDate={setEntryDate}
               scrapObservations={scrapObservations}
               setScrapObservations={setScrapObservations}
               scrapDate={scrapDate}
               setScrapDate={setScrapDate}
               scrapInvoice={scrapInvoice}
               setScrapInvoice={setScrapInvoice}
-              handlePhotoUpload={() => {}}
-              tagPhotoUrl={tagPhotoUrl}
-              handleTagPhotoUpload={handleTagPhotoUpload}
             />
           </TabsContent>
         )}
       </Tabs>
 
       <FormActions
-        loading={isLoading}
+        isLoading={isLoading}
         handleSubmit={handleSubmit}
         mode={mode}
         isScrap={isScrap}
