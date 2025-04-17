@@ -3,15 +3,19 @@ import React, { useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import SummaryCards from "@/components/dashboard/SummaryCards";
 import FeatureCard from "@/components/dashboard/FeatureCard";
-import { useApi } from "@/contexts/api";
+import { useApi } from "@/contexts/ApiContextExtended";
 
 export default function Dashboard() {
-  const { refreshData } = useApi();
+  const api = useApi();
 
   useEffect(() => {
     document.title = "Dashboard - Gestão de Recuperação";
-    refreshData();
-  }, [refreshData]);
+    
+    // Verificar se refreshData existe antes de chamá-lo
+    if (api && api.refreshData) {
+      api.refreshData();
+    }
+  }, [api]);
 
   return (
     <PageLayout>

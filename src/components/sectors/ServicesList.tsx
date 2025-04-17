@@ -1,108 +1,99 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Service } from '@/types';
-import ServiceCheckbox from './ServiceCheckbox';
-import ServiceQuantity from './service-parts/ServiceQuantity';
+import ServiceDetails from './service-parts/ServiceDetails';
 import ServicePhotos from './service-parts/ServicePhotos';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import ServiceQuantity from './service-parts/ServiceQuantity';
+import { useApi } from '@/contexts/ApiContextExtended';
 
 interface ServicesListProps {
   services: Service[];
-  error: boolean;
-  photoRequired: boolean;
-  onServiceChange: (id: string, checked: boolean) => void;
-  onQuantityChange: (id: string, quantity: number) => void;
-  onObservationChange: (id: string, observations: string) => void;
-  onServicePhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
-  disabled?: boolean;
+  onServiceUpdate?: (serviceId: string, quantity?: number) => void;
+  onPhotoUpload?: (serviceId: string, photoUrl: string, type: 'before' | 'after') => void;
   readOnly?: boolean;
-  onCameraCapture?: (e: React.MouseEvent, serviceId?: string) => void;
+  sectorId?: string;
+  stage?: 'peritagem' | 'checagem' | 'consulta';
 }
 
-const ServicesList: React.FC<ServicesListProps> = ({
+export default function ServicesList({
   services,
-  error,
-  photoRequired,
-  onServiceChange,
-  onQuantityChange,
-  onObservationChange,
-  onServicePhotoUpload,
-  disabled = false,
+  onServiceUpdate,
+  onPhotoUpload,
   readOnly = false,
-  onCameraCapture
-}) => {
-  console.log("🔄 ServicesList render", Date.now());
-  console.log("🔄 services:", Array.isArray(services) ? services.length : 'não é array');
-  console.log("🔄 error:", error);
+  sectorId,
+  stage = 'peritagem'
+}: ServicesListProps) {
+  const [expandedService, setExpandedService] = useState<string | null>(null);
+  const api = useApi();
 
-  // Verificar se services é um array
-  const safeServices = Array.isArray(services) ? services : [];
+  const toggleService = (serviceId: string) => {
+    if (expandedService === serviceId) {
+      setExpandedService(null);
+    } else {
+      setExpandedService(serviceId);
+    }
+  };
+
+  const handleUpdateQuantity = (serviceId: string, quantity: number) => {
+    if (onServiceUpdate) {
+      onServiceUpdate(serviceId, quantity);
+    }
+  };
+
+  const handlePhotoUpload = async (serviceId: string, file: File, type: 'before' | 'after') => {
+    if (!onPhotoUpload || !sectorId) return;
+
+    try {
+      // Upload the photo
+      const photoUrl = await api.uploadPhoto(file, `sectors/${sectorId}/services/${serviceId}`);
+      
+      // Update the service with the new photo
+      await api.updateServicePhotos(sectorId, serviceId, photoUrl, type);
+      
+      // Call the onPhotoUpload callback
+      onPhotoUpload(serviceId, photoUrl, type);
+    } catch (error) {
+      console.error('Erro ao fazer upload da foto:', error);
+    }
+  };
+
+  if (!services || services.length === 0) {
+    return <p className="text-gray-500 italic">Nenhum serviço selecionado</p>;
+  }
 
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="text-red-500 text-sm">
-          Por favor, selecione pelo menos um serviço e adicione uma foto para cada serviço selecionado.
+      {services.map((service) => (
+        <div 
+          key={service.id} 
+          className="border rounded-lg overflow-hidden bg-white shadow-sm"
+        >
+          <ServiceDetails 
+            service={service} 
+            isExpanded={expandedService === service.id}
+            onToggle={() => toggleService(service.id)}
+            readOnly={!!readOnly}
+          />
+          
+          {expandedService === service.id && (
+            <div className="p-4 border-t space-y-4">
+              {!readOnly && (
+                <ServiceQuantity 
+                  service={service}
+                  onUpdateQuantity={(quantity) => handleUpdateQuantity(service.id, quantity)}
+                />
+              )}
+              
+              <ServicePhotos 
+                service={service}
+                onPhotoUpload={(file, type) => handlePhotoUpload(service.id, file, type)}
+                readOnly={readOnly}
+                stage={stage}
+              />
+            </div>
+          )}
         </div>
-      )}
-
-      {safeServices.length === 0 ? (
-        <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-center">
-          Nenhum serviço disponível.
-        </div>
-      ) : (
-        <ul className="space-y-4">
-          {safeServices.map((service) => (
-            <li key={service.id} className="border rounded-md p-4">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-2">
-                  <ServiceCheckbox
-                    service={service}
-                    onServiceChange={(checked) => onServiceChange(service.id, checked)}
-                    disabled={disabled || readOnly}
-                  />
-                  
-                  <ServiceQuantity
-                    service={service}
-                    onQuantityChange={(quantity) => onQuantityChange(service.id, quantity)}
-                    disabled={disabled || !service.selected}
-                  />
-                </div>
-                
-                {service.selected && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor={`observation-${service.id}`} className="text-sm">
-                        Observações
-                      </Label>
-                      <Textarea
-                        id={`observation-${service.id}`}
-                        value={service.observations || ""}
-                        onChange={(e) => onObservationChange(service.id, e.target.value)}
-                        placeholder="Observações sobre este serviço..."
-                        className="resize-none"
-                        disabled={disabled}
-                      />
-                    </div>
-                    
-                    <ServicePhotos
-                      service={service}
-                      photoType={readOnly ? "after" : "before"}
-                      required={photoRequired}
-                      onPhotoUpload={onServicePhotoUpload ? (files, type) => onServicePhotoUpload(service.id, files, type) : undefined}
-                      disabled={!service.selected || disabled}
-                      onCameraCapture={onCameraCapture ? (e) => onCameraCapture(e, service.id) : undefined}
-                    />
-                  </>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      ))}
     </div>
   );
-};
-
-export default ServicesList;
+}

@@ -1,43 +1,51 @@
+import { useState } from 'react';
+import { useApi } from '@/contexts/ApiContextExtended';
+import { ServiceType, Service } from '@/types';
 
-import { Photo, PhotoWithFile } from "@/types";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useApi } from "@/contexts/api/useExtendedApi";
-import { supabase } from "@/integrations/supabase/client";
+export function usePhotosManagement() {
+  const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
+  const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
+  const { uploadPhoto } = useApi();
 
-export function usePhotosManagement(cycleId?: string) {
-  const [photos, setPhotos] = useState<PhotoWithFile[]>([]);
-  const { refreshData } = useApi();
+  const handleBeforePhotoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    sectorId: string,
+    serviceId: string
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-  const handlePhotosUpdate = async (photos: Photo[], type: 'before' | 'after' | 'scrap') => {
-    if (!cycleId) return [];
-    
     try {
-      // Use 'any' to bypass TypeScript type checking for Supabase queries
-      const { data: existingPhotos } = await supabase
-        .from('photos')
-        .select('url')
-        .eq('cycle_id', cycleId as any)
-        .eq('type', type as any);
-        
-      if (existingPhotos) {
-        const existingUrls = existingPhotos.map(p => 'url' in p ? p.url : '');
-        const newPhotos = photos.filter(photo => !existingUrls.includes(photo.url));
-        
-        return newPhotos;
-      }
-      
-      return photos;
+      const file = files[0];
+      const photoUrl = await uploadPhoto(file, `sectors/${sectorId}/services/${serviceId}/before`);
+      setBeforePhotos((prevPhotos) => [...prevPhotos, photoUrl]);
     } catch (error) {
-      console.error(`Error updating ${type} photos:`, error);
-      toast.error(`Error updating ${type} photos`);
-      return [];
+      console.error("Error uploading before photo:", error);
+    }
+  };
+
+  const handleAfterPhotoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    sectorId: string,
+    serviceId: string
+  ) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const file = files[0];
+      const photoUrl = await uploadPhoto(file, `sectors/${sectorId}/services/${serviceId}/after`);
+      setAfterPhotos((prevPhotos) => [...prevPhotos, photoUrl]);
+    } catch (error) {
+      console.error("Error uploading after photo:", error);
     }
   };
 
   return {
-    photos,
-    setPhotos,
-    handlePhotosUpdate
+    beforePhotos,
+    afterPhotos,
+    handleBeforePhotoUpload,
+    handleAfterPhotoUpload,
   };
 }
+

@@ -58,7 +58,7 @@ export default function Sucateamento() {
             tagNumber: sector.tag_number || "",
             tagPhotoUrl: sector.tag_photo_url || undefined,
             entryInvoice: sector.nf_entrada || "",
-            entryDate: sector.data_entrada ? new Date(sector.data_entrada) : undefined,
+            entryDate: sector.data_entrada || "",
             status: sector.current_status as any,
             outcome: sector.current_outcome as any || "EmAndamento",
             services: [],
@@ -66,7 +66,7 @@ export default function Sucateamento() {
             afterPhotos: [],
             scrapPhotos: [],
             productionCompleted: false,
-            peritagemDate: sector.peritagem_date || "",
+            peritagemDate: sector.data_entrada || "",
             cycleCount: sector.cycle_count || 1,
             updated_at: sector.updated_at
           }));
@@ -115,7 +115,7 @@ export default function Sucateamento() {
           tagNumber: sector.tag_number || "",
           tagPhotoUrl: sector.tag_photo_url || undefined,
           entryInvoice: sector.nf_entrada || "",
-          entryDate: sector.data_entrada ? new Date(sector.data_entrada) : undefined,
+          entryDate: sector.data_entrada || "",
           status: sector.current_status as any,
           outcome: sector.current_outcome as any || "EmAndamento",
           services: [],
@@ -123,7 +123,7 @@ export default function Sucateamento() {
           afterPhotos: [],
           scrapPhotos: [],
           productionCompleted: false,
-          peritagemDate: sector.peritagem_date || "",
+          peritagemDate: sector.data_entrada || "",
           cycleCount: sector.cycle_count || 1,
           updated_at: sector.updated_at
         }));

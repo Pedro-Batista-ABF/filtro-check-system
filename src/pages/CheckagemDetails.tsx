@@ -1,174 +1,99 @@
 
-import React, { useEffect, useState } from "react";
-import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, Loader } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/api";
-import { Sector } from "@/types";
-import { Card } from "@/components/ui/card";
-import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
-import { refreshAuthSession } from "@/integrations/supabase/client";
-import { validateSession } from "@/utils/sessionUtils";
-import { toast } from "sonner";
-import SectorFormWrapper from "@/components/sectors/SectorFormWrapper";
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import PageLayoutWrapper from '@/components/layout/PageLayoutWrapper';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { useSectorFetch } from '@/hooks/useSectorFetch';
+import CheckagemFormContent from '@/components/checagem/CheckagemFormContent';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ExitTabContent from '@/components/sectors/forms/quality/ExitTabContent';
+import ServicesTabContent from '@/components/sectors/forms/quality/ServicesTabContent';
+import { ConnectionErrorFallback } from '@/components/fallback/ConnectionErrorFallback';
+import { Sector } from '@/types';
+import { useApi } from '@/contexts/ApiContextExtended';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function CheckagemDetails() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { id } = useParams();
-  const { getSectorById, updateSector, refreshData } = useApi();
-  const [sector, setSector] = useState<Sector | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-
-  // Verificar status da conexão periodicamente
-  useEffect(() => {
-    const checkConnectionStatus = async () => {
-      try {
-        await refreshAuthSession();
-        setConnectionStatus('online');
-      } catch (error) {
-        console.error("Erro ao verificar status da conexão:", error);
-        setConnectionStatus('offline');
-      }
-    };
+  const { sector, isLoading, error } = useSectorFetch(id);
+  const api = useApi();
+  
+  const handleSaveQualityCheck = async (updatedSector: Partial<Sector>) => {
+    if (!id) return;
     
-    checkConnectionStatus();
-    const interval = setInterval(checkConnectionStatus, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    document.title = "Detalhes Checagem - Gestão de Recuperação";
-    
-    const loadSector = async () => {
-      if (!id) return;
-      
-      setLoading(true);
-      try {
-        await refreshAuthSession();
-        
-        const userId = await validateSession();
-        if (!userId) {
-          toast.error("Sessão inválida", { 
-            description: "Por favor, faça login novamente." 
-          });
-          navigate('/login');
-          return;
-        }
-        
-        const sectorData = await getSectorById(id);
-        if (sectorData) {
-          setSector(sectorData);
-        } else {
-          toast.error("Setor não encontrado");
-          navigate('/checagem');
-        }
-      } catch (error) {
-        console.error("Erro ao carregar setor:", error);
-        toast.error("Erro ao carregar informações do setor");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadSector();
-  }, [id, navigate, getSectorById]);
-
-  const handleSubmit = async (data: Partial<Sector>) => {
-    if (!sector?.id) {
-      toast.error("ID do setor não encontrado.");
-      return;
-    }
-
-    setSaving(true);
     try {
-      await refreshAuthSession();
+      // Update sector status
+      await api.updateSector(id, {
+        ...updatedSector,
+        status: 'concluido'
+      });
       
-      const userId = await validateSession();
-      if (!userId) {
-        throw new Error("Sessão inválida");
-      }
+      // Mostrar mensagem de sucesso
+      toast.success('Checagem final concluída com sucesso!');
       
-      const updatedData = { ...data, status: 'concluido' as any };
-      await updateSector(sector.id, updatedData);
-      await refreshData();
-      
-      toast.success("Checagem concluída com sucesso!");
-      navigate('/concluidos');
+      // Redirecionar para a lista de checagens
+      setTimeout(() => {
+        navigate('/checagem');
+      }, 1500);
     } catch (error) {
-      console.error("Erro ao atualizar setor:", error);
-      toast.error("Erro ao finalizar checagem");
-    } finally {
-      setSaving(false);
+      console.error('Erro ao salvar checagem final:', error);
+      toast.error('Erro ao salvar checagem final');
     }
   };
-
-  const handleRetryConnection = async () => {
-    setConnectionStatus('checking');
-    try {
-      await refreshAuthSession();
-      setConnectionStatus('online');
-      if (id) {
-        const sectorData = await getSectorById(id);
-        if (sectorData) {
-          setSector(sectorData);
-          toast.success("Conexão restaurada!");
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao reconectar:", error);
-      setConnectionStatus('offline');
-      toast.error("Falha ao reconectar.");
-    }
-  };
-
-  if (loading) {
-    return (
-      <PageLayoutWrapper>
-        <div className="flex justify-center items-center p-12">
-          <Loader className="h-8 w-8 animate-spin mr-2" />
-          <p>Carregando informações do setor...</p>
-        </div>
-      </PageLayoutWrapper>
-    );
+  
+  if (error) {
+    return <ConnectionErrorFallback error={error} />;
   }
-
+  
   return (
     <PageLayoutWrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Detalhes da Checagem - TAG: {sector?.tagNumber}</h1>
-          <div className="flex items-center gap-2">
-            <ConnectionStatus 
-              status={connectionStatus} 
-              onRetryConnection={handleRetryConnection}
-            />
+          <div className="flex items-center space-x-2">
             <Button 
-              variant="outline" 
+              variant="ghost" 
+              size="icon" 
               onClick={() => navigate('/checagem')}
+              className="h-8 w-8"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
+              <ArrowLeft className="h-4 w-4" />
             </Button>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Checagem Final - {sector?.tagNumber || 'Carregando...'}
+            </h1>
           </div>
         </div>
-
-        <Card className="border-none shadow-lg">
-          <div className="p-6">
-            {sector && (
-              <SectorFormWrapper 
-                initialSector={sector}
-                onSubmit={handleSubmit}
-                mode="quality"
-                photoRequired={true}
-                isLoading={saving}
-                disableEntryFields={true}
-              />
-            )}
+        
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
           </div>
-        </Card>
+        ) : sector ? (
+          <Tabs defaultValue="services">
+            <TabsList>
+              <TabsTrigger value="services">Serviços</TabsTrigger>
+              <TabsTrigger value="exit">Saída</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="services">
+              <ServicesTabContent sector={sector} />
+            </TabsContent>
+            
+            <TabsContent value="exit">
+              <ExitTabContent 
+                sector={sector}
+                onSave={handleSaveQualityCheck}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Setor não encontrado</p>
+          </div>
+        )}
       </div>
     </PageLayoutWrapper>
   );

@@ -6,7 +6,7 @@ import { Sector, SectorStatus } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/api/useExtendedApi";
+import { useApi } from "@/contexts/ApiContextExtended";
 
 interface ProductionCompletionSwitchProps {
   sector: Sector;
