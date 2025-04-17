@@ -1,7 +1,7 @@
 
 import React, { useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useApi } from "@/contexts/api";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SectorGrid from "@/components/sectors/SectorGrid";

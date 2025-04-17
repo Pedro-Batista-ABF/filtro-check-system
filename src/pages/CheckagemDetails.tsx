@@ -4,7 +4,7 @@ import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, Loader } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useApi } from "@/contexts/api";
 import { Sector } from "@/types";
 import { Card } from "@/components/ui/card";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";

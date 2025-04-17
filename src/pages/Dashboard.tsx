@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import SummaryCards from "@/components/dashboard/SummaryCards";
 import FeatureCard from "@/components/dashboard/FeatureCard";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useApi } from "@/contexts/api";
 
 export default function Dashboard() {
   const { refreshData } = useApi();
