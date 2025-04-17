@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Sector } from "@/types";
 import { toast } from "sonner";
 import { useApi } from "@/contexts/api";
@@ -10,15 +10,24 @@ export function useSectorFetch(id?: string) {
   const [error, setError] = useState<boolean>(false);
   const { getSectorById } = useApi();
 
-  const fetchSector = async () => {
-    if (!id) return;
+  const fetchSector = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(false);
+    
     try {
+      console.log(`Buscando setor com ID: ${id}`);
       const fetchedSector = await getSectorById(id);
+      
       if (fetchedSector) {
+        console.log("Setor encontrado:", fetchedSector);
         setSector(fetchedSector);
       } else {
+        console.error("Setor não encontrado para o ID:", id);
         setError(true);
         toast.error("Setor não encontrado");
       }
@@ -29,7 +38,7 @@ export function useSectorFetch(id?: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, getSectorById]);
 
   return { sector, fetchSector, loading, error };
 }
