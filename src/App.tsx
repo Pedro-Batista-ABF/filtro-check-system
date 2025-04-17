@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/Dashboard'; // This import was failing
 import Peritagem from './pages/Peritagem';
 import PeritagemNew from './pages/PeritagemNew';
 import PeritagemEdit from './pages/PeritagemEdit';
@@ -16,7 +16,7 @@ import Checagem from './pages/Checagem';
 import CheckagemDetails from './pages/CheckagemDetails';
 import Relatorio from './pages/Relatorio';
 import { AuthProvider } from './contexts/AuthContext';
-import { ApiContextProvider } from './contexts/ApiContextExtended';
+import { ApiContextProvider } from './contexts/ApiContextExtended'; // Fixed import
 import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
@@ -31,7 +31,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/peritagem" element={<ProtectedRoute><Peritagem /></ProtectedRoute>} />
-              <Route path="/peritagem/new" element={<ProtectedRoute><PeritagemNew /></ProtectedRoute>} />
+              <Route path="/peritagem/novo" element={<ProtectedRoute><PeritagemNew /></ProtectedRoute>} />
               <Route path="/peritagem/:id" element={<ProtectedRoute><PeritagemEdit /></ProtectedRoute>} />
               <Route path="/sucateamento" element={<ProtectedRoute><Sucateamento /></ProtectedRoute>} />
               <Route path="/sucateamento/:id" element={<ProtectedRoute><SucateamentoDetails /></ProtectedRoute>} />
