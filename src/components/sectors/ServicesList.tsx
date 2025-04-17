@@ -14,7 +14,7 @@ interface ServicesListProps {
   onServiceChange: (id: string, checked: boolean) => void;
   onQuantityChange: (id: string, quantity: number) => void;
   onObservationChange: (id: string, observations: string) => void;
-  onServicePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
+  onServicePhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
   disabled?: boolean;
   readOnly?: boolean;
   onCameraCapture?: (e: React.MouseEvent, serviceId?: string) => void;

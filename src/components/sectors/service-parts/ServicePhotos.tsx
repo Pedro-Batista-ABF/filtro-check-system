@@ -10,7 +10,7 @@ interface ServicePhotosProps {
   service: Service;
   photoType: 'before' | 'after';
   required: boolean;
-  onPhotoUpload: (serviceId: string, files: FileList, type: 'before' | 'after') => void;
+  onPhotoUpload?: (serviceId: string, files: FileList, type: 'before' | 'after') => void;
   disabled?: boolean;
   onCameraCapture?: (e: React.MouseEvent) => void;
 }
@@ -32,7 +32,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files && e.target.files.length > 0 && onPhotoUpload) {
       onPhotoUpload(service.id, e.target.files, photoType);
       // Clear the input to allow selecting the same file again
       e.target.value = '';
