@@ -1,7 +1,7 @@
 
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Filter, ClipboardCheck, CheckSquare, Home, FileText, AlertTriangle, Settings } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Filter, ClipboardCheck, CheckSquare, Home, FileText, AlertTriangle, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,8 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   HeaderExtra?: React.ReactNode;
@@ -166,7 +164,6 @@ export default function Header({ HeaderExtra }: HeaderProps) {
       {isMenuOpen && (
         <nav className="md:hidden bg-primary-foreground/10 p-4">
           <div className="flex flex-col space-y-2">
-            {HeaderExtra && <div className="pb-2 border-b border-white/20 mb-2">{HeaderExtra}</div>}
             <Link 
               to="/" 
               className={`flex items-center space-x-2 py-2 px-4 rounded ${isActive('/')}`}
