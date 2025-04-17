@@ -23,6 +23,7 @@ import ConsolidatedReport from './pages/ConsolidatedReport';
 import ReportPreview from './pages/ReportPreview';
 import Home from './pages/Home';
 import { supabase } from './integrations/supabase/client';
+import Relatorios from './pages/Relatorios';
 
 /**
  * Componente principal da aplicação
@@ -155,6 +156,11 @@ function App() {
               <Concluidos />
             </ProtectedRoute>
           } />
+          <Route path="/relatorio" element={
+            <ProtectedRoute>
+              <Relatorios />
+            </ProtectedRoute>
+          } />
           <Route path="/relatorio/setor/:id" element={
             <ProtectedRoute>
               <SectorReport />
@@ -168,6 +174,11 @@ function App() {
           <Route path="/relatorio/preview" element={
             <ProtectedRoute>
               <ReportPreview />
+            </ProtectedRoute>
+          } />
+          <Route path="/relatorios" element={
+            <ProtectedRoute>
+              <Relatorios />
             </ProtectedRoute>
           } />
           

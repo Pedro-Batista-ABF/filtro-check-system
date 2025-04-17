@@ -1,10 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Camera } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -20,7 +20,7 @@ interface EntryFormSectionProps {
   entryDate: Date | undefined;
   setEntryDate: (date: Date | undefined) => void;
   tagPhotoUrl?: string;
-  onPhotoUpload: (files: FileList) => void;
+  onPhotoUpload: (files: FileList) => Promise<string | undefined>;
   entryObservations: string;
   setEntryObservations: (value: string) => void;
   errors: {
@@ -31,6 +31,7 @@ interface EntryFormSectionProps {
   };
   photoRequired?: boolean;
   disabled?: boolean;
+  onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
 export function EntryFormSection({
@@ -46,7 +47,8 @@ export function EntryFormSection({
   setEntryObservations,
   errors,
   photoRequired = true,
-  disabled = false
+  disabled = false,
+  onCameraCapture
 }: EntryFormSectionProps) {
   return (
     <Card>
@@ -94,40 +96,31 @@ export function EntryFormSection({
             <Label htmlFor="entryDate" className={errors.entryDate ? "text-red-500" : ""}>
               Data de Entrada*
             </Label>
-            {disabled ? (
-              <Input
-                id="entryDate"
-                value={entryDate ? format(entryDate, "dd/MM/yyyy") : ""}
-                disabled
-                className="bg-gray-50"
-              />
-            ) : (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="entryDate"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !entryDate && "text-muted-foreground",
-                      errors.entryDate && "border-red-500"
-                    )}
-                    disabled={disabled}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {entryDate ? format(entryDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={entryDate}
-                    onSelect={setEntryDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="entryDate"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !entryDate && "text-muted-foreground",
+                    errors.entryDate && "border-red-500"
+                  )}
+                  disabled={disabled}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {entryDate ? format(entryDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={entryDate}
+                  onSelect={setEntryDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             {errors.entryDate && (
               <p className="text-xs text-red-500">Data é obrigatória</p>
             )}
@@ -142,36 +135,19 @@ export function EntryFormSection({
               value={format(new Date(), "dd/MM/yyyy")}
               readOnly
               disabled
-              className="bg-gray-50"
+              className="bg-gray-100"
             />
             <p className="text-xs text-gray-500">Data preenchida automaticamente</p>
           </div>
         </div>
         
-        {disabled ? (
-          <div className="space-y-2">
-            <Label>Foto da TAG (somente visualização)</Label>
-            {tagPhotoUrl ? (
-              <div className="mt-2">
-                <img 
-                  src={tagPhotoUrl} 
-                  alt="TAG do Setor" 
-                  className="w-32 h-32 object-cover rounded-md border"
-                />
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">Nenhuma foto disponível</p>
-            )}
-          </div>
-        ) : (
-          <TagPhotoField
-            tagPhotoUrl={tagPhotoUrl}
-            onPhotoUpload={onPhotoUpload}
-            onCameraCapture={(e) => {/* Função para captura de câmera */}}
-            error={errors.tagPhoto}
-            required={photoRequired}
-          />
-        )}
+        <TagPhotoField
+          tagPhotoUrl={tagPhotoUrl}
+          onPhotoUpload={onPhotoUpload}
+          onCameraCapture={onCameraCapture || (() => {})}
+          error={errors.tagPhoto}
+          required={photoRequired}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="entryObservations">
@@ -183,7 +159,6 @@ export function EntryFormSection({
             onChange={(e) => setEntryObservations(e.target.value)}
             placeholder="Observações sobre o estado do setor na entrada..."
             disabled={disabled}
-            className={disabled ? "bg-gray-50" : ""}
           />
         </div>
       </CardContent>

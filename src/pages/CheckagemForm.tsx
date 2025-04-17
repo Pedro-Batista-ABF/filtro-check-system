@@ -169,7 +169,7 @@ export default function CheckagemForm() {
               <SectorFormWrapper 
                 initialSector={sector}
                 onSubmit={handleSubmit}
-                mode="checagem"
+                mode="quality"
                 photoRequired={true}
                 isLoading={saving}
                 disableEntryFields={true}

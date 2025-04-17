@@ -14,14 +14,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   
   const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
+
+  const getUserInitials = () => {
+    if (!user?.email) return "U";
+    return user.email.charAt(0).toUpperCase();
   };
   
   return (
@@ -44,7 +54,9 @@ const Navbar = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 flex items-center gap-2">
-              <UserCircle className="h-5 w-5" />
+              <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                <AvatarFallback>{getUserInitials()}</AvatarFallback>
+              </Avatar>
               <span className="hidden md:inline-flex">
                 {user?.email?.split('@')[0] || 'Usuário'}
               </span>

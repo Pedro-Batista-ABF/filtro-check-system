@@ -3,7 +3,7 @@ import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Service } from '@/types';
-import { Camera, Image, Plus, X } from 'lucide-react';
+import { Camera, Image, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface ServicePhotosProps {
@@ -41,6 +41,13 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
 
   // Filter photos by type
   const photos = (service.photos || []).filter(photo => photo.type === photoType);
+  
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = '/placeholder.svg';
+    target.classList.add('border-red-200');
+    target.classList.add('bg-red-50');
+  };
 
   return (
     <div className="space-y-2">
@@ -59,9 +66,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
                     src={photo.url}
                     alt={`Foto ${index + 1}`}
                     className="aspect-square w-full object-cover rounded-md border"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.svg';
-                    }}
+                    onError={handleImageError}
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-md">
                     <Plus className="h-5 w-5 text-white" />
@@ -73,9 +78,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
                   src={photo.url}
                   alt={`Visualização da foto ${index + 1}`}
                   className="w-full h-auto max-h-[80vh] object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
-                  }}
+                  onError={handleImageError}
                 />
               </DialogContent>
             </Dialog>
@@ -95,17 +98,19 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
       </div>
 
       <div className="flex space-x-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onCameraCapture} // Fixed: Changed from handleCameraCapture to onCameraCapture
-          disabled={disabled}
-          className="text-xs"
-        >
-          <Camera className="h-3 w-3 mr-1" />
-          Usar câmera
-        </Button>
+        {onCameraCapture && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onCameraCapture}
+            disabled={disabled}
+            className="text-xs"
+          >
+            <Camera className="h-3 w-3 mr-1" />
+            Usar câmera
+          </Button>
+        )}
 
         <Button
           type="button"

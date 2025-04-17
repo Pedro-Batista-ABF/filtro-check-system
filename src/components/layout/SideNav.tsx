@@ -16,6 +16,9 @@ const SideNav: React.FC = () => {
   const location = useLocation();
   
   const isActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === path;
+    }
     return location.pathname.startsWith(path);
   };
   
@@ -47,9 +50,9 @@ const SideNav: React.FC = () => {
       path: '/sucateamento'
     },
     {
-      name: 'Concluídos',
+      name: 'Relatórios',
       icon: <FileText className="h-5 w-5" />,
-      path: '/concluidos'
+      path: '/relatorio'
     }
   ];
   
@@ -65,7 +68,7 @@ const SideNav: React.FC = () => {
               variant="ghost"
               className={cn(
                 'w-full justify-start px-4',
-                (item.exact ? location.pathname === item.path : isActive(item.path))
+                isActive(item.path)
                   ? 'bg-accent text-accent-foreground'
                   : 'hover:bg-accent hover:text-accent-foreground'
               )}

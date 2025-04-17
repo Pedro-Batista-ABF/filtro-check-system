@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Camera } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -19,7 +19,7 @@ interface SectorInfoSectionProps {
   entryDate: Date | undefined;
   setEntryDate: (date: Date | undefined) => void;
   tagPhotoUrl: string | undefined;
-  handleTagPhotoUpload: (files: FileList) => void;
+  handleTagPhotoUpload: (files: FileList) => Promise<string | undefined>;
   entryObservations: string;
   setEntryObservations: (value: string) => void;
   onCameraCapture: (e: React.MouseEvent) => void;
