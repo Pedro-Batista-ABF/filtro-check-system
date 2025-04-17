@@ -14,7 +14,6 @@ const options = {
     detectSessionInUrl: true,
     storageKey: 'supabase.auth.token',
     storage: localStorage,
-    flowType: 'implicit',
   },
   global: {
     headers: {
@@ -27,38 +26,12 @@ const options = {
       eventsPerSecond: 10,
     },
   },
-  // Aumentar o timeout global para 10 segundos
-  fetch: (url: string, options: RequestInit) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    return fetch(url, {
-      ...options,
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-  }
 };
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, options);
-
-// Configurar interceptor para atualizar headers em todas as requisições
-const originalFetch = supabase.rest.headers;
-supabase.rest.headers = async () => {
-  const { data } = await supabase.auth.getSession();
-  const baseHeaders = await originalFetch();
-  
-  if (data.session?.access_token) {
-    return {
-      ...baseHeaders,
-      'Authorization': `Bearer ${data.session.access_token}`
-    };
-  }
-  
-  return baseHeaders;
-};
 
 // Log inicial para verificar a inicialização do cliente Supabase
 console.log("Cliente Supabase inicializado com persistência aprimorada");

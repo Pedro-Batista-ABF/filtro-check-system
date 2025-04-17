@@ -59,13 +59,13 @@ const ServicesList: React.FC<ServicesListProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <ServiceCheckbox
                     service={service}
-                    onServiceChange={onServiceChange}
+                    onServiceChange={(checked) => onServiceChange(service.id, checked)}
                     disabled={disabled || readOnly}
                   />
                   
                   <ServiceQuantity
                     service={service}
-                    onQuantityChange={onQuantityChange}
+                    onQuantityChange={(quantity) => onQuantityChange(service.id, quantity)}
                     disabled={disabled || !service.selected}
                   />
                 </div>
@@ -90,7 +90,7 @@ const ServicesList: React.FC<ServicesListProps> = ({
                       service={service}
                       photoType={readOnly ? "after" : "before"}
                       required={photoRequired}
-                      onPhotoUpload={onServicePhotoUpload}
+                      onPhotoUpload={onServicePhotoUpload ? (files, type) => onServicePhotoUpload(service.id, files, type) : undefined}
                       disabled={!service.selected || disabled}
                       onCameraCapture={onCameraCapture ? (e) => onCameraCapture(e, service.id) : undefined}
                     />

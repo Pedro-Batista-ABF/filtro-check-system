@@ -4,3 +4,4 @@ export { ApiProvider } from './ApiProvider';
 export { useApi } from './useApi';
 export { ApiContextExtended, ApiContextExtendedProvider } from './ApiContextExtendedProvider';
 export type { ApiContextType, ApiContextExtendedType } from './types';
+export { useApi as useExtendedApi } from './useExtendedApi';

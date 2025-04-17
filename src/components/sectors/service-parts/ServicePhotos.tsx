@@ -1,134 +1,115 @@
 
 import React from 'react';
-import { Service, Photo, PhotoWithFile } from '@/types';
+import { Service, Photo } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, Camera, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Upload, Camera } from 'lucide-react';
 
 export interface ServicePhotosProps {
   service: Service;
-  photoType: 'before' | 'after';
+  photoType: "before" | "after";
   required?: boolean;
-  onPhotoUpload?: (files: FileList) => void;
-  onPhotoDelete?: (photoId: string) => void;
+  onPhotoUpload?: (files: FileList, type: "before" | "after") => void;
   disabled?: boolean;
   onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
 const ServicePhotos: React.FC<ServicePhotosProps> = ({
   service,
-  photoType = 'before',
+  photoType = "before",
   required = false,
   onPhotoUpload,
-  onPhotoDelete,
   disabled = false,
   onCameraCapture
 }) => {
+  // Filter photos by type
+  const photos = service.photos?.filter(photo => photo.type === photoType) || [];
+  const hasPhotos = photos.length > 0;
+  
+  // Hide the component if disabled and no photos
+  if (disabled && !hasPhotos) return null;
+  
+  // Reference for file input
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
-  const handleButtonClick = () => {
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      if (onPhotoUpload) {
+        onPhotoUpload(e.target.files, photoType);
+      }
+    }
+  };
+  
+  // Handle button click to open file dialog
+  const handleSelectFile = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0 && onPhotoUpload) {
-      onPhotoUpload(files);
-      // Reset the input value after upload
-      e.target.value = '';
-    }
-  };
-  
-  // Filtrar fotos baseado no tipo (antes/depois)
-  const photos = service.photos || [];
-  const filteredPhotos = photos.filter(photo => photo.type === photoType);
-  
-  const needsPhotos = required && filteredPhotos.length === 0;
-  
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <Label className={cn("text-sm", needsPhotos && "text-red-500")}>
-          {photoType === 'before' ? 'Fotos da Peritagem' : 'Fotos da Checagem Final'}
-          {required && <span className="text-red-500">*</span>}
+        <Label className="text-sm">
+          {photoType === "before" ? "Fotos do defeito" : "Fotos após serviço"}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
         
-        <div className="flex space-x-2">
-          {onCameraCapture && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onCameraCapture}
-              disabled={disabled}
-            >
-              <Camera className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Câmera</span>
-            </Button>
-          )}
-          
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleButtonClick}
-            disabled={disabled}
-          >
-            <UploadCloud className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Upload</span>
-          </Button>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-            multiple
-            disabled={disabled}
-          />
-        </div>
-      </div>
-      
-      {needsPhotos && (
-        <p className="text-xs text-red-500">
-          É necessário adicionar pelo menos uma foto
-        </p>
-      )}
-      
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {filteredPhotos.map((photo) => (
-          <div key={photo.id} className="relative">
-            <img
-              src={photo.url}
-              alt={`Foto ${photo.id}`}
-              className="h-24 w-full object-cover rounded-md border"
-            />
-            
-            {onPhotoDelete && !disabled && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="h-6 w-6 absolute top-1 right-1 opacity-70 hover:opacity-100"
-                onClick={() => onPhotoDelete(photo.id)}
+        {!disabled && (
+          <div className="flex space-x-2">
+            {onCameraCapture && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={onCameraCapture}
+                aria-label="Capturar foto"
               >
-                <Trash2 className="h-3 w-3" />
+                <Camera className="h-4 w-4 mr-1" />
+                Câmera
               </Button>
             )}
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={handleSelectFile}
+              aria-label="Selecionar foto"
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              Arquivo
+            </Button>
+            
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+              multiple
+            />
           </div>
-        ))}
+        )}
       </div>
       
-      {filteredPhotos.length === 0 && (
-        <div className={cn(
-          "h-24 border border-dashed rounded-md flex items-center justify-center text-sm text-gray-500",
-          needsPhotos && "border-red-300 bg-red-50"
-        )}>
-          Nenhuma foto adicionada
+      {hasPhotos ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {photos.map((photo, index) => (
+            <div key={index} className="relative w-full aspect-square">
+              <img
+                src={photo.url}
+                alt={`${service.name} ${photoType === "before" ? "antes" : "depois"} ${index + 1}`}
+                className="w-full h-full object-cover rounded-md"
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-gray-50 p-4 rounded-md text-gray-500 text-center">
+          {required ? "Adicione pelo menos uma foto" : "Nenhuma foto adicionada"}
         </div>
       )}
     </div>

@@ -49,7 +49,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId)
+        .eq('sector_id', sectorId as any)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -69,16 +69,16 @@ export function usePhotoUploadWithMetadata() {
         .from('photos')
         .select('id')
         .eq('cycle_id', cycleId)
-        .eq('type', 'tag')
+        .eq('type', 'tag' as any)
         .maybeSingle();
         
       // Corrija a verificação de existingPhoto
-      if (existingPhoto) {
+      if (existingPhoto?.id) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase
           .from('photos')
-          .update({ url: url })
+          .update({ url: url } as any)
           .eq('id', existingPhoto.id);
           
         return;
@@ -98,7 +98,7 @@ export function usePhotoUploadWithMetadata() {
             stage: 'peritagem',
             type: 'tag'
           }
-        });
+        } as any);
         
       console.log("Foto da TAG inserida com sucesso");
     } catch (error) {
@@ -121,7 +121,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId)
+        .eq('sector_id', sectorId as any)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -151,7 +151,7 @@ export function usePhotoUploadWithMetadata() {
             stage: 'peritagem',
             type: type
           }
-        });
+        } as any);
         
       console.log(`Foto do serviço ${serviceId} inserida com sucesso`);
     } catch (error) {
