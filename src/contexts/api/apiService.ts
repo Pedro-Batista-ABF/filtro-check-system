@@ -1,67 +1,41 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Sector, Service } from '@/types';
 import { supabaseService } from '@/services/supabase';
 import { toast } from 'sonner';
-import { useAuth } from './AuthContext';
 
-// Make sure to export this type
-export interface ApiContextType {
-  sectors: Sector[];
-  loading: boolean;
-  error: string | null;
-  getSectorById: (id: string) => Promise<Sector | undefined>;
-  getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
-  createSector: (sector: Omit<Sector, 'id'>) => Promise<Sector>;
-  updateSector: (sector: Sector) => Promise<Sector>;
-  deleteSector: (id: string) => Promise<void>;
-  getDefaultServices: () => Promise<Service[]>;
-  uploadPhoto: (file: File, folder?: string) => Promise<string>;
-}
+/**
+ * Core API service functions for sector operations
+ */
+export const apiService = {
+  /**
+   * Fetch all sectors
+   */
+  getAllSectors: async (): Promise<Sector[]> => {
+    try {
+      return await supabaseService.getAllSectors();
+    } catch (err) {
+      console.error('Error fetching sectors:', err);
+      toast.error('Não foi possível carregar os setores');
+      return [];
+    }
+  },
 
-const ApiContext = createContext<ApiContextType | undefined>(undefined);
-
-export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sectors, setSectors] = useState<Sector[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const auth = useAuth();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!auth.isAuthenticated) {
-        setSectors([]);
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        const data = await supabaseService.getAllSectors();
-        setSectors(data);
-        setError(null);
-      } catch (err) {
-        setError('Erro ao carregar dados dos setores');
-        console.error(err);
-        toast.error('Não foi possível carregar os setores');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [auth.isAuthenticated]);
-
-  const getSectorById = async (id: string): Promise<Sector | undefined> => {
+  /**
+   * Get sector by ID
+   */
+  getSectorById: async (id: string): Promise<Sector | undefined> => {
     try {
       return await supabaseService.getSectorById(id);
     } catch (err) {
       console.error('Erro ao buscar setor por ID:', err);
       return undefined;
     }
-  };
+  },
 
-  const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
+  /**
+   * Get sectors by tag
+   */
+  getSectorsByTag: async (tagNumber: string): Promise<Sector[]> => {
     try {
       if (supabaseService.getSectorsByTag) {
         return await supabaseService.getSectorsByTag(tagNumber);
@@ -73,15 +47,14 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Erro ao buscar setores por TAG:', err);
       return [];
     }
-  };
+  },
 
-  const createSector = async (sector: Omit<Sector, 'id'>): Promise<Sector> => {
+  /**
+   * Create a new sector
+   */
+  createSector: async (sector: Omit<Sector, 'id'>): Promise<Sector> => {
     try {
-      setLoading(true);
       const newSector = await supabaseService.addSector(sector);
-      
-      // Atualiza a lista de setores
-      setSectors(prevSectors => [...prevSectors, newSector]);
       
       toast.success(sector.status === 'sucateadoPendente' 
         ? 'Setor registrado como sucateado com sucesso!' 
@@ -94,27 +67,20 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Verificar se é um erro de recursão infinita (problema comum com políticas RLS)
       if (err instanceof Error && err.message.includes("infinite recursion")) {
         const errorMsg = 'Erro de configuração do banco de dados: problema com as políticas de acesso';
-        setError(errorMsg);
         throw new Error(errorMsg);
       }
       
       const errorMsg = 'Erro ao cadastrar setor';
-      setError(errorMsg);
       throw new Error(errorMsg);
-    } finally {
-      setLoading(false);
     }
-  };
+  },
 
-  const updateSector = async (sector: Sector): Promise<Sector> => {
+  /**
+   * Update an existing sector
+   */
+  updateSector: async (sector: Sector): Promise<Sector> => {
     try {
-      setLoading(true);
       const updatedSector = await supabaseService.updateSector(sector);
-      
-      // Atualiza a lista de setores
-      setSectors(prevSectors => 
-        prevSectors.map(s => s.id === sector.id ? updatedSector : s)
-      );
       
       let successMessage = 'Setor atualizado com sucesso!';
       if (sector.status === 'concluido') {
@@ -133,35 +99,32 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Verificar se é um erro de recursão infinita (problema comum com políticas RLS)
       if (err instanceof Error && err.message.includes("infinite recursion")) {
         const errorMsg = 'Erro de configuração do banco de dados: problema com as políticas de acesso';
-        setError(errorMsg);
         throw new Error(errorMsg);
       }
       
       const errorMsg = 'Erro ao atualizar setor';
-      setError(errorMsg);
       throw new Error(errorMsg);
-    } finally {
-      setLoading(false);
     }
-  };
+  },
 
-  const deleteSector = async (id: string): Promise<void> => {
+  /**
+   * Delete a sector
+   */
+  deleteSector: async (id: string): Promise<void> => {
     try {
-      setLoading(true);
       await supabaseService.deleteSector(id);
-      setSectors(prevSectors => prevSectors.filter(sector => sector.id !== id));
       toast.success('Setor removido com sucesso!');
     } catch (err) {
       const errorMsg = 'Erro ao remover setor';
-      setError(errorMsg);
       toast.error(errorMsg);
       throw new Error(errorMsg);
-    } finally {
-      setLoading(false);
     }
-  };
+  },
 
-  const getDefaultServices = async (): Promise<Service[]> => {
+  /**
+   * Get default service types
+   */
+  getDefaultServices: async (): Promise<Service[]> => {
     try {
       if (supabaseService.getServiceTypes) {
         return await supabaseService.getServiceTypes();
@@ -175,9 +138,12 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.error('Não foi possível carregar os serviços disponíveis');
       return [];
     }
-  };
+  },
   
-  const uploadPhoto = async (file: File, folder?: string): Promise<string> => {
+  /**
+   * Upload a photo
+   */
+  uploadPhoto: async (file: File, folder?: string): Promise<string> => {
     try {
       if (supabaseService.uploadPhoto) {
         return await supabaseService.uploadPhoto(file, folder);
@@ -191,36 +157,5 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast.error('Não foi possível fazer upload da foto');
       throw err;
     }
-  };
-
-  const contextValue: ApiContextType = {
-    sectors,
-    loading,
-    error,
-    getSectorById,
-    getSectorsByTag,
-    createSector,
-    updateSector,
-    deleteSector,
-    getDefaultServices,
-    uploadPhoto
-  };
-
-  return (
-    <ApiContext.Provider value={contextValue}>
-      {children}
-    </ApiContext.Provider>
-  );
-};
-
-// Rename to useApiOriginal and export properly
-export const useApiOriginal = (): ApiContextType => {
-  const context = useContext(ApiContext);
-  if (context === undefined) {
-    throw new Error('useApiOriginal must be used within an ApiProvider');
   }
-  return context;
 };
-
-// Export other items for compatibility
-export { ApiContext };

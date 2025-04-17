@@ -18,7 +18,7 @@ import CheckagemFinal from './pages/CheckagemFinal';
 import Concluidos from './pages/Concluidos';
 import Relatorio from './pages/Relatorio';
 import { AuthProvider } from './contexts/AuthContext';
-import { ApiProvider } from './contexts/ApiContext';
+import { ApiProvider } from './contexts/api';
 import { ApiContextExtendedProvider } from './contexts/api';
 import { ThemeProvider } from './contexts/ThemeContext';
 

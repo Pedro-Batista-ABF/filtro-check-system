@@ -2,7 +2,7 @@
 import { Photo, PhotoWithFile } from "@/types";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useApi } from "@/contexts/api";
 import { supabase } from "@/integrations/supabase/client";
 
 export function usePhotosManagement(cycleId?: string) {

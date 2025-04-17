@@ -1,23 +1,18 @@
 
-import { Sector, Service } from "@/types";
-import { ApiContextType } from "../ApiContext";
+import { Sector, Service } from '@/types';
 
 /**
- * Extended API context that includes additional methods for sector management
+ * Original API context interface with standard sector operations
  */
-export interface ApiContextExtendedType extends Omit<ApiContextType, 'updateSector'> {
-  isLoading: boolean;
-  error: string | null;
+export interface ApiContextType {
   sectors: Sector[];
-  pendingSectors: Sector[];
-  inProgressSectors: Sector[];
-  qualityCheckSectors: Sector[];
-  completedSectors: Sector[];
-  addSector: (sectorData: Omit<Sector, 'id'>) => Promise<string>;
-  updateSector: (sectorId: string, sectorData: Partial<Sector>) => Promise<boolean>;
+  loading: boolean;
+  error: string | null;
   getSectorById: (id: string) => Promise<Sector | undefined>;
   getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
+  createSector: (sector: Omit<Sector, 'id'>) => Promise<Sector>;
+  updateSector: (sector: Sector) => Promise<Sector>;
+  deleteSector: (id: string) => Promise<void>;
+  getDefaultServices: () => Promise<Service[]>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
-  updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
-  refreshData: () => Promise<void>;
 }

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/ApiContextExtended";
+import { useApi } from "@/contexts/api";
 import { Sector, SectorStatus, Service } from "@/types";
 import { toast } from "sonner";
 import { generateUniqueCycleCount } from "@/utils/cycleUtils";

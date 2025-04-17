@@ -1,5 +1,5 @@
 
-import { Sector, PhotoType } from "@/types";
+import { Sector } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -60,7 +60,11 @@ export function usePhotoUploadWithMetadata() {
         return;
       }
       
-      const cycleId = cycleData[0].id;
+      const cycleId = cycleData[0]?.id;
+      if (!cycleId) {
+        console.error("Ciclo não encontrado");
+        return;
+      }
       
       // Verificar se a foto já existe
       const { data: existingPhoto } = await supabase
@@ -70,7 +74,7 @@ export function usePhotoUploadWithMetadata() {
         .eq('type', 'tag' as any)
         .maybeSingle();
         
-      if (existingPhoto) {
+      if (existingPhoto?.id) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase
@@ -111,7 +115,7 @@ export function usePhotoUploadWithMetadata() {
     url: string,
     serviceId: string,
     sectorId: string,
-    type: PhotoType,
+    type: 'before' | 'after',
     userId: string
   ) => {
     try {
@@ -128,7 +132,11 @@ export function usePhotoUploadWithMetadata() {
         return;
       }
       
-      const cycleId = cycleData[0].id;
+      const cycleId = cycleData[0]?.id;
+      if (!cycleId) {
+        console.error("Ciclo não encontrado");
+        return;
+      }
       
       // Inserir foto
       await supabase

@@ -1,8 +1,7 @@
-
 import { createContext, useState, useEffect, ReactNode } from "react";
 import { ApiContextExtendedType } from "./types";
 import { extendedApiService } from "./extendedApiService";
-import { useApiOriginal } from "../ApiContext";
+import { useApi as useOriginalApi } from "./useApi";
 import { Sector } from "@/types";
 import { useSectorService } from "@/services/sectorService";
 import { toast } from "sonner";
@@ -14,7 +13,7 @@ export const ApiContextExtended = createContext<ApiContextExtendedType | null>(n
  * Provider component for the extended API context
  */
 export function ApiContextExtendedProvider({ children }: { children: ReactNode }) {
-  const originalApi = useApiOriginal();
+  const originalApi = useOriginalApi();
   const sectorService = useSectorService();
   
   const [isLoading, setIsLoading] = useState(false);
