@@ -1,14 +1,209 @@
+import React, { useState, useEffect } from 'react';
+import { Sector } from '@/types';
+import { useSectorFormState } from '@/hooks/useSectorFormState';
+import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit'; 
+import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
+import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Loader2 } from 'lucide-react';
+import ReviewForm from './forms/ReviewForm';
+import ProductionForm from './forms/ProductionForm';
+import QualityForm from './forms/QualityForm';
+import ScrapForm from './forms/ScrapForm';
+import ScrapToggle from './forms/ScrapToggle';
+import FormActions from './forms/FormActions';
+import FormValidationAlert from './form-parts/FormValidationAlert';
 
-// Add the missing property to the form errors type
-type FormErrors = {
-  tagNumber: boolean;
-  tagPhoto: boolean;
-  entryInvoice: boolean;
-  entryDate: boolean;
-  services: boolean;
-  photos: boolean;
-  exitDate: boolean;
-  exitInvoice: boolean;
-  scrapObservations: boolean;
-  scrapPhotos: boolean;
-};
+export interface SectorFormProps {
+  initialSector: Sector;
+  onSubmit: (data: Partial<Sector>) => Promise<void>;
+  mode: 'peritagem' | 'production' | 'quality' | 'scrap';
+  photoRequired: boolean;
+  isLoading: boolean;
+  disableEntryFields: boolean;
+}
+
+function SectorForm({
+  initialSector,
+  onSubmit,
+  mode,
+  photoRequired,
+  isLoading,
+  disableEntryFields
+}: SectorFormProps) {
+  const {
+    tagNumber,
+    setTagNumber,
+    entryInvoice,
+    setEntryInvoice,
+    entryDate,
+    setEntryDate,
+    tagPhotoUrl,
+    setTagPhotoUrl,
+    entryObservations,
+    setEntryObservations,
+    services,
+    setServices,
+    formErrors,
+    setFormErrors,
+    isScrap,
+    setIsScrap,
+    scrapObservations,
+    setScrapObservations,
+    scrapDate,
+    setScrapDate,
+    scrapInvoice,
+    setScrapInvoice,
+    exitInvoice,
+    setExitInvoice,
+    exitDate,
+    setExitDate,
+    exitObservations,
+    setExitObservations,
+    qualityCompleted,
+    setQualityCompleted,
+    selectedTab,
+    setSelectedTab
+  } = useSectorFormState(initialSector);
+
+  // Adicionando o campo faltante
+  const formErrors = {
+    tagNumber: false,
+    tagPhoto: false,
+    entryInvoice: false,
+    entryDate: false,
+    services: false,
+    photos: false,
+    exitDate: false,
+    exitInvoice: false,
+    scrapObservations: false,
+    scrapPhotos: false
+  };
+
+  const { validateForm, prepareFormData } = useSectorFormSubmit();
+  const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling(services, setServices);
+  const { handleTagPhotoUpload, handlePhotoUpload, handleCameraCapture } = useSectorPhotoHandling(services, setServices);
+
+  const handleSubmit = async () => {
+    const errors = validateForm({
+      tagNumber,
+      tagPhotoUrl,
+      entryInvoice,
+      entryDate,
+      services,
+      isScrap,
+      scrapObservations,
+      scrapDate,
+      scrapInvoice
+    });
+
+    setFormErrors(errors);
+
+    if (Object.values(errors).some(error => error)) {
+      console.warn('Formulário com erros:', errors);
+      return;
+    }
+
+    const formData = prepareFormData({
+      tagNumber,
+      tagPhotoUrl,
+      entryInvoice,
+      entryDate,
+      entryObservations,
+      services,
+      isScrap,
+      scrapObservations,
+      scrapDate,
+      scrapInvoice
+    }, !!initialSector.id, initialSector.id);
+
+    await onSubmit(formData);
+  };
+  
+  const handleTabChange = (value: string) => {
+    setSelectedTab(value);
+  };
+
+  // Rendereizar o componente baseado no mode
+  return (
+    <div className="space-y-6">
+      <FormValidationAlert formErrors={formErrors} />
+
+      <ScrapToggle isScrap={isScrap} setIsScrap={setIsScrap} />
+
+      <Tabs value={selectedTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="services">Peritagem</TabsTrigger>
+          {mode === 'production' && <TabsTrigger value="production">Produção</TabsTrigger>}
+          {mode === 'quality' && <TabsTrigger value="quality">Qualidade</TabsTrigger>}
+          {isScrap && <TabsTrigger value="scrap">Sucateamento</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="services">
+          <ReviewForm
+            tagNumber={tagNumber}
+            setTagNumber={setTagNumber}
+            entryInvoice={entryInvoice}
+            setEntryInvoice={setEntryInvoice}
+            entryDate={entryDate}
+            setEntryDate={setEntryDate}
+            tagPhotoUrl={tagPhotoUrl}
+            handleTagPhotoUpload={handleTagPhotoUpload}
+            entryObservations={entryObservations}
+            setEntryObservations={setEntryObservations}
+            services={services}
+            handleServiceChange={handleServiceChange}
+            handleQuantityChange={handleQuantityChange}
+            handleObservationChange={handleObservationChange}
+            handlePhotoUpload={handlePhotoUpload}
+            formErrors={formErrors}
+            photoRequired={photoRequired}
+            handleCameraCapture={handleCameraCapture}
+          />
+        </TabsContent>
+
+        {mode === 'production' && (
+          <TabsContent value="production">
+            <ProductionForm />
+          </TabsContent>
+        )}
+
+        {mode === 'quality' && (
+          <TabsContent value="quality">
+            <QualityForm
+              exitInvoice={exitInvoice}
+              setExitInvoice={setExitInvoice}
+              exitDate={exitDate}
+              setExitDate={setExitDate}
+              exitObservations={exitObservations}
+              setExitObservations={setExitObservations}
+              qualityCompleted={qualityCompleted}
+              setQualityCompleted={setQualityCompleted}
+            />
+          </TabsContent>
+        )}
+
+        {isScrap && (
+          <TabsContent value="scrap">
+            <ScrapForm
+              scrapObservations={scrapObservations}
+              setScrapObservations={setScrapObservations}
+              scrapDate={scrapDate}
+              setScrapDate={setScrapDate}
+              scrapInvoice={scrapInvoice}
+              setScrapInvoice={setScrapInvoice}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
+
+      <FormActions
+        isLoading={isLoading}
+        handleSubmit={handleSubmit}
+      />
+    </div>
+  );
+}
+
+export default SectorForm;

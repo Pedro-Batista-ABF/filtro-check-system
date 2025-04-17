@@ -1,9 +1,22 @@
 
-// Assuming this file exists, let's fix the type issue with the query
 import { supabase } from '@/integrations/supabase/client';
 
-// Replace the problematic query
-const { data } = await supabase
-  .from('cycle_services')
-  .select('*')
-  .eq('cycle_id', cycleId as any);
+/**
+ * Recupera os serviços do ciclo especificado
+ * @param cycleId ID do ciclo
+ * @returns Serviços do ciclo
+ */
+export async function getCycleServices(cycleId: string) {
+  try {
+    // Consulta com validação de tipo
+    const { data } = await supabase
+      .from('cycle_services')
+      .select('*')
+      .eq('cycle_id', cycleId as any);
+      
+    return data || [];
+  } catch (error) {
+    console.error("Erro ao recuperar serviços do ciclo:", error);
+    return [];
+  }
+}

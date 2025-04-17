@@ -1,4 +1,3 @@
-
 import { Sector } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -42,9 +41,7 @@ export function usePhotoUploadWithMetadata() {
     }
   };
   
-  /**
-   * Faz upload de uma foto da TAG
-   */
+  // Correção para lidar com erro de tipagem para id
   const uploadTagPhoto = async (url: string, sectorId: string, userId: string) => {
     try {
       // Buscar o ciclo atual do setor
@@ -74,8 +71,8 @@ export function usePhotoUploadWithMetadata() {
         .eq('type', 'tag' as any)
         .maybeSingle();
         
-      // Add null check for existingPhoto before accessing its properties
-      if (existingPhoto && 'id' in existingPhoto) {
+      // Corrija a verificação de existingPhoto
+      if (existingPhoto && existingPhoto.id) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase
@@ -109,9 +106,7 @@ export function usePhotoUploadWithMetadata() {
     }
   };
   
-  /**
-   * Faz upload de uma foto de serviço
-   */
+  // Correção similar para uploadServicePhoto
   const uploadServicePhoto = async (
     url: string,
     serviceId: string,
@@ -121,6 +116,7 @@ export function usePhotoUploadWithMetadata() {
   ) => {
     try {
       // Buscar o ciclo atual do setor
+      
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')

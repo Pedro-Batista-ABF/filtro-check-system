@@ -18,7 +18,8 @@ import CheckagemFinal from './pages/CheckagemFinal';
 import Concluidos from './pages/Concluidos';
 import Relatorio from './pages/Relatorio';
 import { AuthProvider } from './contexts/AuthContext';
-import { ApiProvider, ApiContextExtendedProvider } from './contexts/api';
+import { ApiProvider } from './contexts/api';
+import { ApiContextExtendedProvider } from './contexts/api/ApiContextExtendedProvider';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {

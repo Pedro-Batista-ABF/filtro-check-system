@@ -1,7 +1,7 @@
 
 import { useContext } from "react";
 import { ApiContextExtended } from "./ApiContextExtendedProvider";
-import { ApiContextExtendedType } from "./types";
+import type { ApiContextExtendedType } from "./types";
 
 /**
  * Hook to use the extended API context

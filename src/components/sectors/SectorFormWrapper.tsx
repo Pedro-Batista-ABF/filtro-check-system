@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Sector } from '@/types';
-import SectorForm from './SectorForm';
+import SectorForm from '@/components/sectors/SectorForm';
 
 interface SectorFormWrapperProps {
   initialSector: Sector;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
@@ -23,6 +22,7 @@ export function PeritagemForm() {
   const isEditing = !!id;
   const isMobile = useIsMobile();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [mountTime] = useState(Date.now());
   
   const {
     sector,
@@ -93,7 +93,19 @@ export function PeritagemForm() {
   if (errorMessage?.includes('timeout')) {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
-        <TimeoutError onRetry={() => window.location.reload()} />
+        <TimeoutError 
+          onRetry={() => window.location.reload()}
+          forceRefreshing={false}
+          mountTime={mountTime}
+          authVerified={true}
+          services={services}
+          connectionStatus={isOffline ? 'offline' : 'online'}
+          defaultSector={defaultSector}
+          sector={sector}
+          errorMessage={errorMessage}
+          onBack={() => navigate('/peritagem')}
+          onRetryConnection={() => window.location.reload()}
+        />
       </PageLayout>
     );
   }
