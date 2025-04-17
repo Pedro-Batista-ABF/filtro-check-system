@@ -1,44 +1,51 @@
 
 import { Service } from "@/types";
+import { useState } from "react";
 
-export function useSectorServiceHandling() {
-  const handleServiceChange = (services: Service[], id: string, checked: boolean): Service[] => {
+export function useSectorServiceHandling(services: Service[], setServices: (services: Service[]) => void) {
+  const handleServiceChange = (id: string, checked: boolean) => {
     if (!Array.isArray(services)) {
       console.error("services is not an array:", services);
-      return [];
+      return;
     }
     
-    return services.map(service => 
+    const updatedServices = services.map(service => 
       service.id === id 
         ? { ...service, selected: checked } 
         : service
     );
+    
+    setServices(updatedServices);
   };
 
-  const handleQuantityChange = (services: Service[], id: string, quantity: number): Service[] => {
+  const handleQuantityChange = (id: string, quantity: number) => {
     if (!Array.isArray(services)) {
       console.error("services is not an array:", services);
-      return [];
+      return;
     }
     
-    return services.map(service => 
+    const updatedServices = services.map(service => 
       service.id === id 
         ? { ...service, quantity } 
         : service
     );
+    
+    setServices(updatedServices);
   };
 
-  const handleObservationChange = (services: Service[], id: string, observations: string): Service[] => {
+  const handleObservationChange = (id: string, observations: string) => {
     if (!Array.isArray(services)) {
       console.error("services is not an array:", services);
-      return [];
+      return;
     }
     
-    return services.map(service => 
+    const updatedServices = services.map(service => 
       service.id === id 
         ? { ...service, observations } 
         : service
     );
+    
+    setServices(updatedServices);
   };
 
   return {

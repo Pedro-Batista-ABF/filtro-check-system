@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { toast } from "sonner";
 import { findServicesWithoutPhotos } from '@/utils/peritagemValidation';
 
-interface FormState {
+export interface FormState {
   tagNumber: string;
   tagPhotoUrl?: string;
   entryInvoice: string;

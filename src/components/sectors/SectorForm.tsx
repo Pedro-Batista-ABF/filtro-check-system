@@ -44,7 +44,7 @@ function SectorForm({
     setEntryObservations,
     services,
     setServices,
-    formErrors: formValidationErrors,
+    formErrors: validationErrors,
     setFormErrors,
     isScrap,
     setIsScrap,
@@ -76,6 +76,7 @@ function SectorForm({
       tagPhotoUrl,
       entryInvoice,
       entryDate,
+      entryObservations,
       services,
       isScrap,
       scrapObservations,
@@ -110,11 +111,17 @@ function SectorForm({
     setSelectedTab(value);
   };
 
+  // Rendereizar o componente baseado no mode
   return (
     <div className="space-y-6">
-      <FormValidationAlert formErrors={formValidationErrors} />
+      <FormValidationAlert formErrors={validationErrors} />
 
-      <ScrapToggle isScrap={isScrap} setIsScrap={setIsScrap} />
+      <ScrapToggle 
+        isScrap={isScrap} 
+        setIsScrap={setIsScrap}
+        scrapObservations={scrapObservations}
+        setScrapObservations={setScrapObservations}
+      />
 
       <Tabs value={selectedTab} onValueChange={handleTabChange}>
         <TabsList>
@@ -141,7 +148,7 @@ function SectorForm({
             handleQuantityChange={handleQuantityChange}
             handleObservationChange={handleObservationChange}
             handlePhotoUpload={handlePhotoUpload}
-            formErrors={formValidationErrors}
+            formErrors={validationErrors}
             photoRequired={photoRequired}
             handleCameraCapture={handleCameraCapture}
           />
@@ -149,7 +156,12 @@ function SectorForm({
 
         {mode === 'production' && (
           <TabsContent value="production">
-            <ProductionForm />
+            <ProductionForm 
+              services={services}
+              productionCompleted={false}
+              handleProductionToggle={() => {}}
+              sectorStatus="emExecucao"
+            />
           </TabsContent>
         )}
 
@@ -164,6 +176,11 @@ function SectorForm({
               setExitObservations={setExitObservations}
               qualityCompleted={qualityCompleted}
               setQualityCompleted={setQualityCompleted}
+              services={services}
+              selectedTab={selectedTab}
+              setSelectedTab={setSelectedTab}
+              handlePhotoUpload={handlePhotoUpload}
+              handleCameraCapture={handleCameraCapture}
             />
           </TabsContent>
         )}
@@ -177,6 +194,15 @@ function SectorForm({
               setScrapDate={setScrapDate}
               scrapInvoice={scrapInvoice}
               setScrapInvoice={setScrapInvoice}
+              tagNumber={tagNumber}
+              setTagNumber={setTagNumber}
+              entryInvoice={entryInvoice}
+              setEntryInvoice={setEntryInvoice}
+              entryDate={entryDate}
+              setEntryDate={setEntryDate}
+              setTagPhotoUrl={setTagPhotoUrl}
+              tagPhotoUrl={tagPhotoUrl}
+              handleTagPhotoUpload={handleTagPhotoUpload}
             />
           </TabsContent>
         )}
