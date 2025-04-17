@@ -17,14 +17,14 @@ import CheckagemDetails from './pages/CheckagemDetails';
 import CheckagemFinal from './pages/CheckagemFinal';
 import Relatorio from './pages/Relatorio';
 import { AuthProvider } from './contexts/AuthContext';
-import { ApiContextProvider } from './contexts/ApiContext';
+import { ApiProvider } from './contexts/ApiContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ApiContextProvider>
+        <ApiProvider>
           <Router>
             <Toaster />
             <Routes>
@@ -44,7 +44,7 @@ function App() {
               <Route path="/relatorio" element={<ProtectedRoute><Relatorio /></ProtectedRoute>} />
             </Routes>
           </Router>
-        </ApiContextProvider>
+        </ApiProvider>
       </AuthProvider>
     </ThemeProvider>
   );
