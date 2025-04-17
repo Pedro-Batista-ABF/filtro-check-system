@@ -4,7 +4,7 @@ import { Service } from "@/types";
 import { photoService } from "@/services/photoService";
 
 export function useSectorPhotoHandling(services: Service[], setServices: (services: Service[]) => void) {
-  const handleTagPhotoUpload = async (files: FileList) => {
+  const handleTagPhotoUpload = async (files: FileList): Promise<string | undefined> => {
     if (files.length > 0) {
       try {
         const file = files[0];
@@ -28,7 +28,7 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
     return undefined;
   };
 
-  const handlePhotoUpload = async (serviceId: string, files: FileList, type: "before" | "after") => {
+  const handlePhotoUpload = async (serviceId: string, files: FileList, type: "before" | "after"): Promise<void> => {
     if (!Array.isArray(services) || files.length === 0) return;
     
     try {

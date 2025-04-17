@@ -13,14 +13,15 @@ export function useSectorStatus() {
         throw new Error("ID do setor inválido");
       }
 
+      // Usa any para contornar verificação de tipagem do TypeScript
       const { error } = await supabase
         .from('sectors')
         .update({
           current_status: status,
           current_outcome: data.outcome || 'EmAndamento',
           updated_at: new Date().toISOString()
-        })
-        .eq('id', sectorId);
+        } as any)
+        .eq('id', sectorId as any);
         
       if (error) {
         console.error(`Erro ao atualizar tabela sectors para o setor ${sectorId}:`, error);
@@ -31,7 +32,7 @@ export function useSectorStatus() {
       const { data: cycleData, error: cycleQueryError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId)
+        .eq('sector_id', sectorId as any)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -47,6 +48,7 @@ export function useSectorStatus() {
       
       const cycleId = cycleData[0].id;
       
+      // Atualizar o ciclo
       const { error: cycleError } = await supabase
         .from('cycles')
         .update({
@@ -56,7 +58,7 @@ export function useSectorStatus() {
           entry_invoice: data.entryInvoice,
           tag_number: data.tagNumber,
           peritagem_date: data.peritagemDate
-        })
+        } as any)
         .eq('id', cycleId);
         
       if (cycleError) {
@@ -81,7 +83,7 @@ export function useSectorStatus() {
       const { data: checkData, error: checkError } = await supabase
         .from('sectors')
         .select('current_status')
-        .eq('id', sectorId)
+        .eq('id', sectorId as any)
         .single();
         
       if (checkError) {
@@ -101,8 +103,8 @@ export function useSectorStatus() {
           .update({
             current_status: 'sucateadoPendente',
             updated_at: new Date().toISOString()
-          })
-          .eq('id', sectorId);
+          } as any)
+          .eq('id', sectorId as any);
           
         if (forceError) {
           console.error("Erro ao forçar status:", forceError);

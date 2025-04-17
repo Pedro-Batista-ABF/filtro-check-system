@@ -54,11 +54,6 @@ function App() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Notificar o usuário que a conexão foi restaurada
-      if (!isOnline) {
-        // Só invalidar queries se tivermos um queryClient disponível
-        // queryClient.invalidateQueries();  // Removido para evitar erro
-      }
     };
     
     const handleOffline = () => {

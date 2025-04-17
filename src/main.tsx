@@ -130,50 +130,6 @@ window.addEventListener('unhandledrejection', (event) => {
 // Iniciar monitoramento de conexão
 setupConnectionMonitoring();
 
-// Botão de diagnóstico para testes de conexão (apenas em desenvolvimento)
-if (import.meta.env.DEV) {
-  const createDebugButton = () => {
-    const button = document.createElement('button');
-    button.innerText = 'Testar Conexão';
-    button.style.position = 'fixed';
-    button.style.bottom = '10px';
-    button.style.right = '10px';
-    button.style.zIndex = '9999';
-    button.style.padding = '8px 12px';
-    button.style.background = '#4f46e5';
-    button.style.color = 'white';
-    button.style.border = 'none';
-    button.style.borderRadius = '4px';
-    button.style.cursor = 'pointer';
-    button.onclick = async () => {
-      try {
-        const startTime = Date.now();
-        const response = await fetch('https://yjcyebiahnwfwrcgqlcm.supabase.co/rest/v1/', {
-          method: 'HEAD',
-          cache: 'no-cache',
-        });
-        const endTime = Date.now();
-        const elapsed = endTime - startTime;
-        
-        if (response.ok) {
-          console.log(`✅ Conexão OK (${elapsed}ms)`);
-          alert(`Conexão OK! Tempo: ${elapsed}ms`);
-        } else {
-          console.error(`❌ Erro de conexão: ${response.status} (${elapsed}ms)`);
-          alert(`Erro de conexão: ${response.status} - Tempo: ${elapsed}ms`);
-        }
-      } catch (error) {
-        console.error('❌ Erro ao testar conexão:', error);
-        alert(`Falha no teste: ${error.message}`);
-      }
-    };
-    document.body.appendChild(button);
-  };
-  
-  // Adicionar botão após o carregamento do DOM
-  window.addEventListener('DOMContentLoaded', createDebugButton);
-}
-
 root.render(
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>

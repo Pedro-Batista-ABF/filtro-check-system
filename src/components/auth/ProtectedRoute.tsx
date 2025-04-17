@@ -1,38 +1,45 @@
 
-import { useEffect } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import PageLayout from '../layout/PageLayout';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const navigate = useNavigate();
-  const { isAuthenticated, loading, session } = useAuth();
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  redirectTo?: string;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  redirectTo = '/login'
+}) => {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      console.log("ProtectedRoute: Usuário não autenticado, redirecionando para login");
-      navigate('/login');
+    // Se não está mais carregando, podemos parar de verificar
+    if (!isLoading) {
+      setIsChecking(false);
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [isLoading]);
 
-  // Mostrar loading enquanto verifica autenticação
-  if (loading) {
+  // Se ainda está verificando, mostra uma tela de carregamento
+  if (isChecking || isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2 text-sm text-gray-500">Verificando autenticação...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse">Verificando autenticação...</div>
       </div>
     );
   }
-  
-  // Redirecionar para login se não autenticado
-  if (!isAuthenticated || !session) {
-    console.log("Redirecionando para login: sem autenticação");
-    return <Navigate to="/login" replace />;
+
+  // Se não houver usuário autenticado, redireciona para a página de login
+  if (!user) {
+    return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Renderizar conteúdo protegido se autenticado
-  return <>{children}</>;
+  // Se o usuário estiver autenticado, renderiza o conteúdo protegido
+  return <PageLayout>{children}</PageLayout>;
 };
 
 export default ProtectedRoute;

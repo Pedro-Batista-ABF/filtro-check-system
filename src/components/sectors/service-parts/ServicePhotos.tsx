@@ -1,18 +1,18 @@
 
-import React, { useRef, useState } from 'react';
-import { Camera, Trash2, Image, Loader2, Eye } from 'lucide-react';
+import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Service, Photo } from '@/types';
-import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { Service } from '@/types';
+import { Camera, Image, Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface ServicePhotosProps {
   service: Service;
-  photoType: "before" | "after";
+  photoType: 'before' | 'after';
   required: boolean;
-  onPhotoUpload: (serviceId: string, files: FileList, type: "before" | "after") => void;
+  onPhotoUpload: (serviceId: string, files: FileList, type: 'before' | 'after') => void;
   disabled?: boolean;
-  onCameraCapture?: (e: React.MouseEvent, serviceId: string) => void;
+  onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
 const ServicePhotos: React.FC<ServicePhotosProps> = ({
@@ -24,144 +24,111 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   onCameraCapture
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  
-  // Garantir que photos é um array
-  const photos = Array.isArray(service.photos) ? service.photos : [];
-  // Filtrar fotos pelo tipo correto
-  const typePhotos = photos.filter(photo => photo.type === photoType);
-  
+
   const handleClick = () => {
-    if (disabled) return;
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (disabled || !e.target.files || e.target.files.length === 0) return;
-    
-    setUploading(true);
-    try {
-      console.log(`Iniciando upload de ${e.target.files.length} fotos para o serviço ${service.id}`);
-      // Processar as imagens
-      await onPhotoUpload(service.id, e.target.files, photoType);
-      
-      // Limpar o input para permitir selecionar o mesmo arquivo novamente
-      if (e.target.value) {
-        e.target.value = '';
-      }
-    } catch (error) {
-      console.error('Erro ao fazer upload da foto:', error);
-      toast.error("Falha ao enviar foto. Tente novamente.");
-    } finally {
-      setUploading(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onPhotoUpload(service.id, e.target.files, photoType);
+      // Clear the input to allow selecting the same file again
+      e.target.value = '';
     }
   };
 
-  const handleCameraCaptureClick = (e: React.MouseEvent) => {
-    if (disabled || !onCameraCapture) return;
-    onCameraCapture(e, service.id);
-  };
-  
+  // Filter photos by type
+  const photos = (service.photos || []).filter(photo => photo.type === photoType);
+
   return (
-    <div className="mt-2">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium">
-          Fotos {photoType === 'before' ? 'antes' : 'depois'}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </span>
-        
-        <div className="flex space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleClick}
-            disabled={disabled || uploading}
-            className="text-xs"
-          >
-            {uploading ? (
-              <span className="flex items-center">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Enviando...
-              </span>
-            ) : (
-              <>
-                <Image className="h-3 w-3 mr-1" />
-                Adicionar foto
-              </>
-            )}
-          </Button>
-          
-          {onCameraCapture && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCameraCaptureClick}
-              disabled={disabled || uploading}
-              className="text-xs"
-            >
-              <Camera className="h-3 w-3 mr-1" />
-              Usar câmera
-            </Button>
-          )}
-        </div>
-        
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept="image/*"
-          className="hidden"
-          multiple
-          disabled={disabled || uploading}
-        />
-      </div>
-      
-      {typePhotos.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {typePhotos.map((photo, index) => (
-            <Dialog key={photo.id || `photo-${index}`}>
+    <div className="space-y-2">
+      <Label className="text-sm flex items-center">
+        Fotos {photoType === 'before' ? 'do defeito' : 'da execução'}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </Label>
+
+      <div className="grid grid-cols-4 gap-2">
+        {photos.map((photo, index) => (
+          <div key={photo.id || `photo-${index}`} className="relative group">
+            <Dialog>
               <DialogTrigger asChild>
-                <div className="relative border rounded-md overflow-hidden h-24 cursor-pointer">
+                <div className="cursor-pointer">
                   <img
                     src={photo.url}
-                    alt={`Foto ${index + 1} do serviço ${service.name}`}
-                    className="h-full w-full object-cover"
+                    alt={`Foto ${index + 1}`}
+                    className="aspect-square w-full object-cover rounded-md border"
                     onError={(e) => {
-                      // Fallback para imagem quebrada
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
-                      target.classList.add('bg-gray-100');
+                      (e.target as HTMLImageElement).src = '/placeholder.svg';
                     }}
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 flex items-center justify-center transition-all">
-                    <Eye className="h-5 w-5 text-white opacity-0 hover:opacity-100" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-md">
+                    <Plus className="h-5 w-5 text-white" />
                   </div>
                 </div>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl p-0">
+              <DialogContent className="max-w-3xl p-0 overflow-hidden">
                 <img
                   src={photo.url}
-                  alt={`Foto ${index + 1} do serviço ${service.name}`}
+                  alt={`Visualização da foto ${index + 1}`}
                   className="w-full h-auto max-h-[80vh] object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                  }}
                 />
               </DialogContent>
             </Dialog>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-gray-50 rounded-md p-4 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-300">
-          <Image className="h-8 w-8 mb-2" />
-          <p className="text-xs text-center">
-            {disabled
-              ? "Não há fotos disponíveis"
-              : "Clique no botão acima para adicionar fotos"}
-          </p>
-        </div>
-      )}
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="aspect-square flex items-center justify-center border-dashed"
+          onClick={handleClick}
+          disabled={disabled}
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="flex space-x-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleCameraCapture}
+          disabled={disabled}
+          className="text-xs"
+        >
+          <Camera className="h-3 w-3 mr-1" />
+          Usar câmera
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleClick}
+          disabled={disabled}
+          className="text-xs"
+        >
+          <Image className="h-3 w-3 mr-1" />
+          Carregar foto
+        </Button>
+      </div>
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+        multiple
+        disabled={disabled}
+      />
     </div>
   );
 };

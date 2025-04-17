@@ -13,8 +13,8 @@ interface ScrapToggleProps {
   setIsScrap: (value: boolean) => void;
   scrapObservations: string;
   setScrapObservations: (value: string) => void;
-  scrapPhotos: PhotoWithFile[];
-  handleScrapPhotoUpload: (files: FileList) => void;
+  scrapPhotos?: PhotoWithFile[];
+  handleScrapPhotoUpload?: (files: FileList) => void;
   error?: {
     observations?: boolean;
     photos?: boolean;
@@ -28,8 +28,8 @@ const ScrapToggle: React.FC<ScrapToggleProps> = ({
   setIsScrap,
   scrapObservations,
   setScrapObservations,
-  scrapPhotos,
-  handleScrapPhotoUpload,
+  scrapPhotos = [],
+  handleScrapPhotoUpload = () => {},
   error = {},
   disabled = false,
   onCameraCapture

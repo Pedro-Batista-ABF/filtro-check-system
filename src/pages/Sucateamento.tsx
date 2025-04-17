@@ -8,25 +8,47 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search } from 'lucide-react';
 import { Sector } from '@/types';
 import SectorGrid from '@/components/sectors/SectorGrid';
+import { toast } from 'sonner';
 
 export default function Sucateamento() {
   const navigate = useNavigate();
-  const { sectors, isLoading, refreshData } = useApi();
+  const { sectors, isLoading, error, refreshData } = useApi();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
+  const [localSectors, setLocalSectors] = useState<Sector[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
   
   useEffect(() => {
     document.title = "Sucateamento - Gestão de Recuperação";
-    refreshData();
+    
+    const loadData = async () => {
+      try {
+        setLocalLoading(true);
+        await refreshData();
+        setLocalLoading(false);
+      } catch (err) {
+        toast.error("Erro ao carregar setores");
+        setLocalLoading(false);
+      }
+    };
+    
+    loadData();
   }, [refreshData]);
   
+  useEffect(() => {
+    if (!isLoading && sectors) {
+      setLocalSectors(sectors);
+      setLocalLoading(false);
+    }
+  }, [sectors, isLoading]);
+  
   // Filter sectors based on status and search term
-  const pendingScraps = sectors.filter(sector => 
+  const pendingScraps = localSectors.filter(sector => 
     sector.status === 'sucateadoPendente' && 
     (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
-  const completedScraps = sectors.filter(sector => 
+  const completedScraps = localSectors.filter(sector => 
     sector.status === 'sucateado' && 
     (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -34,6 +56,23 @@ export default function Sucateamento() {
   const handleSectorClick = (sector: Sector) => {
     navigate(`/sucateamento/${sector.id}`);
   };
+
+  if (error) {
+    return (
+      <PageLayout>
+        <div className="flex flex-col items-center justify-center py-10">
+          <h1 className="text-xl font-bold text-red-500">Erro ao carregar dados</h1>
+          <p className="text-gray-600 mb-4">Ocorreu um erro ao carregar os setores.</p>
+          <button 
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            onClick={() => refreshData()}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
@@ -62,8 +101,10 @@ export default function Sucateamento() {
           </TabsList>
           
           <TabsContent value="pending" className="mt-4">
-            {isLoading ? (
-              <p>Carregando...</p>
+            {localLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
             ) : pendingScraps.length > 0 ? (
               <SectorGrid
                 sectors={pendingScraps}
@@ -77,8 +118,10 @@ export default function Sucateamento() {
           </TabsContent>
           
           <TabsContent value="completed" className="mt-4">
-            {isLoading ? (
-              <p>Carregando...</p>
+            {localLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
             ) : completedScraps.length > 0 ? (
               <SectorGrid
                 sectors={completedScraps}

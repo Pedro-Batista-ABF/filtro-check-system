@@ -93,7 +93,7 @@ export default function PhotoUpload({
                         variant="destructive"
                         size="icon"
                         className="absolute top-2 right-2"
-                        onClick={() => onRemove(photo.id)}
+                        onClick={() => onRemove(photo.id || '')}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -101,55 +101,43 @@ export default function PhotoUpload({
                   </div>
                 </DialogContent>
               </Dialog>
-              
-              {allowRemove && onRemove && (
-                <button
-                  type="button"
-                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onRemove(photo.id)}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
             </div>
           );
         })}
-
-        <div className="flex items-center space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-20 h-20 rounded-md border-dashed"
-            disabled={disabled}
-            onClick={handleClick}
-            title={title}
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-          
-          {onCameraCapture && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-14 h-20 rounded-md border-dashed"
-              disabled={disabled}
-              onClick={onCameraCapture}
-              title="Usar câmera"
-            >
-              <Camera className="h-5 w-5" />
-            </Button>
-          )}
-        </div>
+        
+        <Button
+          type="button"
+          variant="outline"
+          className="w-20 h-20 border-dashed flex flex-col items-center justify-center"
+          onClick={handleClick}
+          disabled={disabled}
+        >
+          <Plus className="h-5 w-5 mb-1" />
+          <span className="text-xs">Foto</span>
+        </Button>
       </div>
-
+      
+      <div className="flex space-x-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onCameraCapture}
+          disabled={disabled}
+        >
+          <Camera className="h-4 w-4 mr-1" />
+          Câmera
+        </Button>
+      </div>
+      
       <Input
-        ref={fileInputRef}
         type="file"
-        accept="image/*"
+        ref={fileInputRef}
         onChange={(e) => e.target.files && onChange(e.target.files)}
+        accept="image/*"
         className="hidden"
-        required={required && photos.length === 0}
         multiple
+        disabled={disabled}
       />
     </div>
   );

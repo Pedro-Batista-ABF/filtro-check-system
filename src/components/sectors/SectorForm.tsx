@@ -4,7 +4,7 @@ import { useSectorFormState } from '@/hooks/useSectorFormState';
 import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit';
 import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
 import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
-import { Sector, Service } from '@/types';
+import { Sector, Service, PhotoWithFile } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from '@/hooks/use-mobile';
 import ScrapToggle from './forms/ScrapToggle';
@@ -12,6 +12,7 @@ import ScrapForm from './forms/ScrapForm';
 import ReviewForm from './forms/ReviewForm';
 import FormActions from './forms/FormActions';
 import { FormValidationAlert } from './form-parts/FormValidationAlert';
+import { usePhotosManagement } from '@/hooks/usePhotosManagement';
 
 interface SectorFormProps {
   initialSector: Sector;
@@ -32,6 +33,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [scrapPhotos, setScrapPhotos] = useState<PhotoWithFile[]>([]);
   
   // Hooks para gerenciamento de estado e submissão do formulário
   const sectorState = useSectorFormState(initialSector);
@@ -65,8 +67,32 @@ const SectorForm: React.FC<SectorFormProps> = ({
         initialSector.scrapReturnDate ? new Date(initialSector.scrapReturnDate) : undefined
       );
       sectorState.setScrapInvoice(initialSector.scrapReturnInvoice || '');
+      
+      // Set scrap photos if available
+      if (initialSector.scrapPhotos && initialSector.scrapPhotos.length > 0) {
+        setScrapPhotos(initialSector.scrapPhotos as PhotoWithFile[]);
+      }
     }
   }, [initialSector]);
+  
+  // Handle scrap photo upload
+  const handleScrapPhotoUpload = (files: FileList) => {
+    if (!files.length) return;
+    
+    const newPhotos: PhotoWithFile[] = [...scrapPhotos];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      newPhotos.push({
+        id: `scrap-${Date.now()}-${i}`,
+        file,
+        url: URL.createObjectURL(file),
+        type: 'scrap'
+      });
+    }
+    
+    setScrapPhotos(newPhotos);
+  };
   
   // Função para submeter o formulário
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -82,7 +108,8 @@ const SectorForm: React.FC<SectorFormProps> = ({
       isScrap: sectorState.isScrap,
       scrapObservations: sectorState.scrapObservations,
       scrapDate: sectorState.scrapDate,
-      scrapInvoice: sectorState.scrapInvoice
+      scrapInvoice: sectorState.scrapInvoice,
+      scrapPhotos: scrapPhotos
     };
     
     // Validar formulário
@@ -141,6 +168,13 @@ const SectorForm: React.FC<SectorFormProps> = ({
           setIsScrap={sectorState.setIsScrap}
           scrapObservations={sectorState.scrapObservations}
           setScrapObservations={sectorState.setScrapObservations}
+          scrapPhotos={scrapPhotos}
+          handleScrapPhotoUpload={handleScrapPhotoUpload}
+          onCameraCapture={handleCameraCapture}
+          error={{
+            observations: sectorState.formErrors.scrapObservations,
+            photos: sectorState.formErrors.scrapPhotos
+          }}
         />
       )}
       
@@ -161,6 +195,8 @@ const SectorForm: React.FC<SectorFormProps> = ({
           setScrapDate={sectorState.setScrapDate}
           scrapInvoice={sectorState.scrapInvoice}
           setScrapInvoice={sectorState.setScrapInvoice}
+          scrapPhotos={scrapPhotos}
+          handleScrapPhotoUpload={handleScrapPhotoUpload}
           formErrors={sectorState.formErrors}
           onCameraCapture={handleCameraCapture}
           disabled={disableEntryFields}

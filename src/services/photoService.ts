@@ -1,188 +1,69 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Photo } from "@/types";
-import { toast } from "sonner";
 
 /**
- * Serviço para gerenciar fotos
+ * Serviço para operações com fotos
  */
 export const photoService = {
   /**
-   * Faz upload de uma foto para o Storage
+   * Faz upload de uma foto para o bucket do Storage
    */
   uploadPhoto: async (file: File, folder: string = 'general'): Promise<string> => {
     try {
-      if (!file || !(file instanceof File)) {
-        throw new Error("Arquivo inválido");
-      }
-
-      // Verificar se é uma imagem
-      if (!file.type.startsWith('image/')) {
-        throw new Error("O arquivo precisa ser uma imagem");
-      }
-
-      console.log(`Iniciando upload de foto para pasta '${folder}'`);
-
-      // Gerar nome único para o arquivo
-      const fileExt = file.name.split('.').pop();
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const fileName = `${randomId}_${Date.now()}.${fileExt}`;
-      const filePath = `${folder}/${fileName}`;
+      console.log(`Iniciando upload de foto para ${folder}`);
       
-      console.log(`Nome de arquivo gerado: ${fileName}`);
+      // Comprimir imagem se necessário (no futuro)
       
-      // Tentar criar bucket se não existir
-      try {
-        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('photos');
-        if (bucketError && bucketError.message.includes('not found')) {
-          const { error: createError } = await supabase.storage.createBucket('photos', {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB
-          });
-          if (createError) {
-            console.error("Erro ao criar bucket:", createError);
-          } else {
-            console.log("Bucket 'photos' criado com sucesso");
-          }
-        }
-      } catch (bucketErr) {
-        console.error("Erro ao verificar bucket:", bucketErr);
-      }
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `${folder}/${Date.now()}.${fileExt}`;
       
-      // Fazer upload para o bucket 'photos'
       const { data, error } = await supabase.storage
-        .from('photos')
-        .upload(filePath, file, {
+        .from('sector_photos')
+        .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
         });
         
       if (error) {
-        console.error("Erro no upload para o Supabase:", error);
+        console.error('Erro ao fazer upload de foto:', error);
         throw error;
       }
       
-      console.log("Upload para Supabase concluído com sucesso");
-      
-      // Obter a URL pública
-      const { data: urlData } = supabase.storage
-        .from('photos')
-        .getPublicUrl(filePath);
+      const result = supabase.storage
+        .from('sector_photos')
+        .getPublicUrl(fileName);
         
-      if (!urlData || !urlData.publicUrl) {
-        throw new Error("Não foi possível obter URL pública da imagem");
-      }
+      console.log(`Upload concluído. URL pública: ${result.data.publicUrl}`);
       
-      console.log(`URL pública gerada: ${urlData.publicUrl}`);
-      
-      return urlData.publicUrl;
+      return result.data.publicUrl;
     } catch (error) {
-      console.error("Erro no upload da foto:", error);
+      console.error('Erro ao fazer upload de foto:', error);
       throw error;
     }
   },
   
   /**
-   * Atualiza fotos para um serviço específico
+   * Exclui uma foto do bucket do Storage
    */
-  updateServicePhotos: async (
-    sectorId: string,
-    serviceId: string,
-    photoUrl: string,
-    type: 'before' | 'after'
-  ): Promise<boolean> => {
+  deletePhoto: async (url: string): Promise<boolean> => {
     try {
-      // Obter o usuário atual
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) {
-        console.error("Usuário não autenticado");
-        return false;
-      }
-
-      // Encontrar o ciclo atual para este setor
-      const { data: cycleData, error: cycleError } = await supabase
-        .from('cycles')
-        .select('id')
-        .eq('sector_id', sectorId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (cycleError) {
-        console.error("Erro ao encontrar ciclo para foto:", cycleError);
-        return false;
-      }
+      // Extrair o caminho do arquivo da URL
+      const baseUrl = supabase.storage.from('sector_photos').getPublicUrl('').data.publicUrl;
+      const filePath = url.replace(baseUrl, '');
       
-      // Inserir a foto com associação ao serviço e ID do usuário
-      const { error: photoError } = await supabase
-        .from('photos')
-        .insert({
-          cycle_id: cycleData.id,
-          service_id: serviceId,
-          url: photoUrl,
-          type,
-          created_by: userData.user.id,
-          metadata: {
-            sector_id: sectorId,
-            service_id: serviceId,
-            stage: type === 'before' ? 'peritagem' : 'checagem',
-            type
-          }
-        });
+      const { error } = await supabase.storage
+        .from('sector_photos')
+        .remove([filePath]);
         
-      if (photoError) {
-        console.error("Erro ao inserir foto do serviço:", photoError);
-        return false;
+      if (error) {
+        console.error('Erro ao excluir foto:', error);
+        throw error;
       }
       
       return true;
     } catch (error) {
-      console.error("Erro em updateServicePhotos:", error);
+      console.error('Erro ao excluir foto:', error);
       return false;
-    }
-  },
-  
-  /**
-   * Recupera todas as fotos de um setor
-   */
-  getSectorPhotos: async (sectorId: string): Promise<Photo[]> => {
-    try {
-      // Encontrar o ciclo atual para este setor
-      const { data: cycleData, error: cycleError } = await supabase
-        .from('cycles')
-        .select('id')
-        .eq('sector_id', sectorId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (cycleError) {
-        console.error("Erro ao encontrar ciclo para fotos:", cycleError);
-        return [];
-      }
-      
-      // Buscar todas as fotos associadas a este ciclo
-      const { data: photos, error: photosError } = await supabase
-        .from('photos')
-        .select('*')
-        .eq('cycle_id', cycleData.id);
-        
-      if (photosError) {
-        console.error("Erro ao buscar fotos do setor:", photosError);
-        return [];
-      }
-      
-      return photos as Photo[];
-    } catch (error) {
-      console.error("Erro em getSectorPhotos:", error);
-      return [];
     }
   }
 };
-
-/**
- * Hook para usar o serviço de fotos
- */
-export function usePhotoService() {
-  return photoService;
-}
