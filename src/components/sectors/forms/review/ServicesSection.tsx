@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Service, Photo } from "@/types";
 import ServiceCheck from "./ServiceCheck";
@@ -11,6 +10,7 @@ import {
 import { AlertCircle, Check, CheckSquare, X, Square } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { IntrinsicAttributes } from "react";
 
 interface ServicesCheckProps {
   service: Service;
@@ -41,7 +41,7 @@ function ServiceModal({ service, onClose, onSave, beforePhotos = [], readOnly = 
         <div className="py-4">
           <ServiceCheck
             service={service}
-            onChange={(updatedValue) => setUpdatedService(updatedValue)}
+            onServiceChange={(updatedValue) => setUpdatedService(updatedValue)}
             beforePhotos={beforePhotos}
             readOnly={readOnly}
           />

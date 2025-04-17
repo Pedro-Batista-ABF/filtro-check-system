@@ -2,7 +2,7 @@
 import { Photo, PhotoWithFile } from "@/types";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useApi } from "@/contexts/api";
+import { useApi } from "@/contexts/api/useExtendedApi";
 import { supabase } from "@/integrations/supabase/client";
 
 export function usePhotosManagement(cycleId?: string) {
@@ -21,7 +21,7 @@ export function usePhotosManagement(cycleId?: string) {
         .eq('type', type as any);
         
       if (existingPhotos) {
-        const existingUrls = existingPhotos.map(p => p.url);
+        const existingUrls = existingPhotos.map(p => 'url' in p ? p.url : '');
         const newPhotos = photos.filter(photo => !existingUrls.includes(photo.url));
         
         return newPhotos;

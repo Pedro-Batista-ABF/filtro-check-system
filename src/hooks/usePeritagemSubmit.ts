@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/api";
+import { useApi } from "@/contexts/api/useExtendedApi"; // Updated import
 import { Sector, SectorStatus, Service } from "@/types";
 import { toast } from "sonner";
 import { generateUniqueCycleCount } from "@/utils/cycleUtils";
@@ -62,7 +61,7 @@ export function usePeritagemSubmit() {
             sectorResult = typeof apiResult === 'string' ? apiResult : false;
             
             if (sectorResult) {
-              await updateSectorStatus(sectorResult, data, 'sucateadoPendente');
+              await updateSectorStatus(sectorResult, data, 'sucateadoPendente' as SectorStatus);
               await refreshData();
               
               toast.success("Setor registrado para sucateamento");
@@ -83,7 +82,7 @@ export function usePeritagemSubmit() {
           try {
             const apiResult = await updateSector(sectorId, data);
             if (apiResult) {
-              await updateSectorStatus(sectorId, data, 'sucateadoPendente');
+              await updateSectorStatus(sectorId, data, 'sucateadoPendente' as SectorStatus);
               await refreshData();
               
               toast.success("Setor marcado para sucateamento");
