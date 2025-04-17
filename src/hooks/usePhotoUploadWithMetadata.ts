@@ -1,3 +1,4 @@
+
 import { Sector } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,7 +49,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as any)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -67,17 +68,17 @@ export function usePhotoUploadWithMetadata() {
       const { data: existingPhoto } = await supabase
         .from('photos')
         .select('id')
-        .eq('cycle_id', cycleId as any)
-        .eq('type', 'tag' as any)
+        .eq('cycle_id', cycleId)
+        .eq('type', 'tag')
         .maybeSingle();
         
       // Corrija a verificação de existingPhoto
-      if (existingPhoto && existingPhoto.id) {
+      if (existingPhoto) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase
           .from('photos')
-          .update({ url: url } as any)
+          .update({ url: url })
           .eq('id', existingPhoto.id);
           
         return;
@@ -97,7 +98,7 @@ export function usePhotoUploadWithMetadata() {
             stage: 'peritagem',
             type: 'tag'
           }
-        } as any);
+        });
         
       console.log("Foto da TAG inserida com sucesso");
     } catch (error) {
@@ -120,7 +121,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as any)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -150,7 +151,7 @@ export function usePhotoUploadWithMetadata() {
             stage: 'peritagem',
             type: type
           }
-        } as any);
+        });
         
       console.log(`Foto do serviço ${serviceId} inserida com sucesso`);
     } catch (error) {

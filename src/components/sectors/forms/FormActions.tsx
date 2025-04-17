@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 
 interface FormActionsProps {
   loading: boolean;
+  handleSubmit: () => Promise<void>;
   mode: 'peritagem' | 'production' | 'quality' | 'scrap';
   isScrap?: boolean;
   qualityCompleted?: boolean;
@@ -12,6 +13,7 @@ interface FormActionsProps {
 
 export default function FormActions({ 
   loading, 
+  handleSubmit,
   mode,
   isScrap = false,
   qualityCompleted = false
@@ -21,7 +23,7 @@ export default function FormActions({
       <Button variant="outline" type="button" onClick={() => window.history.back()}>
         Cancelar
       </Button>
-      <Button type="submit" disabled={loading}>
+      <Button type="button" onClick={handleSubmit} disabled={loading}>
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

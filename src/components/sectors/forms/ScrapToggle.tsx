@@ -5,22 +5,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle } from "lucide-react";
-import PhotoUpload from "../PhotoUpload";
-import { PhotoWithFile } from "@/types";
 
 interface ScrapToggleProps {
   isScrap: boolean;
   setIsScrap: (value: boolean) => void;
   scrapObservations: string;
   setScrapObservations: (value: string) => void;
-  scrapPhotos?: PhotoWithFile[];
-  handleScrapPhotoUpload?: (files: FileList) => void;
   error?: {
     observations?: boolean;
     photos?: boolean;
   };
   disabled?: boolean;
-  onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
 const ScrapToggle: React.FC<ScrapToggleProps> = ({
@@ -28,11 +23,8 @@ const ScrapToggle: React.FC<ScrapToggleProps> = ({
   setIsScrap,
   scrapObservations,
   setScrapObservations,
-  scrapPhotos = [],
-  handleScrapPhotoUpload = () => {},
   error = {},
   disabled = false,
-  onCameraCapture
 }) => {
   return (
     <Card className="mb-6">
@@ -75,27 +67,6 @@ const ScrapToggle: React.FC<ScrapToggleProps> = ({
                 />
                 {error.observations && (
                   <p className="text-xs text-red-500">O motivo do sucateamento é obrigatório</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label 
-                  className={`text-sm ${error.photos ? 'text-red-500' : ''}`}
-                >
-                  Fotos do estado de sucateamento*
-                </Label>
-                <PhotoUpload 
-                  photos={scrapPhotos} 
-                  onChange={handleScrapPhotoUpload}
-                  disabled={disabled}
-                  title="Adicionar fotos do sucateamento"
-                  required={true}
-                  onCameraCapture={onCameraCapture}
-                />
-                {error.photos && (
-                  <p className="text-xs text-red-500">
-                    É necessário adicionar pelo menos uma foto do estado de sucateamento
-                  </p>
                 )}
               </div>
               

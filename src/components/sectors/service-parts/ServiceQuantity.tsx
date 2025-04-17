@@ -1,72 +1,77 @@
 
 import React from 'react';
+import { Service } from '@/types';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Minus } from 'lucide-react';
-import { Service } from '@/types';
+import { Minus, Plus } from 'lucide-react';
 
 export interface ServiceQuantityProps {
   service: Service;
-  onQuantityChange: (id: string, quantity: number) => void;
+  onQuantityChange: (quantity: number) => void;
   disabled?: boolean;
 }
 
-const ServiceQuantity: React.FC<ServiceQuantityProps> = ({
-  service,
+const ServiceQuantity: React.FC<ServiceQuantityProps> = ({ 
+  service, 
   onQuantityChange,
-  disabled = false
+  disabled = false 
 }) => {
-  const handleDecrement = () => {
-    if (!service.selected || disabled) return;
-    const newQuantity = Math.max(1, (service.quantity || 1) - 1);
-    onQuantityChange(service.id, newQuantity);
-  };
-
+  const quantity = service.quantity || 1;
+  
   const handleIncrement = () => {
-    if (!service.selected || disabled) return;
-    const newQuantity = (service.quantity || 1) + 1;
-    onQuantityChange(service.id, newQuantity);
+    onQuantityChange(quantity + 1);
   };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!service.selected || disabled) return;
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
-      onQuantityChange(service.id, value);
+  
+  const handleDecrement = () => {
+    if (quantity > 1) {
+      onQuantityChange(quantity - 1);
     }
   };
-
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseInt(e.target.value, 10);
+    if (!isNaN(newValue) && newValue > 0) {
+      onQuantityChange(newValue);
+    }
+  };
+  
   return (
-    <div className="flex items-center">
-      <span className="text-sm mr-2 whitespace-nowrap">Quantidade:</span>
-      <div className="flex items-center">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={handleDecrement}
-          disabled={!service.selected || disabled}
+    <div className="space-y-1">
+      <Label htmlFor={`quantity-${service.id}`} className="text-sm">
+        Quantidade
+      </Label>
+      <div className="flex items-center space-x-2">
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="icon" 
+          onClick={handleDecrement} 
+          disabled={quantity <= 1 || disabled}
+          aria-label="Diminuir quantidade"
         >
-          <Minus className="h-3 w-3" />
+          <Minus className="h-4 w-4" />
         </Button>
+        
         <Input
+          id={`quantity-${service.id}`}
           type="number"
           min="1"
-          value={service.quantity || 1}
+          className="w-20 text-center"
+          value={quantity}
           onChange={handleInputChange}
-          className="h-8 w-14 mx-1 text-center p-1"
-          disabled={!service.selected || disabled}
+          disabled={disabled}
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0"
+        
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="icon" 
           onClick={handleIncrement}
-          disabled={!service.selected || disabled}
+          disabled={disabled}
+          aria-label="Aumentar quantidade"
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
     </div>

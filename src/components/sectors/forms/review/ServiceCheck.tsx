@@ -3,9 +3,9 @@ import React from 'react';
 import { Service, Photo } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import ServiceQuantity from "@/components/sectors/service-parts/ServiceQuantity";
 import ServicePhotos from "@/components/sectors/service-parts/ServicePhotos";
-import { Textarea } from "@/components/ui/textarea";
 
 interface ServiceCheckProps {
   service: Service;
@@ -51,9 +51,8 @@ export default function ServiceCheck({
           {service.selected && (
             <>
               <ServiceQuantity 
-                id={service.id}
-                quantity={service.quantity || 1}
-                onChange={handleQuantityChange}
+                service={service}
+                onQuantityChange={(quantity) => handleQuantityChange(service.id, quantity)}
               />
               
               {handleObservationChange && (
@@ -72,12 +71,11 @@ export default function ServiceCheck({
               )}
               
               <ServicePhotos
-                serviceId={service.id}
-                photos={service.photos || []}
+                service={service}
+                photoType="before"
+                required={photoRequired}
                 onPhotoUpload={(files) => handlePhotoUpload(service.id, files, 'before')}
                 onCameraCapture={(e) => onCameraCapture(e, service.id)}
-                required={photoRequired}
-                maxPhotos={5}
               />
             </>
           )}

@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { Sector } from '@/types';
 import { useSectorFormState } from '@/hooks/useSectorFormState';
 import { useSectorFormSubmit } from '@/hooks/useSectorFormSubmit'; 
 import { useSectorServiceHandling } from '@/hooks/useSectorServiceHandling';
 import { useSectorPhotoHandling } from '@/hooks/useSectorPhotoHandling';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
 import ReviewForm from './forms/ReviewForm';
 import ProductionForm from './forms/ProductionForm';
 import QualityForm from './forms/QualityForm';
 import ScrapForm from './forms/ScrapForm';
 import ScrapToggle from './forms/ScrapToggle';
 import FormActions from './forms/FormActions';
-import FormValidationAlert from './form-parts/FormValidationAlert';
+import { FormValidationAlert } from './form-parts/FormValidationAlert';
 
 export interface SectorFormProps {
   initialSector: Sector;
@@ -45,7 +44,7 @@ function SectorForm({
     setEntryObservations,
     services,
     setServices,
-    formErrors,
+    formErrors: stateFormErrors,
     setFormErrors,
     isScrap,
     setIsScrap,
@@ -67,22 +66,8 @@ function SectorForm({
     setSelectedTab
   } = useSectorFormState(initialSector);
 
-  // Adicionando o campo faltante
-  const formErrors = {
-    tagNumber: false,
-    tagPhoto: false,
-    entryInvoice: false,
-    entryDate: false,
-    services: false,
-    photos: false,
-    exitDate: false,
-    exitInvoice: false,
-    scrapObservations: false,
-    scrapPhotos: false
-  };
-
   const { validateForm, prepareFormData } = useSectorFormSubmit();
-  const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling(services, setServices);
+  const { handleServiceChange, handleQuantityChange, handleObservationChange } = useSectorServiceHandling();
   const { handleTagPhotoUpload, handlePhotoUpload, handleCameraCapture } = useSectorPhotoHandling(services, setServices);
 
   const handleSubmit = async () => {
@@ -91,6 +76,7 @@ function SectorForm({
       tagPhotoUrl,
       entryInvoice,
       entryDate,
+      entryObservations,
       services,
       isScrap,
       scrapObservations,
@@ -125,12 +111,31 @@ function SectorForm({
     setSelectedTab(value);
   };
 
-  // Rendereizar o componente baseado no mode
+  // Manipuladores para os serviços
+  const onServiceChange = (id: string, checked: boolean) => {
+    setServices(handleServiceChange(services, id, checked));
+  };
+
+  const onQuantityChange = (id: string, quantity: number) => {
+    setServices(handleQuantityChange(services, id, quantity));
+  };
+
+  const onObservationChange = (id: string, observations: string) => {
+    setServices(handleObservationChange(services, id, observations));
+  };
+
+  // Renderizar o componente baseado no mode
   return (
     <div className="space-y-6">
-      <FormValidationAlert formErrors={formErrors} />
+      <FormValidationAlert formErrors={stateFormErrors} isScrap={isScrap} />
 
-      <ScrapToggle isScrap={isScrap} setIsScrap={setIsScrap} />
+      <ScrapToggle 
+        isScrap={isScrap} 
+        setIsScrap={setIsScrap} 
+        scrapObservations={scrapObservations}
+        setScrapObservations={setScrapObservations}
+        error={{}}
+      />
 
       <Tabs value={selectedTab} onValueChange={handleTabChange}>
         <TabsList>
@@ -153,11 +158,11 @@ function SectorForm({
             entryObservations={entryObservations}
             setEntryObservations={setEntryObservations}
             services={services}
-            handleServiceChange={handleServiceChange}
-            handleQuantityChange={handleQuantityChange}
-            handleObservationChange={handleObservationChange}
+            handleServiceChange={onServiceChange}
+            handleQuantityChange={onQuantityChange}
+            handleObservationChange={onObservationChange}
             handlePhotoUpload={handlePhotoUpload}
-            formErrors={formErrors}
+            formErrors={stateFormErrors}
             photoRequired={photoRequired}
             handleCameraCapture={handleCameraCapture}
           />
@@ -165,7 +170,12 @@ function SectorForm({
 
         {mode === 'production' && (
           <TabsContent value="production">
-            <ProductionForm />
+            <ProductionForm 
+              services={services} 
+              productionCompleted={false} 
+              handleProductionToggle={() => {}} 
+              sectorStatus="emExecucao"
+            />
           </TabsContent>
         )}
 
@@ -180,6 +190,11 @@ function SectorForm({
               setExitObservations={setExitObservations}
               qualityCompleted={qualityCompleted}
               setQualityCompleted={setQualityCompleted}
+              services={services}
+              selectedTab={selectedTab}
+              setSelectedTab={setSelectedTab}
+              handlePhotoUpload={handlePhotoUpload}
+              handleCameraCapture={handleCameraCapture}
             />
           </TabsContent>
         )}
@@ -187,20 +202,32 @@ function SectorForm({
         {isScrap && (
           <TabsContent value="scrap">
             <ScrapForm
+              tagNumber={tagNumber}
+              setTagNumber={setTagNumber}
+              entryInvoice={entryInvoice}
+              setEntryInvoice={setEntryInvoice}
+              entryDate={entryDate}
+              setEntryDate={setEntryDate}
               scrapObservations={scrapObservations}
               setScrapObservations={setScrapObservations}
               scrapDate={scrapDate}
               setScrapDate={setScrapDate}
               scrapInvoice={scrapInvoice}
               setScrapInvoice={setScrapInvoice}
+              handlePhotoUpload={() => {}}
+              tagPhotoUrl={tagPhotoUrl}
+              handleTagPhotoUpload={handleTagPhotoUpload}
             />
           </TabsContent>
         )}
       </Tabs>
 
       <FormActions
-        isLoading={isLoading}
+        loading={isLoading}
         handleSubmit={handleSubmit}
+        mode={mode}
+        isScrap={isScrap}
+        qualityCompleted={qualityCompleted}
       />
     </div>
   );
