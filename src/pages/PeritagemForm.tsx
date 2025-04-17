@@ -5,6 +5,7 @@ import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePeritagemSubmit } from '@/hooks/usePeritagemSubmit';
 import { usePeritagemData } from '@/hooks/usePeritagemData';
@@ -22,7 +23,6 @@ export function PeritagemForm() {
   const isEditing = !!id;
   const isMobile = useIsMobile();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [mountTime] = useState(Date.now());
   
   const {
     sector,
@@ -45,23 +45,14 @@ export function PeritagemForm() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    console.log("PeritagemForm montado:", {
-      id,
-      isEditing,
-      loading,
-      hasValidData,
-      validDefaultSector: !!validDefaultSector
-    });
-    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [id, isEditing, loading, hasValidData, validDefaultSector]);
+  }, []);
   
   // Processar envio do formulário
   const onSubmit = async (data: any) => {
-    console.log("Tentando submeter formulário:", data);
     try {
       await handleSubmit(data, isEditing, id);
     } catch (error) {
@@ -79,7 +70,6 @@ export function PeritagemForm() {
   
   // Se estiver carregando, mostrar estado de carregamento
   if (loading) {
-    console.log("Renderizando estado de carregamento");
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
         <div className="flex items-center gap-4 mb-6">
@@ -94,11 +84,7 @@ export function PeritagemForm() {
             {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
           </h1>
         </div>
-        <LoadingState 
-          message="Carregando dados da peritagem..." 
-          showTiming={true}
-          details="Aguarde enquanto carregamos as informações necessárias"
-        />
+        <LoadingState message="Carregando dados da peritagem..." />
       </PageLayout>
     );
   }
@@ -107,19 +93,7 @@ export function PeritagemForm() {
   if (errorMessage?.includes('timeout')) {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
-        <TimeoutError 
-          onRetry={() => window.location.reload()}
-          forceRefreshing={false}
-          mountTime={mountTime}
-          authVerified={true}
-          services={services}
-          connectionStatus={isOffline ? 'offline' : 'online'}
-          defaultSector={defaultSector}
-          sector={sector}
-          errorMessage={errorMessage}
-          onBack={() => navigate('/peritagem')}
-          onRetryConnection={() => window.location.reload()}
-        />
+        <TimeoutError onRetry={() => window.location.reload()} />
       </PageLayout>
     );
   }
@@ -128,9 +102,7 @@ export function PeritagemForm() {
   if (errorMessage) {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
-        <ErrorMessage 
-          message={errorMessage} 
-        />
+        <ErrorMessage message={errorMessage} />
       </PageLayout>
     );
   }
@@ -146,24 +118,12 @@ export function PeritagemForm() {
   
   // Verificar se temos dados válidos
   if (!hasValidData || !validDefaultSector) {
-    console.log("Sem dados válidos, renderizando estado de carregamento adicional");
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
-        <LoadingState 
-          message="Carregando serviços disponíveis..." 
-          showTiming={true}
-          details="Estamos preparando o formulário com os serviços disponíveis"
-        />
+        <LoadingState message="Carregando serviços disponíveis..." />
       </PageLayout>
     );
   }
-  
-  console.log("Renderizando formulário completo", {
-    validDefaultSector: !!validDefaultSector,
-    sectorToUse: isEditing ? (sector || validDefaultSector) : validDefaultSector
-  });
-  
-  const sectorToUse = isEditing ? (sector || validDefaultSector) : validDefaultSector;
   
   return (
     <PageLayout HeaderExtra={HeaderExtra}>
@@ -172,7 +132,7 @@ export function PeritagemForm() {
         
         <Card className="p-6">
           <SectorFormWrapper
-            initialSector={sectorToUse}
+            initialSector={isEditing ? (sector || validDefaultSector) : validDefaultSector}
             onSubmit={onSubmit}
             mode="peritagem"
             photoRequired={true}

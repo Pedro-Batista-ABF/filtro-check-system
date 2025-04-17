@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ConnectionErrorFallback from './fallback/ConnectionErrorFallback';
 import { useConnectionAuth } from '@/hooks/useConnectionAuth';
@@ -49,7 +48,7 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
         // Em caso de falha, registrar diagnóstico no console
         if (!isConnected) {
           console.warn("FallbackRoot: Falha na conexão com Supabase");
-          runConnectionDiagnostics();
+          await runConnectionDiagnostics();
         }
       } catch (error) {
         console.error("FallbackRoot: Erro ao verificar conexão:", error);
@@ -64,7 +63,7 @@ const FallbackRoot: React.FC<FallbackRootProps> = ({ children }) => {
     // Verificar conexão periodicamente
     const connectionInterval = setInterval(checkConnection, 30000);
     return () => clearInterval(connectionInterval);
-  }, [isCheckingConnection]);
+  }, []);
   
   // Monitor para detectar se a aplicação está funcionando corretamente
   useEffect(() => {

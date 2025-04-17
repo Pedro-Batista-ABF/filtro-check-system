@@ -1,73 +1,97 @@
 
-import React from 'react';
-import { Service } from '@/types';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Service } from "@/types";
+import ServicesTabContent from "./quality/ServicesTabContent";
+import ExitTabContent from "./quality/ExitTabContent";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
-export interface QualityFormProps {
-  exitInvoice: string;
-  setExitInvoice: (value: string) => void;
+interface QualityFormProps {
+  services: Service[];
+  selectedTab: string;
+  setSelectedTab: (value: string) => void;
   exitDate: Date | undefined;
   setExitDate: (date: Date | undefined) => void;
+  exitInvoice: string;
+  setExitInvoice: (value: string) => void;
   exitObservations: string;
   setExitObservations: (value: string) => void;
   qualityCompleted: boolean;
   setQualityCompleted: (value: boolean) => void;
-  services: Service[];
-  selectedTab: string;
-  setSelectedTab: (tab: string) => void;
   handlePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
-  handleCameraCapture: (e: React.MouseEvent, serviceId?: string) => void;
+  formErrors: {
+    photos?: boolean;
+    exitDate?: boolean;
+    exitInvoice?: boolean;
+    exitObservations?: boolean;
+  };
+  hasAfterPhotosForAllServices: boolean;
 }
 
 export default function QualityForm({
-  exitInvoice,
-  setExitInvoice,
+  services,
+  selectedTab,
+  setSelectedTab,
   exitDate,
   setExitDate,
+  exitInvoice,
+  setExitInvoice,
   exitObservations,
   setExitObservations,
   qualityCompleted,
   setQualityCompleted,
-  services,
-  selectedTab,
-  setSelectedTab,
   handlePhotoUpload,
-  handleCameraCapture
+  formErrors,
+  hasAfterPhotosForAllServices
 }: QualityFormProps) {
+  const hasErrors = Object.values(formErrors).some(Boolean) || !hasAfterPhotosForAllServices;
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Checagem Final</CardTitle>
-          <CardDescription>
-            Registre as informações de saída e verifique a qualidade dos serviços executados
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
-            <p className="text-sm">
-              <strong>Importante:</strong> Para cada serviço executado, registre pelo menos uma foto do
-              resultado final. Isso permitirá a comparação com as fotos da peritagem.
-            </p>
-          </div>
-          
-          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="services-check">Serviços</TabsTrigger>
-              <TabsTrigger value="exit-info">Dados de Saída</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="services-check">
-              <p>Serviços a serem verificados</p>
-            </TabsContent>
-            
-            <TabsContent value="exit-info">
-              <p>Informações de saída do setor</p>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      {hasErrors && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Atenção!</AlertTitle>
+          <AlertDescription>
+            <p>Por favor, verifique os seguintes requisitos para concluir a checagem:</p>
+            <ul className="list-disc ml-5 mt-2">
+              {formErrors.exitInvoice && <li>Nota Fiscal de Saída é obrigatória</li>}
+              {formErrors.exitDate && <li>Data de Saída é obrigatória</li>}
+              {(formErrors.photos || !hasAfterPhotosForAllServices) && <li>Todos os serviços precisam de pelo menos uma foto "DEPOIS"</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="services">Serviços</TabsTrigger>
+          <TabsTrigger value="exit">Saída do Setor</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="services">
+          <ServicesTabContent 
+            services={services}
+            formErrors={formErrors}
+            handlePhotoUpload={handlePhotoUpload}
+          />
+        </TabsContent>
+        
+        <TabsContent value="exit">
+          <ExitTabContent 
+            exitDate={exitDate}
+            setExitDate={setExitDate}
+            exitInvoice={exitInvoice}
+            setExitInvoice={setExitInvoice}
+            exitObservations={exitObservations}
+            setExitObservations={setExitObservations}
+            qualityCompleted={qualityCompleted}
+            setQualityCompleted={setQualityCompleted}
+            formErrors={formErrors}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

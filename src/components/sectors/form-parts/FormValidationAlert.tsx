@@ -14,7 +14,6 @@ interface FormValidationAlertProps {
     exitDate?: boolean;
     exitInvoice?: boolean;
     scrapObservations?: boolean;
-    scrapPhotos?: boolean;
   };
   isScrap?: boolean;
 }
@@ -24,11 +23,6 @@ export const FormValidationAlert: React.FC<FormValidationAlertProps> = ({
   isScrap = false
 }) => {
   if (!formErrors) return null;
-  
-  // Verificar se há pelo menos um erro
-  const hasErrors = Object.values(formErrors).some(error => error === true);
-  
-  if (!hasErrors) return null;
   
   return (
     <Alert variant="destructive">
@@ -46,9 +40,10 @@ export const FormValidationAlert: React.FC<FormValidationAlertProps> = ({
           {formErrors.exitDate && <li>A data de saída é obrigatória</li>}
           {formErrors.exitInvoice && <li>O número da nota fiscal de saída é obrigatório</li>}
           {isScrap && formErrors.scrapObservations && <li>O motivo do sucateamento é obrigatório</li>}
-          {isScrap && formErrors.scrapPhotos && <li>Adicione fotos do estado de sucateamento</li>}
         </ul>
       </AlertDescription>
     </Alert>
   );
 };
+
+// We are explicitly NOT exporting a default export to avoid the star export error

@@ -377,7 +377,7 @@ export type Database = {
         Returns: string
       }
       is_same_user: {
-        Args: { profile_id: string } | { user_id: number }
+        Args: { user_id: number } | { profile_id: string }
         Returns: boolean
       }
     }

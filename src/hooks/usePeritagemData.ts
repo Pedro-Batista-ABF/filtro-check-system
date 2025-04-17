@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInitialSectorData } from "./useInitialSectorData";
 import { useSectorLoadingState } from "./useSectorLoadingState";
 import { useServiceDataFetching } from "./useServiceDataFetching";
-import { toast } from "sonner";
 
 export function usePeritagemData(id?: string) {
   console.log("🚀 START: usePeritagemData hook initialization", Date.now());
@@ -16,7 +15,6 @@ export function usePeritagemData(id?: string) {
   const isEditing = !!id;
   const [validDefaultSector, setValidDefaultSector] = useState<Sector | null>(null);
   const [defaultServices, setDefaultServices] = useState<Service[]>([]);
-  const [retryCount, setRetryCount] = useState(0);
 
   const {
     defaultSector,
@@ -46,7 +44,7 @@ export function usePeritagemData(id?: string) {
     verifyConnection
   } = useServiceDataFetching();
 
-  // Melhorado: efeito para garantir sincronização entre defaultSector e validDefaultSector
+  // Improved effect to ensure synchronization between defaultSector and validDefaultSector
   useEffect(() => {
     console.log("🚀 useEffect for validDefaultSector sync started", Date.now());
     console.log("🚀 dataReady:", dataReady);
@@ -79,13 +77,13 @@ export function usePeritagemData(id?: string) {
     console.log("🚀 useEffect for validDefaultSector sync completed", Date.now());
   }, [defaultSector, sector, isEditing, dataReady]);
 
-  // Melhorado: função para carregar dados com tratamento de erros aprimorado
   const loadData = useCallback(async () => {
     console.log("🚀 START: loadData", Date.now());
-    if (authLoading || !isAuthenticated) {
+    if (authLoading || !isAuthenticated || loadingTimeout) {
       console.log("❌ Condições impediram loadData:", { 
         authLoading, 
-        isAuthenticated: !!isAuthenticated
+        isAuthenticated: !!isAuthenticated, 
+        loadingTimeout 
       });
       return;
     }
@@ -95,33 +93,24 @@ export function usePeritagemData(id?: string) {
       setLoading(true);
       setErrorMessage(null);
       
-      // Verificar conexão antes de tentar carregar dados
       const isConnected = await verifyConnection();
       if (!isConnected) {
-        setErrorMessage("Não foi possível verificar sua conexão. Tente novamente mais tarde.");
+        setErrorMessage("Não foi possível verificar sua autenticação. Tente fazer login novamente.");
         setLoading(false);
         console.log("❌ Sem conexão verificada, saindo do loadData", Date.now());
-        toast.error("Erro de conexão", {
-          description: "Não foi possível conectar ao servidor. Verifique sua conexão."
-        });
         return;
       }
       
-      // Primeira etapa: carregar serviços disponíveis
-      console.log("Carregando serviços disponíveis...");
       const loadedServices = await loadServices();
       console.log("✅ Serviços carregados:", loadedServices.length);
       
-      // Segundo passo: carregar setor existente ou criar um novo
       if (!isEditing) {
-        console.log("Criando novo setor com serviços carregados");
         const newDefaultSector = createDefaultSector(loadedServices);
         setDefaultSector(newDefaultSector);
-        console.log("✅ Setor padrão criado");
+        console.log("usePeritagemData: Setor padrão criado");
       } else if (id) {
-        console.log("Carregando setor existente com ID:", id);
         await fetchSector();
-        console.log("✅ Setor existente carregado");
+        console.log("usePeritagemData: Setor existente carregado");
       }
       
       setDataReady(true);
@@ -130,25 +119,12 @@ export function usePeritagemData(id?: string) {
       console.log("✅ END: loadData", Date.now());
     } catch (error) {
       console.error("usePeritagemData: Erro ao carregar dados:", error);
-      
-      // Adicionado: 3 tentativas automáticas em caso de falha
-      if (retryCount < 3) {
-        console.log(`Tentativa ${retryCount + 1} de 3 para carregar dados...`);
-        setRetryCount(prev => prev + 1);
-        setTimeout(() => loadData(), 1000); // Tentar novamente após 1 segundo
-        return;
-      }
-      
       setErrorMessage("Erro ao carregar dados. Tente novamente mais tarde.");
       setLoading(false);
       console.log("❌ Erro no loadData", Date.now());
-      toast.error("Erro ao carregar dados", {
-        description: "Não foi possível carregar os dados necessários."
-      });
     }
-  }, [isAuthenticated, authLoading, id, isEditing, retryCount, verifyConnection, loadServices, createDefaultSector, fetchSector, setDefaultSector, setDataReady, setErrorMessage, getLogInfo]);
+  }, [isAuthenticated, authLoading, id, isEditing, loadingTimeout]);
 
-  // Melhorado: efeito para disparar carregamento de dados com verificações aprimoradas
   useEffect(() => {
     console.log("🚀 useEffect para disparar loadData", Date.now(), {
       authLoading,
@@ -160,25 +136,19 @@ export function usePeritagemData(id?: string) {
     if (!authLoading && isAuthenticated && !servicesFetched && !loadingTimeout) {
       console.log("✅ Disparando loadData()", Date.now());
       loadData();
-    } else if (!authLoading && !isAuthenticated) {
-      setLoading(false);
-      console.log("❌ Usuário não autenticado, impossível carregar dados");
     }
   }, [authLoading, isAuthenticated, loadData, servicesFetched, loadingTimeout]);
 
   // Logs para diagnóstico
-  console.log("✅ Estado final:", {
-    validDefaultSector: !!validDefaultSector,
-    services: defaultServices.length,
-    loading,
-    dataReady,
-    hasData: (!loading && servicesFetched && (!!validDefaultSector || !!sector)) || !!validDefaultSector
-  });
+  console.log("✅ validDefaultSector:", validDefaultSector);
+  console.log("✅ services:", defaultServices);
+  console.log("✅ loading:", loading);
+  console.log("✅ dataReady:", dataReady);
 
   console.log("🚀 END: usePeritagemData return", Date.now());
   return {
     sector,
-    defaultSector: validDefaultSector || defaultSector || null,
+    defaultSector: validDefaultSector || defaultSector || null, // Adicionando fallback direto
     loading,
     errorMessage,
     isEditing,
@@ -186,7 +156,7 @@ export function usePeritagemData(id?: string) {
     hasValidData: (!loading && servicesFetched && (!!validDefaultSector || !!sector)) || !!validDefaultSector,
     dataReady,
     setDataReady,
-    validDefaultSector: validDefaultSector || defaultSector || null,
+    validDefaultSector: validDefaultSector || defaultSector || null, // Adicionando fallback direto
     defaultServices: defaultServices.length > 0 ? defaultServices : []
   };
 }

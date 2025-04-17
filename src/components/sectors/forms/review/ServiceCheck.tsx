@@ -1,86 +1,116 @@
 
-import React from 'react';
-import { Service } from "@/types";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import ServiceQuantity from "@/components/sectors/service-parts/ServiceQuantity";
-import ServicePhotos from "@/components/sectors/service-parts/ServicePhotos";
+import React, { useState } from 'react';
+import { Service } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import ServiceQuantity from '../../service-parts/ServiceQuantity';
+import ServicePhotos from '../../service-parts/ServicePhotos';
+import { Button } from '@/components/ui/button';
+import { Camera } from 'lucide-react';
 
 interface ServiceCheckProps {
   service: Service;
+  photoRequired: boolean;
   handleServiceChange: (id: string, checked: boolean) => void;
   handleQuantityChange: (id: string, quantity: number) => void;
-  handleObservationChange?: (id: string, observations: string) => void;
+  handleObservationChange: (id: string, observations: string) => void;
   handlePhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
-  onCameraCapture: (e: React.MouseEvent, serviceId: string) => void;
-  photoRequired: boolean;
+  disabled?: boolean;
+  phase?: 'peritagem' | 'checagem';
+  onCameraCapture?: (e: React.MouseEvent) => void;
 }
 
-export default function ServiceCheck({
+const ServiceCheck: React.FC<ServiceCheckProps> = ({
   service,
+  photoRequired,
   handleServiceChange,
   handleQuantityChange,
   handleObservationChange,
   handlePhotoUpload,
-  onCameraCapture,
-  photoRequired
-}: ServiceCheckProps) {
-  const hasPhotos = service.photos && service.photos.length > 0;
-  const missingPhotos = service.selected && photoRequired && !hasPhotos;
-  
+  disabled = false,
+  phase = 'peritagem',
+  onCameraCapture
+}) => {
+  const [expanded, setExpanded] = useState(service.selected);
+
+  const handleCheckboxChange = (checked: boolean) => {
+    handleServiceChange(service.id, checked);
+    setExpanded(checked);
+  };
+
+  const photoType = phase === 'peritagem' ? 'before' : 'after';
+
   return (
-    <div className={`p-4 border rounded-md ${missingPhotos ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
-      <div className="flex items-start gap-3">
-        <Checkbox
-          id={`service-${service.id}`}
-          checked={service.selected || false}
-          onCheckedChange={(checked) => 
-            handleServiceChange(service.id, checked === true)
-          }
-          className="mt-1"
-        />
-        <div className="flex-1 space-y-2">
+    <div className="border rounded-md p-4 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id={`service-${service.id}`}
+            checked={service.selected}
+            onCheckedChange={handleCheckboxChange}
+            disabled={disabled}
+          />
           <Label
             htmlFor={`service-${service.id}`}
-            className="text-md font-medium cursor-pointer"
+            className={`font-medium ${service.selected ? '' : 'text-gray-500'}`}
           >
             {service.name}
           </Label>
-          
-          {service.selected && (
-            <>
-              <ServiceQuantity 
-                service={service}
-                onUpdate={(quantity) => handleQuantityChange(service.id, quantity)}
-              />
-              
-              {handleObservationChange && (
-                <div className="mt-2">
-                  <Label htmlFor={`obs-${service.id}`} className="text-sm mb-1 block">
-                    Observações
-                  </Label>
-                  <Textarea
-                    id={`obs-${service.id}`}
-                    placeholder="Observações sobre o serviço"
-                    value={service.observations || ''}
-                    onChange={(e) => handleObservationChange(service.id, e.target.value)}
-                    className="h-20"
-                  />
-                </div>
-              )}
-              
-              <ServicePhotos
-                service={service}
-                photoType="before"
-                required={photoRequired}
-                onPhotoUpload={(files) => handlePhotoUpload(service.id, files, 'before')}
-                onCameraCapture={(e) => onCameraCapture(e, service.id)}
-              />
-            </>
-          )}
         </div>
+
+        {service.selected && (
+          <ServiceQuantity
+            service={service}
+            onQuantityChange={handleQuantityChange}
+            disabled={disabled}
+          />
+        )}
       </div>
+
+      {service.selected && (
+        <div className="pl-6 space-y-4">
+          <div>
+            <Label htmlFor={`observation-${service.id}`} className="text-sm">
+              Observações
+            </Label>
+            <Textarea
+              id={`observation-${service.id}`}
+              value={service.observations || ''}
+              onChange={(e) => handleObservationChange(service.id, e.target.value)}
+              placeholder="Adicione observações sobre este serviço..."
+              className="resize-none mt-1"
+              disabled={disabled}
+            />
+          </div>
+
+          <ServicePhotos
+            service={service}
+            photoType={photoType}
+            required={photoRequired}
+            onPhotoUpload={handlePhotoUpload}
+            disabled={disabled}
+            onCameraCapture={onCameraCapture}
+          />
+
+          {/* Botões de ação para fotos - versão inline */}
+          <div className="flex space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCameraCapture}
+              disabled={disabled}
+              className="text-xs"
+            >
+              <Camera className="h-3 w-3 mr-1" />
+              Usar câmera
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default ServiceCheck;

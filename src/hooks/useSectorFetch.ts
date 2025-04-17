@@ -1,44 +1,61 @@
 
-import { useState, useCallback } from "react";
 import { Sector } from "@/types";
+import { useState } from "react";
+import { useApi } from "@/contexts/ApiContextExtended";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useApi } from "@/contexts/api";
+import { format } from "date-fns";
 
 export function useSectorFetch(id?: string) {
-  const [sector, setSector] = useState<Sector | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<boolean>(false);
+  const [sector, setSector] = useState<Sector | undefined>(undefined);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { getSectorById } = useApi();
+  const navigate = useNavigate();
 
-  const fetchSector = useCallback(async () => {
-    if (!id) {
-      setLoading(false);
-      return;
-    }
-    
-    setLoading(true);
-    setError(false);
-    
+  const fetchSector = async () => {
+    if (!id) return;
+
     try {
-      console.log(`Buscando setor com ID: ${id}`);
-      const fetchedSector = await getSectorById(id);
-      
-      if (fetchedSector) {
-        console.log("Setor encontrado:", fetchedSector);
-        setSector(fetchedSector);
-      } else {
-        console.error("Setor não encontrado para o ID:", id);
-        setError(true);
-        toast.error("Setor não encontrado");
+      const sectorData = await getSectorById(id);
+      if (!sectorData) {
+        toast.error("Setor não encontrado", {
+          description: `O setor com ID ${id} não foi encontrado.`
+        });
+        navigate('/peritagem/novo', { replace: true });
+        return;
       }
-    } catch (err) {
-      console.error("Erro ao buscar setor:", err);
-      setError(true);
-      toast.error("Erro ao buscar setor");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, getSectorById]);
 
-  return { sector, fetchSector, loading, error };
+      setSector(sectorData);
+    } catch (error) {
+      console.error("Error fetching sector:", error);
+      setErrorMessage("Erro ao carregar dados do setor");
+    }
+  };
+
+  const getDefaultSector = (services: any[]): Sector => ({
+    id: '',
+    tagNumber: '',
+    tagPhotoUrl: '',
+    entryInvoice: '',
+    entryDate: '',
+    peritagemDate: format(new Date(), 'yyyy-MM-dd'),
+    services,
+    beforePhotos: [],
+    afterPhotos: [],
+    scrapPhotos: [],
+    productionCompleted: false,
+    cycleCount: 1,
+    status: 'peritagemPendente',
+    outcome: 'EmAndamento',
+    updated_at: new Date().toISOString()
+  });
+
+  return {
+    sector,
+    setSector,
+    errorMessage,
+    setErrorMessage,
+    fetchSector,
+    getDefaultSector
+  };
 }

@@ -1,3 +1,4 @@
+
 import { Sector, SectorStatus, CycleOutcome } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,7 +46,7 @@ export function useSectorStatus() {
         throw new Error("Ciclo não encontrado");
       }
       
-      const cycleId = cycleData[0] && 'id' in cycleData[0] ? cycleData[0].id : null;
+      const cycleId = cycleData[0].id;
       
       // Atualizar o ciclo
       const { error: cycleError } = await supabase

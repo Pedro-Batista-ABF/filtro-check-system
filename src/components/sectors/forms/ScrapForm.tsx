@@ -1,86 +1,205 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useRef } from "react";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, AlertTriangle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, ImageIcon, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { PhotoWithFile } from "@/types";
 
-export interface ScrapFormProps {
+interface ScrapFormProps {
   tagNumber: string;
   setTagNumber: (value: string) => void;
   entryInvoice: string;
   setEntryInvoice: (value: string) => void;
-  entryDate: Date | undefined;
+  entryDate?: Date;
   setEntryDate: (date: Date | undefined) => void;
+  tagPhotoUrl?: string;
+  handleTagPhotoUpload: (files: FileList) => void;
   scrapObservations: string;
   setScrapObservations: (value: string) => void;
-  scrapDate: Date | undefined;
+  scrapDate?: Date;
   setScrapDate: (date: Date | undefined) => void;
   scrapInvoice: string;
   setScrapInvoice: (value: string) => void;
-  tagPhotoUrl: string | undefined;
-  setTagPhotoUrl: (url: string | undefined) => void;
-  handleTagPhotoUpload: (files: FileList) => Promise<string | undefined>;
+  scrapPhotos: PhotoWithFile[];
+  handleScrapPhotoUpload: (files: FileList) => void;
+  formErrors: {
+    tagNumber?: boolean;
+    tagPhoto?: boolean;
+    entryInvoice?: boolean;
+    entryDate?: boolean;
+    scrapObservations?: boolean;
+    scrapDate?: boolean;
+    scrapInvoice?: boolean;
+    scrapPhotos?: boolean;
+  };
+  onCameraCapture: (e: React.MouseEvent) => void;
+  disabled?: boolean;
 }
 
-export default function ScrapForm({
+const ScrapForm: React.FC<ScrapFormProps> = ({
+  tagNumber,
+  setTagNumber,
+  entryInvoice,
+  setEntryInvoice,
+  entryDate,
+  setEntryDate,
+  tagPhotoUrl,
+  handleTagPhotoUpload,
   scrapObservations,
   setScrapObservations,
   scrapDate,
   setScrapDate,
   scrapInvoice,
   setScrapInvoice,
-  tagPhotoUrl,
-  tagNumber,
-  entryInvoice,
-  entryDate,
-  setTagPhotoUrl
-}: ScrapFormProps) {
+  scrapPhotos,
+  handleScrapPhotoUpload,
+  formErrors,
+  onCameraCapture,
+  disabled = false
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleClick = () => {
+    if (disabled) return;
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-yellow-500" />
-          <CardTitle>Informações de Sucateamento</CardTitle>
+        <CardHeader>
+          <CardTitle>Validação para Sucateamento</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
-            <p className="text-sm text-yellow-800">
-              <strong>Atenção:</strong> Ao confirmar o sucateamento deste setor, ele será enviado
-              para aprovação e não poderá mais ser processado para recuperação.
-            </p>
-          </div>
-          
-          <div className="grid gap-4">
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="scrap-reason">Motivo do Sucateamento</Label>
-              <Textarea
-                id="scrap-reason"
-                value={scrapObservations}
-                onChange={(e) => setScrapObservations(e.target.value)}
-                placeholder="Descreva detalhadamente o motivo pelo qual este setor precisou ser sucateado..."
-                className="h-32"
-              />
+        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="border rounded-md p-4 bg-gray-50">
+              <h3 className="font-medium mb-2">Informações do Setor</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><strong>TAG:</strong> {tagNumber || "N/A"}</div>
+                <div><strong>NF Entrada:</strong> {entryInvoice || "N/A"}</div>
+                <div><strong>Data Entrada:</strong> {entryDate ? format(entryDate, "dd/MM/yyyy") : "N/A"}</div>
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="scrap-date">Data de Sucateamento</Label>
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Motivo do Sucateamento</h3>
+              <Textarea
+                id="scrapObservations"
+                value={scrapObservations}
+                onChange={(e) => setScrapObservations(e.target.value)}
+                placeholder="Adicione o motivo pelo qual este setor deve ser sucateado..."
+                className={formErrors.scrapObservations ? "border-red-500" : ""}
+                disabled={disabled}
+              />
+              {formErrors.scrapObservations && (
+                <p className="text-xs text-red-500">Motivo do sucateamento é obrigatório</p>
+              )}
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="font-medium mb-2">Fotos do Estado de Sucateamento*</h3>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {scrapPhotos.map((photo, index) => (
+                  <div key={photo.id || `temp-${index}`} className="relative">
+                    <img
+                      src={photo.url || (photo.file ? URL.createObjectURL(photo.file) : '')}
+                      alt={`Foto ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-md border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </div>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-24 border-dashed flex flex-col items-center justify-center"
+                  onClick={handleClick}
+                  disabled={disabled}
+                >
+                  <ImageIcon className="h-6 w-6 mb-1" />
+                  <span className="text-xs">Adicionar foto</span>
+                </Button>
+              </div>
+              
+              <div className="flex space-x-2 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCameraCapture}
+                  disabled={disabled}
+                  className="text-xs"
+                >
+                  <Camera className="h-3 w-3 mr-1" />
+                  Usar câmera
+                </Button>
+              </div>
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => e.target.files && handleScrapPhotoUpload(e.target.files)}
+                accept="image/*"
+                className="hidden"
+                multiple
+                disabled={disabled}
+              />
+              
+              {formErrors.scrapPhotos && (
+                <p className="text-xs text-red-500 mt-1">
+                  É necessário adicionar pelo menos uma foto do estado de sucateamento
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div className="border-t pt-4">
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="scrapInvoice" className={formErrors.scrapInvoice ? "text-red-500" : ""}>
+                  Nota Fiscal de Devolução*
+                </Label>
+                <Input
+                  id="scrapInvoice"
+                  value={scrapInvoice}
+                  onChange={(e) => setScrapInvoice(e.target.value)}
+                  placeholder="Ex: NF-54321"
+                  className={formErrors.scrapInvoice ? "border-red-500" : ""}
+                  disabled={disabled}
+                />
+                {formErrors.scrapInvoice && (
+                  <p className="text-xs text-red-500">Nota fiscal é obrigatória</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="scrapDate" className={formErrors.scrapDate ? "text-red-500" : ""}>
+                  Data de Devolução*
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
-                      id="scrap-date"
+                      id="scrapDate"
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !scrapDate && "text-muted-foreground"
+                        !scrapDate && "text-muted-foreground",
+                        formErrors.scrapDate && "border-red-500"
                       )}
+                      disabled={disabled}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {scrapDate ? format(scrapDate, "dd/MM/yyyy") : <span>Selecione uma data</span>}
@@ -95,31 +214,9 @@ export default function ScrapForm({
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-              
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="scrap-invoice">Nota Fiscal de Sucateamento</Label>
-                <Input
-                  id="scrap-invoice"
-                  value={scrapInvoice}
-                  onChange={(e) => setScrapInvoice(e.target.value)}
-                  placeholder="Ex: NF-12345"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-            <h4 className="font-medium mb-2">Dados do Setor</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="font-medium">TAG:</span> {tagNumber}
-              </div>
-              <div>
-                <span className="font-medium">NF Entrada:</span> {entryInvoice}
-              </div>
-              <div>
-                <span className="font-medium">Data Entrada:</span> {entryDate ? format(entryDate, "dd/MM/yyyy") : "N/A"}
+                {formErrors.scrapDate && (
+                  <p className="text-xs text-red-500">Data é obrigatória</p>
+                )}
               </div>
             </div>
           </div>
@@ -128,3 +225,5 @@ export default function ScrapForm({
     </div>
   );
 }
+
+export default ScrapForm;

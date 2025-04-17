@@ -1,12 +1,11 @@
 
-import React from 'react';
-import { Service } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { CheckCircle } from 'lucide-react';
+import React from "react";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Service } from "@/types";
 
-export interface ProductionFormProps {
+interface ProductionFormProps {
   services: Service[];
   productionCompleted: boolean;
   handleProductionToggle: (checked: boolean) => void;
@@ -21,54 +20,61 @@ export default function ProductionForm({
 }: ProductionFormProps) {
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Status da Produção</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="prod-complete"
-              checked={productionCompleted}
-              onCheckedChange={handleProductionToggle}
-              disabled={sectorStatus === 'concluido'}
-            />
-            <Label htmlFor="prod-complete" className="font-medium">
-              Setor concluído pela produção?
-            </Label>
-            {productionCompleted && <CheckCircle className="h-5 w-5 text-green-500" />}
-          </div>
-          
-          <p className="text-sm text-muted-foreground mt-2">
-            Marque esta opção quando todos os serviços solicitados tiverem sido finalizados.
-            Isto liberará o setor para a checagem de qualidade.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-between py-4 border-b">
+        <div>
+          <h3 className="text-lg font-medium">Progresso da Execução</h3>
+          <p className="text-sm text-gray-500">Marque como concluído após finalizar os serviços</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch 
+            id="productionCompleted" 
+            checked={productionCompleted} 
+            onCheckedChange={handleProductionToggle} 
+            disabled={sectorStatus === "concluido" || sectorStatus === "sucateado"} 
+          />
+          <Label htmlFor="productionCompleted">Setor concluído pela produção?</Label>
+        </div>
+      </div>
       
       <Card>
         <CardHeader>
-          <CardTitle>Serviços a Executar</CardTitle>
+          <CardTitle>Serviços Necessários</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ul className="space-y-4">
-            {services.filter(s => s.selected).map(service => (
-              <li key={service.id} className="border p-4 rounded-md">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <h4 className="font-medium">{service.name}</h4>
-                    <p className="text-sm text-gray-500">Quantidade: {service.quantity || 1}</p>
-                    {service.observations && (
-                      <p className="text-sm mt-1 bg-gray-50 p-2 rounded">
-                        <span className="font-medium">Observações: </span>
-                        {service.observations}
-                      </p>
-                    )}
+        <CardContent className="space-y-4">
+          {services.filter(service => service.selected).map((service) => (
+            <div key={service.id} className="border-b pb-4 last:border-b-0">
+              <h3 className="font-medium">{service.name}</h3>
+              <p className="text-sm text-gray-500 my-1">
+                Quantidade: {service.quantity}
+              </p>
+              {service.observations && (
+                <p className="text-sm mt-2 bg-gray-50 p-2 rounded">
+                  <strong>Observações:</strong> {service.observations}
+                </p>
+              )}
+              
+              {service.photos && service.photos.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium mb-1">Fotos do defeito:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {service.photos
+                      .filter(photo => typeof photo === 'object' && photo.type === 'before')
+                      .map((photo) => (
+                        typeof photo === 'object' && photo.url && (
+                          <img 
+                            key={photo.id} 
+                            src={photo.url} 
+                            alt={service.name} 
+                            className="w-20 h-20 object-cover rounded border"
+                          />
+                        )
+                      ))
+                    }
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "@/contexts/api"; // Using regular API context
+import { useApi } from "@/contexts/ApiContextExtended";
 import { Sector, SectorStatus, Service } from "@/types";
 import { toast } from "sonner";
 import { generateUniqueCycleCount } from "@/utils/cycleUtils";
@@ -16,7 +16,7 @@ export function usePeritagemSubmit() {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
-  const api = useApi();
+  const { addSector, updateSector, uploadPhoto, refreshData } = useApi();
   const { uploadPhotosWithMetadata } = usePhotoUploadWithMetadata();
   const { updateSectorStatus } = useSectorStatus();
   const { prepareSectorData } = useSectorDataPreparation();
@@ -58,13 +58,12 @@ export function usePeritagemSubmit() {
           
           // Adicionar setor para sucateamento
           try {
-            // Use createSector since it's guaranteed to exist in the API context
-            const newSector = await api.createSector(sectorData as Omit<Sector, 'id'>);
-            sectorResult = newSector.id;
+            const apiResult = await addSector(sectorData as Omit<Sector, 'id'>);
+            sectorResult = typeof apiResult === 'string' ? apiResult : false;
             
             if (sectorResult) {
-              await updateSectorStatus(sectorResult, data, 'sucateadoPendente' as SectorStatus);
-              if (api.refreshData) await api.refreshData();
+              await updateSectorStatus(sectorResult, data, 'sucateadoPendente');
+              await refreshData();
               
               toast.success("Setor registrado para sucateamento");
               navigate('/peritagem');
@@ -82,15 +81,10 @@ export function usePeritagemSubmit() {
         // Setor existente marcado para sucateamento
         if (isEditing && sectorId) {
           try {
-            // Use updateSector with the original API signature
-            const updatedSector = await api.updateSector({
-              ...data,
-              id: sectorId
-            } as Sector);
-            
-            if (updatedSector) {
-              await updateSectorStatus(sectorId, data, 'sucateadoPendente' as SectorStatus);
-              if (api.refreshData) await api.refreshData();
+            const apiResult = await updateSector(sectorId, data);
+            if (apiResult) {
+              await updateSectorStatus(sectorId, data, 'sucateadoPendente');
+              await refreshData();
               
               toast.success("Setor marcado para sucateamento");
               navigate('/peritagem');
@@ -130,7 +124,7 @@ export function usePeritagemSubmit() {
       }
 
       // Processar fotos
-      const processedPhotos = await processServicePhotos(data.services || [], api.uploadPhoto);
+      const processedPhotos = await processServicePhotos(data.services || [], uploadPhoto);
       const status = isEditing ? (data.status as SectorStatus) || 'peritagemPendente' : 'emExecucao';
 
       let sectorResult: string | boolean = "";
@@ -155,18 +149,13 @@ export function usePeritagemSubmit() {
             }));
           }
 
+          let apiResult;
           if (isEditing && sectorId) {
-            // Use the original API signature
-            const updatedSector = await api.updateSector({
-              ...sectorData,
-              id: sectorId
-            } as Sector);
-            
-            sectorResult = updatedSector ? sectorId : false;
+            apiResult = await updateSector(sectorId, sectorData);
+            sectorResult = apiResult ? sectorId : false;
           } else {
-            // Use the original createSector method
-            const newSector = await api.createSector(sectorData as Omit<Sector, 'id'>);
-            sectorResult = newSector.id;
+            apiResult = await addSector(sectorData as Omit<Sector, 'id'>);
+            sectorResult = typeof apiResult === 'string' ? apiResult : false;
           }
 
           break;
@@ -184,7 +173,7 @@ export function usePeritagemSubmit() {
         ]);
       }
 
-      if (api.refreshData) await api.refreshData();
+      await refreshData();
       
       toast.success(isEditing ? "Peritagem atualizada" : "Peritagem registrada");
       navigate('/peritagem');

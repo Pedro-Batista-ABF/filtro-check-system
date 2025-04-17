@@ -12,7 +12,7 @@ interface ReviewFormProps {
   entryDate: Date | undefined;
   setEntryDate: (date: Date | undefined) => void;
   tagPhotoUrl: string | undefined;
-  handleTagPhotoUpload: (files: FileList) => Promise<string | undefined>; // Corrigido para retornar Promise
+  handleTagPhotoUpload: (files: FileList) => void;
   entryObservations: string;
   setEntryObservations: (value: string) => void;
   services: Service[];

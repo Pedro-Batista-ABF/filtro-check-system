@@ -13,8 +13,8 @@ export const ServicesList: React.FC<ServicesListProps> = ({ services, onServiceS
       {services.map((service) => (
         <div 
           key={service.id}
-          className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-          onClick={() => onServiceSelect && onServiceSelect(service)}
+          className="p-4 border rounded-lg hover:bg-gray-50"
+          onClick={() => onServiceSelect?.(service)}
         >
           <h3 className="font-medium">{service.name}</h3>
           {service.description && (

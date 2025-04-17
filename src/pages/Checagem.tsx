@@ -12,7 +12,6 @@ import { CalendarIcon, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { format, isAfter, isBefore, isWithinInterval, parse } from "date-fns";
 
@@ -54,7 +53,6 @@ export default function Checagem() {
       const end = parse(endDate, "yyyy-MM-dd", new Date());
       
       result = result.filter(sector => {
-        if (!sector.entryDate) return false;
         const sectorDate = new Date(sector.entryDate);
         return isWithinInterval(sectorDate, { start, end });
       });
@@ -64,7 +62,6 @@ export default function Checagem() {
       const start = parse(startDate, "yyyy-MM-dd", new Date());
       
       result = result.filter(sector => {
-        if (!sector.entryDate) return false;
         const sectorDate = new Date(sector.entryDate);
         return isAfter(sectorDate, start) || format(sectorDate, "yyyy-MM-dd") === startDate;
       });
@@ -74,7 +71,6 @@ export default function Checagem() {
       const end = parse(endDate, "yyyy-MM-dd", new Date());
       
       result = result.filter(sector => {
-        if (!sector.entryDate) return false;
         const sectorDate = new Date(sector.entryDate);
         return isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
       });
@@ -85,7 +81,6 @@ export default function Checagem() {
       const filterDateStr = format(dateFilter, "yyyy-MM-dd");
       
       result = result.filter(sector => {
-        if (!sector.entryDate) return false;
         const sectorDateStr = format(new Date(sector.entryDate), "yyyy-MM-dd");
         return sectorDateStr === filterDateStr;
       });

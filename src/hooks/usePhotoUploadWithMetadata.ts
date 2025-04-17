@@ -1,5 +1,5 @@
 
-import { Sector } from "@/types";
+import { Sector, PhotoType } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -42,7 +42,9 @@ export function usePhotoUploadWithMetadata() {
     }
   };
   
-  // Correção para lidar com erro de tipagem para id
+  /**
+   * Faz upload de uma foto da TAG
+   */
   const uploadTagPhoto = async (url: string, sectorId: string, userId: string) => {
     try {
       // Buscar o ciclo atual do setor
@@ -58,22 +60,17 @@ export function usePhotoUploadWithMetadata() {
         return;
       }
       
-      const cycleId = cycleData[0]?.id;
-      if (!cycleId) {
-        console.error("Ciclo não encontrado");
-        return;
-      }
+      const cycleId = cycleData[0].id;
       
       // Verificar se a foto já existe
       const { data: existingPhoto } = await supabase
         .from('photos')
         .select('id')
-        .eq('cycle_id', cycleId)
+        .eq('cycle_id', cycleId as any)
         .eq('type', 'tag' as any)
         .maybeSingle();
         
-      // Corrija a verificação de existingPhoto
-      if (existingPhoto?.id) {
+      if (existingPhoto) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase
@@ -107,17 +104,18 @@ export function usePhotoUploadWithMetadata() {
     }
   };
   
-  // Correção similar para uploadServicePhoto
+  /**
+   * Faz upload de uma foto de serviço
+   */
   const uploadServicePhoto = async (
     url: string,
     serviceId: string,
     sectorId: string,
-    type: 'before' | 'after',
+    type: PhotoType,
     userId: string
   ) => {
     try {
       // Buscar o ciclo atual do setor
-      
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
@@ -130,11 +128,7 @@ export function usePhotoUploadWithMetadata() {
         return;
       }
       
-      const cycleId = cycleData[0]?.id;
-      if (!cycleId) {
-        console.error("Ciclo não encontrado");
-        return;
-      }
+      const cycleId = cycleData[0].id;
       
       // Inserir foto
       await supabase
