@@ -9,7 +9,7 @@ import CheckagemFormContent from '@/components/checagem/CheckagemFormContent';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ExitTabContent from '@/components/sectors/forms/quality/ExitTabContent';
 import ServicesTabContent from '@/components/sectors/forms/quality/ServicesTabContent';
-import { ConnectionErrorFallback } from '@/components/fallback/ConnectionErrorFallback';
+import ConnectionErrorFallback from '@/components/fallback/ConnectionErrorFallback';
 import { Sector } from '@/types';
 import { useApi } from '@/contexts/ApiContextExtended';
 import { toast } from 'sonner';
@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function CheckagemDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { sector, isLoading, error } = useSectorFetch(id);
+  const { sector, fetchSector } = useSectorFetch(id);
   const api = useApi();
   
   const handleSaveQualityCheck = async (updatedSector: Partial<Sector>) => {
@@ -44,8 +44,11 @@ export default function CheckagemDetails() {
     }
   };
   
-  if (error) {
-    return <ConnectionErrorFallback error={error} />;
+  if (sector === null) {
+    return <ConnectionErrorFallback 
+      message="Erro ao carregar dados do setor"
+      onRetry={() => fetchSector()}
+    />;
   }
   
   return (
@@ -67,7 +70,7 @@ export default function CheckagemDetails() {
           </div>
         </div>
         
-        {isLoading ? (
+        {!sector ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
           </div>

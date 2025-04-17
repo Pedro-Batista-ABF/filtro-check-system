@@ -11,8 +11,8 @@ export default function Dashboard() {
   useEffect(() => {
     document.title = "Dashboard - Gestão de Recuperação";
     
-    // Verificar se refreshData existe antes de chamá-lo
-    if (api && api.refreshData) {
+    // Verificar se api existe e se refreshData existe antes de chamá-lo
+    if (api && typeof api.refreshData === 'function') {
       api.refreshData();
     }
   }, [api]);

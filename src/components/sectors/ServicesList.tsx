@@ -57,6 +57,13 @@ export default function ServicesList({
     }
   };
 
+  const handleFileListUpload = async (serviceId: string, fileList: FileList, type: 'before' | 'after') => {
+    if (fileList.length > 0) {
+      // Process just the first file for simplicity
+      await handlePhotoUpload(serviceId, fileList[0], type);
+    }
+  };
+
   if (!services || services.length === 0) {
     return <p className="text-gray-500 italic">Nenhum serviço selecionado</p>;
   }
@@ -70,7 +77,7 @@ export default function ServicesList({
         >
           <ServiceDetails 
             service={service} 
-            isExpanded={expandedService === service.id}
+            expanded={expandedService === service.id}
             onToggle={() => toggleService(service.id)}
             readOnly={!!readOnly}
           />
@@ -80,16 +87,27 @@ export default function ServicesList({
               {!readOnly && (
                 <ServiceQuantity 
                   service={service}
-                  onUpdateQuantity={(quantity) => handleUpdateQuantity(service.id, quantity)}
+                  onUpdate={(quantity) => handleUpdateQuantity(service.id, quantity)}
                 />
               )}
               
               <ServicePhotos 
                 service={service}
-                onPhotoUpload={(file, type) => handlePhotoUpload(service.id, file, type)}
-                readOnly={readOnly}
+                onPhotoUpload={(file, photoType) => handleFileListUpload(service.id, file, photoType)}
+                photoType="before"
+                disabled={readOnly}
                 stage={stage}
               />
+              
+              {stage === 'checagem' && (
+                <ServicePhotos 
+                  service={service}
+                  onPhotoUpload={(file, photoType) => handleFileListUpload(service.id, file, photoType)}
+                  photoType="after"
+                  disabled={readOnly}
+                  stage={stage}
+                />
+              )}
             </div>
           )}
         </div>
