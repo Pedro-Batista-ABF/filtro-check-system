@@ -1,10 +1,9 @@
-
 import { useContext, useState, createContext, ReactNode, useEffect } from "react";
 import { Sector } from "@/types";
 import { useApiOriginal, ApiContextType } from "./ApiContext";
 import { supabaseService } from "@/services/supabase";
 import { useSectorService } from "@/services/sectorService";
-import { usePhotoService } from "@/services/photoService";
+import { photoService } from "@/services/photoService"; // Changed from usePhotoService to photoService
 import { toast } from "sonner";
 
 /**
@@ -64,7 +63,7 @@ const ApiContextExtended = createContext<ApiContextExtendedType>(defaultContext)
 export function ApiContextExtendedProvider({ children }: { children: ReactNode }) {
   const originalApi = useApiOriginal();
   const sectorService = useSectorService();
-  const photoService = usePhotoService();
+  // Use photoService directly instead of usePhotoService
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,8 +132,8 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
   // Upload a photo
   const uploadPhoto = async (file: File, folder: string = 'general'): Promise<string> => {
     try {
-      if (supabaseService.uploadPhoto) {
-        return await supabaseService.uploadPhoto(file, folder);
+      if (photoService.uploadPhoto) {
+        return await photoService.uploadPhoto(file, folder);
       } else {
         console.error('Método uploadPhoto não implementado');
         throw new Error('Método uploadPhoto não implementado');
@@ -153,7 +152,7 @@ export function ApiContextExtendedProvider({ children }: { children: ReactNode }
     type: 'before' | 'after'
   ): Promise<boolean> => {
     try {
-      return await photoService.updateServicePhotos(sectorId, serviceId, photoUrl, type);
+      return await photoService.updateServicePhotos?.(sectorId, serviceId, photoUrl, type) || false;
     } catch (error) {
       console.error("Error updating service photos:", error);
       return false;

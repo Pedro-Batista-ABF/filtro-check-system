@@ -65,5 +65,25 @@ export const photoService = {
       console.error('Erro ao excluir foto:', error);
       return false;
     }
+  },
+
+  /**
+   * Atualiza as fotos de um serviço
+   */
+  updateServicePhotos: async (
+    sectorId: string,
+    serviceId: string,
+    photoUrl: string,
+    type: 'before' | 'after'
+  ): Promise<boolean> => {
+    try {
+      // Implementação simplificada - apenas retorna true por enquanto
+      // Esta função será expandida no futuro para manipular as fotos no banco de dados
+      console.log(`Atualizando fotos para serviço ${serviceId}, tipo ${type}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar fotos do serviço:', error);
+      return false;
+    }
   }
 };

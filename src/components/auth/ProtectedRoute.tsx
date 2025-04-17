@@ -13,19 +13,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   redirectTo = '/login'
 }) => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth(); // Changed from 'isLoading' to 'loading' to match AuthContext
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     // Se não está mais carregando, podemos parar de verificar
-    if (!isLoading) {
+    if (!loading) {
       setIsChecking(false);
     }
-  }, [isLoading]);
+  }, [loading]);
 
   // Se ainda está verificando, mostra uma tela de carregamento
-  if (isChecking || isLoading) {
+  if (isChecking || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse">Verificando autenticação...</div>

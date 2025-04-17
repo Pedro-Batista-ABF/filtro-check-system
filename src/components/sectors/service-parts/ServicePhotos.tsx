@@ -99,7 +99,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
           type="button"
           variant="outline"
           size="sm"
-          onClick={handleCameraCapture}
+          onClick={onCameraCapture} // Fixed: Changed from handleCameraCapture to onCameraCapture
           disabled={disabled}
           className="text-xs"
         >
