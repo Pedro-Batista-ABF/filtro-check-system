@@ -8,7 +8,7 @@ export function useTagPhotoUpload() {
     const { data: existingTagPhoto } = await supabase
       .from('photos')
       .select('id')
-      .eq('url', tagPhotoUrl as any)
+      .eq('url', tagPhotoUrl)
       .eq('type', 'tag' as any)
       .maybeSingle();
       
@@ -32,7 +32,7 @@ export function useTagPhotoUpload() {
             stage: 'peritagem',
             type: 'tag'
           }
-        } as any);
+        });
         
       if (tagPhotoError) {
         console.error('Erro ao inserir foto da TAG:', tagPhotoError);

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Service, Photo } from "@/types";
+import { Service } from "@/types";
 import SectorInfoSection from './review/SectorInfoSection';
 import ServicesSection from './review/ServicesSection';
 
@@ -27,7 +27,6 @@ interface ReviewFormProps {
     entryDate?: boolean;
     services?: boolean;
     photos?: boolean;
-    scrapPhotos?: boolean;
   };
   photoRequired: boolean;
   handleCameraCapture: (e: React.MouseEvent, serviceId?: string) => void;

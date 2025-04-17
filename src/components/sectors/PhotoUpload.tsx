@@ -42,7 +42,7 @@ export default function PhotoUpload({
     } else if (photo.file instanceof File) {
       return URL.createObjectURL(photo.file);
     }
-    return '/placeholder.svg'; // URL de fallback em caso de falha
+    return ''; // URL vazia caso não seja possível obter
   };
   
   // Função para lidar com erros de carregamento de imagem
@@ -58,6 +58,8 @@ export default function PhotoUpload({
       <div className="flex flex-wrap gap-2">
         {photos && photos.map((photo, index) => {
           const photoUrl = getPhotoUrl(photo);
+          if (!photoUrl) return null;
+          
           const photoId = photo.id || `temp-${index}`;
           const hasError = imageErrors[photoId];
           

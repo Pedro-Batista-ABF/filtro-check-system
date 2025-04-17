@@ -70,7 +70,7 @@ export function usePhotoUploadWithMetadata() {
         .eq('type', 'tag' as any)
         .maybeSingle();
         
-      if (existingPhoto && existingPhoto.id) {
+      if (existingPhoto) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase

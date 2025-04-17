@@ -33,31 +33,31 @@ export default function SummaryCards() {
         const { count: peritagemCount } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'peritagemPendente');
+          .eq('current_status' as any, 'peritagemPendente');
           
         // Total de setores em execução
         const { count: execucaoCount } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'emExecucao');
+          .eq('current_status' as any, 'emExecucao');
           
         // Total de setores em checagem
         const { count: checagemCount } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'checagemFinalPendente');
+          .eq('current_status' as any, 'checagemFinalPendente');
           
         // Total de setores em sucateamento
         const { count: sucateamentoCount } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'sucateadoPendente');
+          .eq('current_status' as any, 'sucateadoPendente');
           
         // Total de setores concluídos
         const { count: concluidosCount } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'concluido');
+          .eq('current_status' as any, 'concluido');
           
         // Total de setores
         const { count: totalCount } = await supabase

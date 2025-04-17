@@ -1,202 +1,227 @@
+import { useContext, useState, createContext, ReactNode, useEffect } from "react";
+import { Sector } from "@/types";
+import { useApiOriginal, ApiContextType } from "./ApiContext";
+import { supabaseService } from "@/services/supabase";
+import { useSectorService } from "@/services/sectorService";
+import { photoService } from "@/services/photoService"; // Changed from usePhotoService to photoService
+import { toast } from "sonner";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Sector } from '@/types';
-import { useAuth } from './AuthContext';
-
-interface ApiContextType {
-  sectors: Sector[];
-  loading: boolean;
+/**
+ * Extended API context that includes additional methods for sector management
+ */
+interface ApiContextExtendedType extends Omit<ApiContextType, 'updateSector'> {
+  isLoading: boolean;
   error: string | null;
-  fetchSectors: () => Promise<void>;
+  sectors: Sector[];
+  pendingSectors: Sector[];
+  inProgressSectors: Sector[];
+  qualityCheckSectors: Sector[];
+  completedSectors: Sector[];
+  addSector: (sectorData: Omit<Sector, 'id'>) => Promise<string>;
+  updateSector: (sectorId: string, sectorData: Partial<Sector>) => Promise<boolean>;
+  getSectorById: (id: string) => Promise<Sector | undefined>;
+  getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
+  uploadPhoto: (file: File, folder?: string) => Promise<string>;
+  updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
   refreshData: () => Promise<void>;
-  getSectorById: (id: string) => Promise<Sector | null>;
-  updateSector: (id: string, data: Partial<Sector>) => Promise<boolean>;
-  addSector: (data: Omit<Sector, 'id'>) => Promise<string | false>;
-  uploadPhoto: (file: File, folder?: string) => Promise<string | null>;
 }
 
-const ApiContext = createContext<ApiContextType | undefined>(undefined);
+/**
+ * Default context values
+ */
+const defaultContext: ApiContextExtendedType = {
+  isLoading: false,
+  error: null,
+  loading: false, 
+  sectors: [],
+  pendingSectors: [],
+  inProgressSectors: [],
+  qualityCheckSectors: [],
+  completedSectors: [],
+  addSector: async () => "",
+  updateSector: async () => false,
+  getSectorById: async () => undefined,
+  getSectorsByTag: async () => [],
+  uploadPhoto: async () => "",
+  updateServicePhotos: async () => false,
+  refreshData: async () => {},
+  
+  // Add these from ApiContextType
+  createSector: async () => ({} as Sector),
+  deleteSector: async () => {},
+  getDefaultServices: async () => []
+};
 
-interface ApiProviderProps {
-  children: React.ReactNode;
-}
+/**
+ * Create the context
+ */
+const ApiContextExtended = createContext<ApiContextExtendedType>(defaultContext);
 
-export const ApiContextProvider: React.FC<ApiProviderProps> = ({ children }) => {
-  const [sectors, setSectors] = useState<Sector[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+/**
+ * Provider component for the extended API context
+ */
+export function ApiContextExtendedProvider({ children }: { children: ReactNode }) {
+  const originalApi = useApiOriginal();
+  const sectorService = useSectorService();
+  // Use photoService directly instead of usePhotoService
+  
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { session } = useAuth();
+  const [sectors, setSectors] = useState<Sector[]>([]);
 
-  const fetchSectors = async () => {
-    setLoading(true);
-    setError(null);
-  
-    try {
-      const token = session?.access_token;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sectors`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-  
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar setores: ${response.status} - ${response.statusText}`);
-      }
-  
-      const data = await response.json();
-      setSectors(data);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao buscar os setores');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  /**
+   * Fetch all sectors from the API
+   */
   const refreshData = async () => {
-    await fetchSectors();
-  };
-
-  const getSectorById = async (id: string): Promise<Sector | null> => {
     try {
-      // Primeiro verificar se o setor já está no estado
-      const existingSector = sectors.find((s) => s.id === id);
-      if (existingSector) return existingSector;
-
-      // Se não estiver, buscar da API
-      const token = session?.access_token;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sectors/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar setor: ${response.status} - ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data;
+      setIsLoading(true);
+      setError(null);
+      
+      console.log("Fetching all sectors...");
+      const result = await supabaseService.getAllSectors();
+      console.log("Fetched sectors:", result);
+      setSectors(result || []);
     } catch (err) {
-      console.error('Erro ao buscar setor por ID:', err);
-      return null;
+      console.error("Error fetching sectors:", err);
+      setError(err instanceof Error ? err.message : "Unknown error fetching sectors");
+      toast.error("Error loading sectors", {
+        description: err instanceof Error ? err.message : "Unknown error"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updateSector = async (id: string, data: Partial<Sector>): Promise<boolean> => {
-    try {
-      const token = session?.access_token;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sectors/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao atualizar setor: ${response.status} - ${response.statusText}`);
-      }
-
-      // Atualizar o estado local após sucesso
-      setSectors((prevSectors) =>
-        prevSectors.map((sector) => (sector.id === id ? { ...sector, ...data } : sector))
-      );
-
-      return true;
-    } catch (err) {
-      console.error('Erro ao atualizar setor:', err);
-      return false;
-    }
-  };
-
-  const addSector = async (data: Omit<Sector, 'id'>): Promise<string | false> => {
-    try {
-      const token = session?.access_token;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sectors`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao adicionar setor: ${response.status} - ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      const newId = result.id;
-
-      // Adicionar o novo setor ao estado local
-      setSectors((prevSectors) => [...prevSectors, { ...data, id: newId }]);
-
-      return newId;
-    } catch (err) {
-      console.error('Erro ao adicionar setor:', err);
-      return false;
-    }
-  };
-
-  const uploadPhoto = async (file: File, folder: string = 'general'): Promise<string | null> => {
-    try {
-      const token = session?.access_token;
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', folder);
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao fazer upload: ${response.status} - ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.url;
-    } catch (err) {
-      console.error('Erro ao fazer upload de arquivo:', err);
-      return null;
-    }
-  };
-
+  // Initial data load
   useEffect(() => {
-    if (session?.access_token) {
-      fetchSectors();
+    console.log("ApiContextExtended: Initializing and fetching data");
+    refreshData();
+  }, []);
+
+  // Filter sectors by status
+  const pendingSectors = sectors.filter(s => s.status === 'peritagemPendente');
+  const inProgressSectors = sectors.filter(s => s.status === 'emExecucao');
+  const qualityCheckSectors = sectors.filter(s => s.status === 'checagemFinalPendente');
+  const completedSectors = sectors.filter(s => s.status === 'concluido');
+
+  // Get sector by ID
+  const getSectorById = async (id: string): Promise<Sector | undefined> => {
+    try {
+      return await supabaseService.getSectorById(id);
+    } catch (error) {
+      console.error(`Error fetching sector ${id}:`, error);
+      return undefined;
     }
-  }, [session]);
+  };
+
+  // Get sectors by tag number
+  const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
+    try {
+      if (supabaseService.getSectorsByTag) {
+        return await supabaseService.getSectorsByTag(tagNumber);
+      } else {
+        console.error('Método getSectorsByTag não implementado');
+        return [];
+      }
+    } catch (error) {
+      console.error(`Error fetching sectors with tag ${tagNumber}:`, error);
+      return [];
+    }
+  };
+
+  // Upload a photo
+  const uploadPhoto = async (file: File, folder: string = 'general'): Promise<string> => {
+    try {
+      if (photoService.uploadPhoto) {
+        return await photoService.uploadPhoto(file, folder);
+      } else {
+        console.error('Método uploadPhoto não implementado');
+        throw new Error('Método uploadPhoto não implementado');
+      }
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      throw error;
+    }
+  };
+
+  // Update service photos
+  const updateServicePhotos = async (
+    sectorId: string,
+    serviceId: string,
+    photoUrl: string,
+    type: 'before' | 'after'
+  ): Promise<boolean> => {
+    try {
+      return await photoService.updateServicePhotos?.(sectorId, serviceId, photoUrl, type) || false;
+    } catch (error) {
+      console.error("Error updating service photos:", error);
+      return false;
+    }
+  };
+
+  // Add a new sector
+  const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
+    try {
+      const result = await sectorService.addSector(sectorData);
+      await refreshData();
+      return result;
+    } catch (error) {
+      console.error("Error adding sector:", error);
+      throw error;
+    }
+  };
+
+  // Update sector - uses our implementation that returns boolean
+  const updateSector = async (sectorId: string, sectorData: Partial<Sector>): Promise<boolean> => {
+    try {
+      if (!sectorId) {
+        throw new Error("Sector ID is required for updates");
+      }
+      
+      const result = await sectorService.updateSector(sectorId, sectorData);
+      await refreshData();
+      return result;
+    } catch (error) {
+      console.error("Error updating sector:", error);
+      throw error;
+    }
+  };
 
   return (
-    <ApiContext.Provider 
-      value={{ 
-        sectors, 
-        loading, 
-        error, 
-        fetchSectors, 
-        refreshData, 
-        getSectorById, 
-        updateSector, 
-        addSector, 
-        uploadPhoto 
+    <ApiContextExtended.Provider
+      value={{
+        isLoading,
+        error,
+        loading: originalApi.loading, // Pass through original loading
+        sectors,
+        pendingSectors,
+        inProgressSectors,
+        qualityCheckSectors,
+        completedSectors,
+        addSector,
+        updateSector,
+        getSectorById,
+        getSectorsByTag,
+        uploadPhoto,
+        updateServicePhotos,
+        refreshData,
+        
+        // Pass through methods from the original context
+        createSector: originalApi.createSector,
+        deleteSector: originalApi.deleteSector,
+        getDefaultServices: originalApi.getDefaultServices
       }}
     >
       {children}
-    </ApiContext.Provider>
+    </ApiContextExtended.Provider>
   );
-};
+}
 
-export const useApi = (): ApiContextType => {
-  const context = useContext(ApiContext);
-  if (!context) {
-    throw new Error("useApi deve ser usado dentro de um ApiContextProvider");
-  }
-  return context;
-};
+/**
+ * Hook to use the extended API context
+ */
+export function useApi() {
+  return useContext(ApiContextExtended);
+}
+
+export { ApiContextExtended };

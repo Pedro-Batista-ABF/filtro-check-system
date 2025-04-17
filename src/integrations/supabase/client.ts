@@ -13,7 +13,8 @@ const options = {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'supabase.auth.token',
-    storage: localStorage
+    storage: localStorage,
+    flowType: 'implicit',
   },
   global: {
     headers: {
@@ -42,6 +43,22 @@ const options = {
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, options);
+
+// Configurar interceptor para atualizar headers em todas as requisições
+const originalFetch = supabase.rest.headers;
+supabase.rest.headers = async () => {
+  const { data } = await supabase.auth.getSession();
+  const baseHeaders = await originalFetch();
+  
+  if (data.session?.access_token) {
+    return {
+      ...baseHeaders,
+      'Authorization': `Bearer ${data.session.access_token}`
+    };
+  }
+  
+  return baseHeaders;
+};
 
 // Log inicial para verificar a inicialização do cliente Supabase
 console.log("Cliente Supabase inicializado com persistência aprimorada");
