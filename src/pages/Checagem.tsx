@@ -1,33 +1,28 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/card";
+import { AlertTriangle, Plus } from "lucide-react";
 import { useApi } from "@/contexts/ApiContextExtended";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search } from "lucide-react";
 import SectorGrid from "@/components/sectors/SectorGrid";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const Checagem = () => {
+export default function Checagem() {
   const navigate = useNavigate();
   const { sectors, loading } = useApi();
+  const [activeTab, setActiveTab] = useState("pendentes");
   
-  // Filtrar setores com status checagemFinalPendente
-  const pendingQualitySectors = sectors.filter(sector => 
-    sector.status === 'checagemFinalPendente'
-  );
+  // Filtrar setores por diferentes status
+  const checagemPendente = sectors.filter(sector => sector.status === 'checagemFinalPendente');
+  const concluidos = sectors.filter(sector => sector.status === 'concluido');
   
-  // Filtrar setores com status concluido
-  const completedSectors = sectors.filter(sector => 
-    sector.status === 'concluido'
-  );
-
   useEffect(() => {
     document.title = "Checagem Final - Gestão de Recuperação";
   }, []);
 
-  const handleSectorClick = (sector: any) => {
+  const handleSectorSelect = (sector: any) => {
     navigate(`/checagem/${sector.id}`);
   };
 
@@ -35,63 +30,79 @@ const Checagem = () => {
     <PageLayoutWrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Checagem Final</h1>
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por TAG..."
-              className="pl-8"
-            />
+          <h1 className="text-2xl font-bold">Checagem Final</h1>
+          <div className="flex space-x-2">
+            <Button 
+              onClick={() => navigate('/checagem-final')}
+              variant="default"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Ver Pendentes
+            </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="pending">
-          <TabsList>
-            <TabsTrigger value="pending">
-              Pendentes ({pendingQualitySectors.length})
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              Concluídos ({completedSectors.length})
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="pendentes">Pendentes ({checagemPendente.length})</TabsTrigger>
+            <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="pending" className="mt-4">
+
+          <TabsContent value="pendentes" className="mt-4">
             {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="flex justify-center items-center p-12">
+                <p>Carregando setores...</p>
               </div>
-            ) : pendingQualitySectors.length > 0 ? (
-              <SectorGrid
-                sectors={pendingQualitySectors}
-                onSectorClick={handleSectorClick}
+            ) : checagemPendente.length > 0 ? (
+              <SectorGrid 
+                sectors={checagemPendente} 
+                onSelect={handleSectorSelect}
               />
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Não há setores pendentes de checagem final.</p>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <AlertTriangle className="mr-2 h-5 w-5 text-yellow-500" />
+                    Nenhum setor pendente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Não há setores pendentes de checagem final. Todos os setores já foram processados ou estão em outras etapas do fluxo.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
-          
-          <TabsContent value="completed" className="mt-4">
+
+          <TabsContent value="concluidos" className="mt-4">
             {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="flex justify-center items-center p-12">
+                <p>Carregando setores...</p>
               </div>
-            ) : completedSectors.length > 0 ? (
-              <SectorGrid
-                sectors={completedSectors}
-                onSectorClick={handleSectorClick}
+            ) : concluidos.length > 0 ? (
+              <SectorGrid 
+                sectors={concluidos} 
+                onSelect={handleSectorSelect}
               />
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Não há setores concluídos.</p>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <AlertTriangle className="mr-2 h-5 w-5 text-yellow-500" />
+                    Nenhum setor concluído
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Não há setores com checagem final concluída no momento.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
       </div>
     </PageLayoutWrapper>
   );
-};
-
-export default Checagem;
+}

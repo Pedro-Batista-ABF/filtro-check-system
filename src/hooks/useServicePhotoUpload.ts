@@ -37,7 +37,7 @@ export function useServicePhotoUpload() {
             const { data: existingPhoto, error: checkError } = await supabase
               .from('photos')
               .select('id')
-              .eq('url', photo.url)
+              .eq('url', photo.url as any)
               .maybeSingle();
               
             if (checkError) {

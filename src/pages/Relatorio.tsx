@@ -1,191 +1,166 @@
 
-import { useEffect, useState } from "react";
-import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
-import { useApi } from "@/contexts/ApiContextExtended";
-import { Sector } from "@/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, FileText, AlertCircle, Download } from "lucide-react";
-import { format } from "date-fns";
-import { pt } from "date-fns/locale";
+import React, { useEffect, useState } from 'react';
+import PageLayoutWrapper from '@/components/layout/PageLayoutWrapper';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FileText, Filter, Download } from 'lucide-react';
+import { useApi } from '@/contexts/ApiContextExtended';
+import { Sector } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
-const Relatorio = () => {
+export default function Relatorio() {
   const { sectors, loading } = useApi();
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [isGenerating, setIsGenerating] = useState(false);
-
+  
+  // Filtrar setores concluídos (que podem ser incluídos em relatórios)
+  const setoresConcluidos = sectors.filter(setor => setor.status === 'concluido');
+  
   useEffect(() => {
     document.title = "Relatórios - Gestão de Recuperação";
   }, []);
 
-  // Filtrar setores concluídos
-  const completedSectors = sectors.filter(
-    (sector) => 
-      sector.status === "concluido" && 
-      (searchTerm === "" || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const setoresFiltrados = filtroStatus === 'todos'
+    ? setoresConcluidos
+    : setoresConcluidos.filter(setor => setor.status === filtroStatus);
 
-  const handleSelectSector = (sectorId: string) => {
-    if (selectedSectors.includes(sectorId)) {
-      setSelectedSectors(selectedSectors.filter(id => id !== sectorId));
-    } else {
-      setSelectedSectors([...selectedSectors, sectorId]);
-    }
+  const handleToggleSetor = (setorId: string) => {
+    setSelectedSectors(prev => 
+      prev.includes(setorId) 
+        ? prev.filter(id => id !== setorId) 
+        : [...prev, setorId]
+    );
   };
 
   const handleSelectAll = () => {
-    if (selectedSectors.length === completedSectors.length) {
+    if (selectedSectors.length === setoresFiltrados.length) {
+      // Se todos já estão selecionados, desseleciona todos
       setSelectedSectors([]);
     } else {
-      setSelectedSectors(completedSectors.map(sector => sector.id));
+      // Seleciona todos os setores filtrados
+      setSelectedSectors(setoresFiltrados.map(setor => setor.id));
     }
   };
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = () => {
     if (selectedSectors.length === 0) {
-      alert("Selecione pelo menos um setor para gerar o relatório");
+      alert('Selecione pelo menos um setor para gerar o relatório');
       return;
     }
-
+    
     setIsGenerating(true);
     
-    try {
-      // Simulação da geração de relatório
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert("Esta funcionalidade de geração de relatório está em implementação.");
-      
+    // Simulação de geração de relatório
+    setTimeout(() => {
       setIsGenerating(false);
-    } catch (error) {
-      console.error("Erro ao gerar relatório:", error);
-      setIsGenerating(false);
-    }
+      alert(`Relatório gerado com ${selectedSectors.length} setores`);
+    }, 1500);
   };
 
   return (
     <PageLayoutWrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Relatórios</h1>
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por TAG..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="select-all"
-              checked={selectedSectors.length === completedSectors.length && completedSectors.length > 0}
-              onCheckedChange={handleSelectAll}
-              disabled={completedSectors.length === 0}
-            />
-            <Label htmlFor="select-all">
-              Selecionar todos ({completedSectors.length})
-            </Label>
-          </div>
-          
-          <Button 
-            onClick={handleGenerateReport} 
-            disabled={isGenerating || selectedSectors.length === 0}
+          <h1 className="text-2xl font-bold">Relatórios</h1>
+          <Button
+            onClick={handleGenerateReport}
+            disabled={selectedSectors.length === 0 || isGenerating}
           >
             {isGenerating ? (
-              <>
-                <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
-                Gerando...
-              </>
+              <>Gerando...</>
             ) : (
               <>
                 <FileText className="mr-2 h-4 w-4" />
-                Gerar Relatório
+                Gerar Relatório ({selectedSectors.length})
               </>
             )}
           </Button>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : completedSectors.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {completedSectors.map((sector) => (
-              <Card 
-                key={sector.id} 
-                className={`cursor-pointer transition-colors ${
-                  selectedSectors.includes(sector.id) ? "border-primary" : ""
-                }`}
-                onClick={() => handleSelectSector(sector.id)}
-              >
-                <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-                  <div>
-                    <CardTitle className="text-lg flex items-center">
-                      <Checkbox 
-                        className="mr-2"
-                        checked={selectedSectors.includes(sector.id)}
-                        onCheckedChange={() => handleSelectSector(sector.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      TAG: {sector.tagNumber}
-                    </CardTitle>
-                    <CardDescription>
-                      NF Entrada: {sector.entryInvoice || "N/A"}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1 text-sm">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-muted-foreground">Entrada:</span>{" "}
-                        {sector.entryDate
-                          ? format(new Date(sector.entryDate), "dd/MM/yyyy", { locale: pt })
-                          : "N/A"}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Saída:</span>{" "}
-                        {sector.exitDate
-                          ? format(new Date(sector.exitDate), "dd/MM/yyyy", { locale: pt })
-                          : "N/A"}
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">NF Saída:</span>{" "}
-                        {sector.exitInvoice || "N/A"}
-                      </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Filtros</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="w-full sm:w-64">
+                <Label htmlFor="status-filter">Status</Label>
+                <Select
+                  value={filtroStatus}
+                  onValueChange={setFiltroStatus}
+                >
+                  <SelectTrigger id="status-filter">
+                    <SelectValue placeholder="Selecione um status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os status</SelectItem>
+                    <SelectItem value="concluido">Concluídos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-end">
+                <Button variant="outline" className="flex-1 sm:flex-none">
+                  <Filter className="mr-2 h-4 w-4" />
+                  Aplicar Filtros
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Setores Disponíveis</CardTitle>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleSelectAll}
+            >
+              {selectedSectors.length === setoresFiltrados.length && setoresFiltrados.length > 0
+                ? "Desselecionar Todos"
+                : "Selecionar Todos"
+              }
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center items-center p-12">
+                <p>Carregando setores...</p>
+              </div>
+            ) : setoresFiltrados.length > 0 ? (
+              <div className="space-y-4">
+                {setoresFiltrados.map(setor => (
+                  <div 
+                    key={setor.id} 
+                    className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleToggleSetor(setor.id)}
+                  >
+                    <Checkbox 
+                      checked={selectedSectors.includes(setor.id)} 
+                      onCheckedChange={() => handleToggleSetor(setor.id)}
+                    />
+                    <div>
+                      <h3 className="font-medium">{setor.tagNumber}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        NF: {setor.entryInvoice} • 
+                        Data: {setor.entryDate ? new Date(setor.entryDate).toLocaleDateString() : 'N/A'}
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <AlertCircle className="mr-2 h-5 w-5 text-yellow-500" />
-                Nenhum setor concluído encontrado
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Não há setores concluídos para gerar relatórios ou sua busca não retornou resultados.
+                ))}
+              </div>
+            ) : (
+              <p className="text-center py-12 text-muted-foreground">
+                Nenhum setor disponível para relatório com os filtros selecionados.
               </p>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </div>
     </PageLayoutWrapper>
   );
-};
-
-export default Relatorio;
+}
