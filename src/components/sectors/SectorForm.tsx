@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Sector } from '@/types';
 import { useSectorFormState } from '@/hooks/useSectorFormState';
@@ -111,7 +110,6 @@ function SectorForm({
     setSelectedTab(value);
   };
 
-  // Rendereizar o componente baseado no mode
   return (
     <div className="space-y-6">
       <FormValidationAlert formErrors={validationErrors} />

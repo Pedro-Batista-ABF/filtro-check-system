@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContextExtended';
@@ -63,6 +62,11 @@ export default function Sucateamento() {
             status: sector.current_status as any,
             outcome: sector.current_outcome as any || "EmAndamento",
             services: [],
+            beforePhotos: [],
+            afterPhotos: [],
+            scrapPhotos: [],
+            productionCompleted: false,
+            peritagemDate: sector.peritagem_date || "",
             cycleCount: sector.cycle_count || 1,
             updated_at: sector.updated_at
           }));
@@ -88,21 +92,6 @@ export default function Sucateamento() {
     }
   }, [sectors, isLoading]);
   
-  // Filter sectors based on status and search term
-  const pendingScraps = localSectors.filter(sector => 
-    sector.status === 'sucateadoPendente' && 
-    (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-  
-  const completedScraps = localSectors.filter(sector => 
-    sector.status === 'sucateado' && 
-    (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const handleSectorClick = (sector: Sector) => {
-    navigate(`/sucateamento/${sector.id}`);
-  };
-
   const handleRetryFetch = async () => {
     setLocalLoading(true);
     setError(null);
@@ -130,7 +119,12 @@ export default function Sucateamento() {
           status: sector.current_status as any,
           outcome: sector.current_outcome as any || "EmAndamento",
           services: [],
-          cycleCount: sector.cycle_count || 1, 
+          beforePhotos: [],
+          afterPhotos: [],
+          scrapPhotos: [],
+          productionCompleted: false,
+          peritagemDate: sector.peritagem_date || "",
+          cycleCount: sector.cycle_count || 1,
           updated_at: sector.updated_at
         }));
         
@@ -162,6 +156,21 @@ export default function Sucateamento() {
       </PageLayoutWrapper>
     );
   }
+
+  // Filter sectors based on status and search term
+  const pendingScraps = localSectors.filter(sector => 
+    sector.status === 'sucateadoPendente' && 
+    (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+  
+  const completedScraps = localSectors.filter(sector => 
+    sector.status === 'sucateado' && 
+    (searchTerm === '' || sector.tagNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const handleSectorClick = (sector: Sector) => {
+    navigate(`/sucateamento/${sector.id}`);
+  };
 
   return (
     <PageLayoutWrapper>

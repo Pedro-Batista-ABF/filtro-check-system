@@ -24,8 +24,8 @@ export interface ScrapFormProps {
   setScrapDate: (date: Date | undefined) => void;
   scrapInvoice: string;
   setScrapInvoice: (value: string) => void;
-  handlePhotoUpload: (files: FileList) => void;
   tagPhotoUrl: string | undefined;
+  setTagPhotoUrl: (url: string | undefined) => void;
   handleTagPhotoUpload: (files: FileList) => Promise<string | undefined>;
 }
 
@@ -39,7 +39,8 @@ export default function ScrapForm({
   tagPhotoUrl,
   tagNumber,
   entryInvoice,
-  entryDate
+  entryDate,
+  setTagPhotoUrl
 }: ScrapFormProps) {
   return (
     <div className="space-y-6">

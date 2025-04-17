@@ -7,8 +7,9 @@ import { Link } from 'react-router-dom';
 interface FeatureCardProps {
   title: string;
   description: string;
-  icon?: ReactNode;
+  icon?: ReactNode | string;
   to?: string;
+  linkTo?: string;  // Added this prop for backward compatibility
   onClick?: () => void;
   variant?: 'default' | 'outline' | 'secondary' | 'destructive';
   className?: string;
@@ -21,17 +22,21 @@ export default function FeatureCard({
   description,
   icon,
   to,
+  linkTo,
   onClick,
   variant = 'default',
   className,
   disabled = false,
   count
 }: FeatureCardProps) {
+  // Use linkTo as fallback for to
+  const navigateTo = to || linkTo;
+  
   const cardContent = (
     <Card 
       className={cn(
         "transition-all duration-200 h-full", 
-        !disabled && !onClick && to && "hover:shadow-md hover:border-primary/50",
+        !disabled && !onClick && navigateTo && "hover:shadow-md hover:border-primary/50",
         disabled && "opacity-60 cursor-not-allowed",
         className
       )}
@@ -68,9 +73,9 @@ export default function FeatureCard({
     );
   }
 
-  if (to) {
+  if (navigateTo) {
     return (
-      <Link to={to} className="block">
+      <Link to={navigateTo} className="block">
         {cardContent}
       </Link>
     );
