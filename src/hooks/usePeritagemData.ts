@@ -6,15 +6,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInitialSectorData } from "./useInitialSectorData";
 import { useSectorLoadingState } from "./useSectorLoadingState";
 import { useServiceDataFetching } from "./useServiceDataFetching";
+import { toast } from "sonner";
 
 export function usePeritagemData(id?: string) {
   console.log("🚀 START: usePeritagemData hook initialization", Date.now());
   const [loading, setLoading] = useState(true);
-  const { sector, fetchSector } = useSectorFetch(id);
+  const { sector, fetchSector, isLoading: sectorLoading } = useSectorFetch(id);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const isEditing = !!id;
   const [validDefaultSector, setValidDefaultSector] = useState<Sector | null>(null);
   const [defaultServices, setDefaultServices] = useState<Service[]>([]);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   const {
     defaultSector,
@@ -41,7 +44,8 @@ export function usePeritagemData(id?: string) {
   const {
     loadServices,
     servicesFetched,
-    verifyConnection
+    verifyConnection,
+    services: availableServices
   } = useServiceDataFetching();
 
   // Improved effect to ensure synchronization between defaultSector and validDefaultSector
@@ -121,9 +125,21 @@ export function usePeritagemData(id?: string) {
       console.error("usePeritagemData: Erro ao carregar dados:", error);
       setErrorMessage("Erro ao carregar dados. Tente novamente mais tarde.");
       setLoading(false);
+      
+      if (retryCount < maxRetries) {
+        console.log(`Tentativa ${retryCount + 1} de ${maxRetries}`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          loadData();
+        }, 1500);
+      } else {
+        toast.error("Erro ao carregar dados", {
+          description: "Não foi possível carregar os dados após várias tentativas."
+        });
+      }
       console.log("❌ Erro no loadData", Date.now());
     }
-  }, [isAuthenticated, authLoading, id, isEditing, loadingTimeout]);
+  }, [isAuthenticated, authLoading, id, isEditing, loadingTimeout, retryCount]);
 
   useEffect(() => {
     console.log("🚀 useEffect para disparar loadData", Date.now(), {
@@ -149,14 +165,14 @@ export function usePeritagemData(id?: string) {
   return {
     sector,
     defaultSector: validDefaultSector || defaultSector || null, // Adicionando fallback direto
-    loading,
+    loading: loading || sectorLoading,
     errorMessage,
     isEditing,
-    services: defaultServices.length > 0 ? defaultServices : [],
+    services: defaultServices.length > 0 ? defaultServices : availableServices || [],
     hasValidData: (!loading && servicesFetched && (!!validDefaultSector || !!sector)) || !!validDefaultSector,
     dataReady,
     setDataReady,
     validDefaultSector: validDefaultSector || defaultSector || null, // Adicionando fallback direto
-    defaultServices: defaultServices.length > 0 ? defaultServices : []
+    defaultServices: defaultServices.length > 0 ? defaultServices : availableServices || []
   };
 }

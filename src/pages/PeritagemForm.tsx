@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePeritagemSubmit } from '@/hooks/usePeritagemSubmit';
@@ -16,6 +16,7 @@ import TimeoutError from '@/components/peritagem/TimeoutError';
 import ErrorMessage from '@/components/peritagem/ErrorMessage';
 import OfflineWarning from '@/components/peritagem/OfflineWarning';
 import ConnectionStatus from '@/components/peritagem/ConnectionStatus';
+import { toast } from 'sonner';
 
 export function PeritagemForm() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,7 @@ export function PeritagemForm() {
   const isEditing = !!id;
   const isMobile = useIsMobile();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [retryLoading, setRetryLoading] = useState(false);
   
   const {
     sector,
@@ -32,7 +34,8 @@ export function PeritagemForm() {
     isEditing: isEditingState,
     services,
     hasValidData,
-    validDefaultSector
+    validDefaultSector,
+    setDataReady
   } = usePeritagemData(id);
   
   const { handleSubmit, isSaving, errorMessage: submitError } = usePeritagemSubmit();
@@ -55,15 +58,32 @@ export function PeritagemForm() {
   const onSubmit = async (data: any) => {
     try {
       await handleSubmit(data, isEditing, id);
+      toast.success(isEditing ? "Peritagem atualizada" : "Peritagem criada", {
+        description: isEditing 
+          ? "Os dados da peritagem foram atualizados com sucesso." 
+          : "Nova peritagem registrada com sucesso."
+      });
     } catch (error) {
       console.error("Erro ao salvar peritagem:", error);
+      toast.error("Erro ao salvar", {
+        description: "Ocorreu um erro ao salvar a peritagem. Tente novamente."
+      });
     }
+  };
+
+  const handleRetryConnection = () => {
+    setRetryLoading(true);
+    setDataReady(false);
+    
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
   
   const HeaderExtra = (
     <ConnectionStatus 
       status={isOffline ? 'offline' : 'online'} 
-      onRetryConnection={() => window.location.reload()}
+      onRetryConnection={handleRetryConnection}
       showDetails={true}
     />
   );
@@ -72,17 +92,29 @@ export function PeritagemForm() {
   if (loading) {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
-        <div className="flex items-center gap-4 mb-6">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => navigate('/peritagem')}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => navigate('/peritagem')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-bold">
+              {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
+            </h1>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetryConnection}
+            disabled={retryLoading}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${retryLoading ? 'animate-spin' : ''}`} />
+            Recarregar
           </Button>
-          <h1 className="text-2xl font-bold">
-            {isEditing ? 'Editar Peritagem' : 'Nova Peritagem'}
-          </h1>
         </div>
         <LoadingState message="Carregando dados da peritagem..." />
       </PageLayout>
@@ -93,7 +125,7 @@ export function PeritagemForm() {
   if (errorMessage?.includes('timeout')) {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
-        <TimeoutError onRetry={() => window.location.reload()} />
+        <TimeoutError onRetry={handleRetryConnection} />
       </PageLayout>
     );
   }
@@ -103,6 +135,12 @@ export function PeritagemForm() {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
         <ErrorMessage message={errorMessage} />
+        <div className="mt-4 flex justify-center">
+          <Button onClick={handleRetryConnection} disabled={retryLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${retryLoading ? 'animate-spin' : ''}`} />
+            Tentar novamente
+          </Button>
+        </div>
       </PageLayout>
     );
   }
@@ -121,6 +159,12 @@ export function PeritagemForm() {
     return (
       <PageLayout HeaderExtra={HeaderExtra}>
         <LoadingState message="Carregando serviços disponíveis..." />
+        <div className="mt-4 flex justify-center">
+          <Button onClick={handleRetryConnection} disabled={retryLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${retryLoading ? 'animate-spin' : ''}`} />
+            Tentar novamente
+          </Button>
+        </div>
       </PageLayout>
     );
   }

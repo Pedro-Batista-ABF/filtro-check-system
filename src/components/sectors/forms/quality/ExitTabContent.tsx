@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Sector } from "@/types";
 
 interface ExitTabContentProps {
   exitDate: Date | undefined;

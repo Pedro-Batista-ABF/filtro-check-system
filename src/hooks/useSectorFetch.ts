@@ -1,6 +1,6 @@
 
 import { Sector } from "@/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { format } from "date-fns";
 export function useSectorFetch(id?: string) {
   const [sector, setSector] = useState<Sector | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { getSectorById } = useApi();
   const navigate = useNavigate();
 
@@ -16,8 +17,14 @@ export function useSectorFetch(id?: string) {
     if (!id) return;
 
     try {
+      setIsLoading(true);
+      setErrorMessage(null);
+      
+      console.log(`Buscando setor com ID: ${id}`);
       const sectorData = await getSectorById(id);
+      
       if (!sectorData) {
+        console.error(`Setor com ID ${id} não encontrado`);
         toast.error("Setor não encontrado", {
           description: `O setor com ID ${id} não foi encontrado.`
         });
@@ -25,10 +32,16 @@ export function useSectorFetch(id?: string) {
         return;
       }
 
+      console.log(`Setor carregado com sucesso: ${sectorData.tagNumber}`);
       setSector(sectorData);
     } catch (error) {
-      console.error("Error fetching sector:", error);
+      console.error("Erro ao carregar setor:", error);
       setErrorMessage("Erro ao carregar dados do setor");
+      toast.error("Erro ao carregar setor", {
+        description: "Não foi possível carregar os dados do setor. Tente novamente."
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -55,6 +68,7 @@ export function useSectorFetch(id?: string) {
     setSector,
     errorMessage,
     setErrorMessage,
+    isLoading,
     fetchSector,
     getDefaultSector
   };
