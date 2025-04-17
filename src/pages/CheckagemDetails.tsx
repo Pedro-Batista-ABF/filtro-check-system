@@ -1,11 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageLayoutWrapper from '@/components/layout/PageLayoutWrapper';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useSectorFetch } from '@/hooks/useSectorFetch';
-import CheckagemFormContent from '@/components/checagem/CheckagemFormContent';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ExitTabContent from '@/components/sectors/forms/quality/ExitTabContent';
 import ServicesTabContent from '@/components/sectors/forms/quality/ServicesTabContent';
@@ -13,12 +12,20 @@ import { Sector } from '@/types';
 import { useApi } from '@/contexts/ApiContextExtended';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import ConnectionErrorFallback from '@/components/fallback/ConnectionErrorFallback';
 
 export default function CheckagemDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { sector, fetchSector, error, loading } = useSectorFetch(id);
   const api = useApi();
+  
+  // Buscar dados do setor ao carregar a página
+  useEffect(() => {
+    if (id) {
+      fetchSector();
+    }
+  }, [id]);
   
   const handleSaveQualityCheck = async (updatedSector: Partial<Sector>) => {
     if (!id) return;
@@ -55,18 +62,12 @@ export default function CheckagemDetails() {
   
   if (error || !sector) {
     return (
-      <PageLayoutWrapper>
-        <div className="text-center py-8">
-          <p className="text-gray-500">Erro ao carregar setor ou setor não encontrado</p>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/checagem')}
-            className="mt-4"
-          >
-            Voltar para Checagem
-          </Button>
-        </div>
-      </PageLayoutWrapper>
+      <ConnectionErrorFallback 
+        message="Erro ao carregar setor ou setor não encontrado"
+        onRetry={() => fetchSector()}
+        showHomeButton={true}
+        showBackButton={true}
+      />
     );
   }
   
@@ -96,16 +97,14 @@ export default function CheckagemDetails() {
           </TabsList>
           
           <TabsContent value="services">
-            {sector && <ServicesTabContent sector={sector} />}
+            <ServicesTabContent sector={sector} />
           </TabsContent>
           
           <TabsContent value="exit">
-            {sector && (
-              <ExitTabContent 
-                sector={sector}
-                onSave={handleSaveQualityCheck}
-              />
-            )}
+            <ExitTabContent 
+              sector={sector}
+              onSave={handleSaveQualityCheck}
+            />
           </TabsContent>
         </Tabs>
       </div>

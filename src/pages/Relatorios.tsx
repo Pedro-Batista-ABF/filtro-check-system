@@ -11,16 +11,33 @@ import { useApi } from '@/contexts/ApiContextExtended';
 import SectorGrid from '@/components/sectors/SectorGrid';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import ConnectionErrorFallback from '@/components/fallback/ConnectionErrorFallback';
 
 export default function Relatorios() {
   const navigate = useNavigate();
-  const { sectors, loading } = useApi();
+  const { sectors, loading, refreshData } = useApi();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('completed');
+  const [error, setError] = useState<boolean>(false);
   
   useEffect(() => {
     document.title = "Relatórios - Gestão de Recuperação";
-  }, []);
+    
+    // Tentar carregar dados
+    const loadData = async () => {
+      try {
+        if (refreshData) {
+          await refreshData();
+        }
+        setError(false);
+      } catch (err) {
+        console.error("Erro ao carregar setores:", err);
+        setError(true);
+      }
+    };
+    
+    loadData();
+  }, [refreshData]);
 
   // Filter sectors based on status and search term
   const completedSectors = sectors.filter(sector => 
@@ -40,6 +57,15 @@ export default function Relatorios() {
   const handleCreateConsolidatedReport = () => {
     navigate('/relatorio/consolidado');
   };
+  
+  if (error) {
+    return (
+      <ConnectionErrorFallback 
+        message="Erro ao carregar dados dos relatórios"
+        onRetry={() => window.location.reload()}
+      />
+    );
+  }
 
   return (
     <PageLayoutWrapper>

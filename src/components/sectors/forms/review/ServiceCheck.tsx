@@ -52,7 +52,7 @@ export default function ServiceCheck({
             <>
               <ServiceQuantity 
                 service={service}
-                onQuantityChange={(quantity) => handleQuantityChange(service.id, quantity)}
+                onUpdate={(quantity) => handleQuantityChange(service.id, quantity)}
               />
               
               {handleObservationChange && (
