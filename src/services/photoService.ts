@@ -29,11 +29,29 @@ export const photoService = {
         throw error;
       }
       
+      // Garantir que a URL pública seja gerada com cabeçalhos de cache corretos
       const result = supabase.storage
         .from('sector_photos')
-        .getPublicUrl(fileName);
+        .getPublicUrl(fileName, {
+          download: false,
+          transform: {
+            quality: 80 // Qualidade de imagem (opcional)
+          }
+        });
         
       console.log(`Upload concluído. URL pública: ${result.data.publicUrl}`);
+      
+      // Verificar se a URL é acessível
+      try {
+        const response = await fetch(result.data.publicUrl, { method: 'HEAD' });
+        console.log(`Verificação de URL: status ${response.status}`);
+        
+        if (!response.ok) {
+          console.warn(`A URL gerada pode não ser acessível: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar URL:', error);
+      }
       
       return result.data.publicUrl;
     } catch (error) {
@@ -48,12 +66,15 @@ export const photoService = {
   deletePhoto: async (url: string): Promise<boolean> => {
     try {
       // Extrair o caminho do arquivo da URL
-      const baseUrl = supabase.storage.from('sector_photos').getPublicUrl('').data.publicUrl;
-      const filePath = url.replace(baseUrl, '');
+      const path = extractPathFromUrl(url);
+      if (!path) {
+        console.error('Não foi possível extrair o caminho da URL:', url);
+        return false;
+      }
       
       const { error } = await supabase.storage
         .from('sector_photos')
-        .remove([filePath]);
+        .remove([path]);
         
       if (error) {
         console.error('Erro ao excluir foto:', error);
@@ -64,6 +85,38 @@ export const photoService = {
     } catch (error) {
       console.error('Erro ao excluir foto:', error);
       return false;
+    }
+  },
+
+  /**
+   * Verifica se uma URL de foto é válida e acessível
+   */
+  verifyPhotoUrl: async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.error('Erro ao verificar URL da foto:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Tenta regenerar a URL pública de uma foto
+   */
+  regeneratePublicUrl: (url: string): string | null => {
+    try {
+      const path = extractPathFromUrl(url);
+      if (!path) return null;
+      
+      const { data } = supabase.storage
+        .from('sector_photos')
+        .getPublicUrl(path);
+        
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Erro ao regenerar URL pública:', error);
+      return null;
     }
   },
 
@@ -85,5 +138,28 @@ export const photoService = {
       console.error('Erro ao atualizar fotos do serviço:', error);
       return false;
     }
+  }
+};
+
+/**
+ * Função auxiliar para extrair o caminho do bucket de uma URL pública
+ */
+export const extractPathFromUrl = (url: string): string | null => {
+  try {
+    const urlParts = url.split('/object/public/');
+    if (urlParts.length > 1) {
+      return urlParts[1];
+    }
+    
+    // Alternativa se o formato for diferente
+    const match = url.match(/sector_photos\/([^?]+)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('Erro ao extrair caminho da URL:', e);
+    return null;
   }
 };

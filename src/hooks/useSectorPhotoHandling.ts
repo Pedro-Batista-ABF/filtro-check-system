@@ -1,7 +1,8 @@
 
 import { toast } from "sonner";
-import { Service } from "@/types";
+import { Service, PhotoWithFile } from "@/types";
 import { photoService } from "@/services/photoService";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useSectorPhotoHandling(services: Service[], setServices: (services: Service[]) => void) {
   const handleTagPhotoUpload = async (files: FileList): Promise<string | undefined> => {
@@ -9,11 +10,37 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
       try {
         const file = files[0];
         console.log("Iniciando upload da foto da TAG...");
-        // Usar o serviço de foto real em vez de URL temporária
+        
+        // Usar o serviço de foto para upload
         const uploadResult = await photoService.uploadPhoto(file, 'tags');
         
         if (uploadResult) {
           console.log("URL da foto da TAG:", uploadResult);
+          
+          // Verificar se a URL é acessível
+          try {
+            const response = await fetch(uploadResult, { method: 'HEAD' });
+            if (!response.ok) {
+              console.warn(`URL da TAG retornou status ${response.status}`);
+              
+              // Tentar regenerar a URL pública
+              const path = extractPathFromUrl(uploadResult);
+              if (path) {
+                const { data } = supabase.storage
+                  .from('sector_photos')
+                  .getPublicUrl(path);
+                  
+                if (data.publicUrl) {
+                  console.log("URL pública regenerada:", data.publicUrl);
+                  toast.success("Foto da TAG capturada com sucesso");
+                  return data.publicUrl;
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Erro ao verificar URL:", error);
+          }
+          
           toast.success("Foto da TAG capturada com sucesso");
           return uploadResult;
         } else {
@@ -53,6 +80,37 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
           const photoUrl = await photoService.uploadPhoto(file, uploadPath);
           
           if (photoUrl) {
+            // Verificar se a URL é acessível
+            try {
+              const response = await fetch(photoUrl, { method: 'HEAD' });
+              if (!response.ok) {
+                console.warn(`URL da foto retornou status ${response.status}`);
+                
+                // Tentar regenerar a URL pública
+                const path = extractPathFromUrl(photoUrl);
+                if (path) {
+                  const { data } = supabase.storage
+                    .from('sector_photos')
+                    .getPublicUrl(path);
+                    
+                  if (data.publicUrl) {
+                    console.log("URL pública regenerada:", data.publicUrl);
+                    
+                    newPhotos.push({
+                      id: `photo-${Date.now()}-${i}`,
+                      url: data.publicUrl,
+                      type,
+                      serviceId,
+                      file
+                    });
+                    continue;
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Erro ao verificar URL:", error);
+            }
+            
             newPhotos.push({
               id: `photo-${Date.now()}-${i}`,
               url: photoUrl,
@@ -101,6 +159,19 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
       toast.error("Câmera não disponível", {
         description: "Seu dispositivo não suporta acesso à câmera ou o acesso foi negado."
       });
+    }
+  };
+
+  // Função auxiliar para extrair o caminho do bucket de uma URL pública
+  const extractPathFromUrl = (url: string): string | null => {
+    try {
+      const urlParts = url.split('/object/public/');
+      if (urlParts.length > 1) {
+        return urlParts[1];
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   };
 

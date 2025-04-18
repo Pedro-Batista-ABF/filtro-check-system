@@ -1,10 +1,12 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { PhotoWithFile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, Plus, Camera, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PhotoUploadProps {
   photos: PhotoWithFile[];
@@ -29,28 +31,130 @@ export default function PhotoUpload({
 }: PhotoUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Limpar erros quando as fotos mudam
+    setImageErrors({});
+    
+    // Processar cada foto para garantir que temos URLs válidas
+    const processPhotos = async () => {
+      const newPhotoUrls: Record<string, string> = {};
+      
+      for (const photo of photos) {
+        const photoId = photo.id || `temp-${Date.now()}`;
+        
+        if (photo.url) {
+          // Se já temos uma URL, vamos verificar se é válida tentando pegar metadados
+          try {
+            const response = await fetch(photo.url, { method: 'HEAD' });
+            if (response.ok) {
+              newPhotoUrls[photoId] = photo.url;
+            } else {
+              console.warn(`URL da foto ${photoId} retornou código ${response.status}`);
+              // Tentar obter a URL pública novamente se for uma URL do Supabase
+              if (photo.url.includes('supabase.co')) {
+                const urlParts = photo.url.split('/object/public/');
+                if (urlParts.length > 1) {
+                  const path = urlParts[1];
+                  try {
+                    const { data } = supabase.storage
+                      .from('sector_photos')
+                      .getPublicUrl(path);
+                    
+                    if (data.publicUrl) {
+                      newPhotoUrls[photoId] = data.publicUrl;
+                      console.log(`Recuperada URL pública para ${photoId}: ${data.publicUrl}`);
+                    }
+                  } catch (storageError) {
+                    console.error(`Erro ao obter URL pública: ${storageError}`);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`Erro ao verificar URL da foto ${photoId}: ${error}`);
+          }
+        } else if (photo.file instanceof File) {
+          // Se temos um arquivo mas não URL, criamos uma URL de objeto
+          newPhotoUrls[photoId] = URL.createObjectURL(photo.file);
+        }
+      }
+      
+      setPhotoUrls(newPhotoUrls);
+    };
+    
+    processPhotos();
+    
+    // Limpeza de URLs de objeto ao desmontar
+    return () => {
+      Object.values(photoUrls).forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [photos]);
 
   const handleClick = () => {
     if (disabled) return;
     fileInputRef.current?.click();
   };
 
-  // Função para obter URL segura da foto, seja arquivo ou URL
+  // Função para obter URL segura da foto
   const getPhotoUrl = (photo: PhotoWithFile): string => {
-    if (photo.url) {
-      return photo.url;
-    } else if (photo.file instanceof File) {
-      return URL.createObjectURL(photo.file);
-    }
-    return ''; // URL vazia caso não seja possível obter
+    const photoId = photo.id || `temp-${Date.now()}`;
+    return photoUrls[photoId] || '';
   };
   
   // Função para lidar com erros de carregamento de imagem
   const handleImageError = (photoId: string) => {
+    console.log("Erro ao carregar imagem:", photoId);
     setImageErrors(prev => ({
       ...prev,
       [photoId]: true
     }));
+    
+    // Tentar fazer download direto como fallback
+    if (photo.url && photo.url.includes('supabase.co')) {
+      tryDownloadImage(photo.url, photoId);
+    }
+  };
+  
+  // Função para tentar fazer download da imagem como fallback
+  const tryDownloadImage = async (url: string, photoId: string) => {
+    try {
+      // Extrair o caminho do bucket da URL
+      const urlParts = url.split('/object/public/');
+      if (urlParts.length > 1) {
+        const path = urlParts[1];
+        console.log(`Tentando download direto para ${photoId}: ${path}`);
+        
+        const { data, error } = await supabase.storage
+          .from('sector_photos')
+          .download(path);
+          
+        if (error) {
+          console.error(`Erro ao fazer download da imagem: ${error.message}`);
+          return;
+        }
+        
+        if (data) {
+          const newUrl = URL.createObjectURL(data);
+          setPhotoUrls(prev => ({
+            ...prev,
+            [photoId]: newUrl
+          }));
+          setImageErrors(prev => ({
+            ...prev,
+            [photoId]: false
+          }));
+          console.log(`Criada URL local para ${photoId}: ${newUrl}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Erro ao processar download: ${error}`);
+    }
   };
 
   return (
