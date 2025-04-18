@@ -1,5 +1,5 @@
 
-import { Sector, PhotoType } from "@/types";
+import { Sector, Photo, PhotoType } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -51,7 +51,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as any)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -66,23 +66,23 @@ export function usePhotoUploadWithMetadata() {
       const { data: existingPhoto } = await supabase
         .from('photos')
         .select('id')
-        .eq('cycle_id', cycleId as any)
-        .eq('type', 'tag' as any)
+        .eq('cycle_id', cycleId)
+        .eq('type', 'tag')
         .maybeSingle();
         
-      if (existingPhoto) {
+      if (existingPhoto && existingPhoto.id) {
         console.log("Foto da TAG já existe, apenas atualizando URL");
         // Atualizar URL da foto existente
         await supabase
           .from('photos')
-          .update({ url: url } as any)
+          .update({ url: url })
           .eq('id', existingPhoto.id);
           
         return;
       }
       
       // Inserir nova foto
-      await supabase
+      const { data: photoData, error: photoError } = await supabase
         .from('photos')
         .insert({
           cycle_id: cycleId,
@@ -95,7 +95,28 @@ export function usePhotoUploadWithMetadata() {
             stage: 'peritagem',
             type: 'tag'
           }
-        } as any);
+        })
+        .select('id');
+        
+      if (photoError) {
+        console.error("Erro ao inserir foto da TAG:", photoError);
+        throw photoError;
+      }
+      
+      // Atualizar a URL da foto da TAG diretamente na tabela sectors
+      const { error: sectorUpdateError } = await supabase
+        .from('sectors')
+        .update({
+          tag_photo_url: url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sectorId);
+        
+      if (sectorUpdateError) {
+        console.error("Erro ao atualizar URL da foto da TAG no setor:", sectorUpdateError);
+      } else {
+        console.log("URL da foto da TAG atualizada com sucesso na tabela sectors");
+      }
         
       console.log("Foto da TAG inserida com sucesso");
     } catch (error) {
@@ -119,7 +140,7 @@ export function usePhotoUploadWithMetadata() {
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as any)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -131,7 +152,7 @@ export function usePhotoUploadWithMetadata() {
       const cycleId = cycleData[0].id;
       
       // Inserir foto
-      await supabase
+      const { data: photoData, error: photoError } = await supabase
         .from('photos')
         .insert({
           cycle_id: cycleId,
@@ -145,7 +166,13 @@ export function usePhotoUploadWithMetadata() {
             stage: 'peritagem',
             type: type
           }
-        } as any);
+        })
+        .select('id');
+        
+      if (photoError) {
+        console.error(`Erro ao fazer upload da foto do serviço ${serviceId}:`, photoError);
+        throw photoError;
+      }
         
       console.log(`Foto do serviço ${serviceId} inserida com sucesso`);
     } catch (error) {

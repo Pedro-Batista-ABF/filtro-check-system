@@ -1,249 +1,134 @@
 
 import { useState } from "react";
+import { Photo, PhotoWithFile, Service } from "@/types";
+import { useApi } from "@/contexts/ApiContextExtended";
 import { toast } from "sonner";
-import { Service, PhotoWithFile } from "@/types";
 import { photoService } from "@/services/photoService";
-import { extractPathFromUrl } from "@/utils/photoUtils";
 
-export function useSectorPhotoHandling(services: Service[], setServices: (services: Service[]) => void) {
-  const [isUploading, setIsUploading] = useState(false);
+export function useSectorPhotoHandling() {
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const { uploadPhoto } = useApi();
 
-  /**
-   * Faz upload da foto da TAG do setor
-   */
+  // Function to handle tag photo upload
   const handleTagPhotoUpload = async (files: FileList): Promise<string | undefined> => {
-    if (files.length === 0) return undefined;
-    
-    setIsUploading(true);
+    if (!files || files.length === 0) return undefined;
+
+    setPhotoUploading(true);
     try {
       const file = files[0];
-      console.log("Iniciando upload da foto da TAG...");
-      
-      // Usar o serviço de foto para upload
-      const uploadResult = await photoService.uploadPhoto(file, 'tags');
-      
-      if (!uploadResult) {
-        throw new Error("Falha no upload da foto");
-      }
-      
-      console.log("URL da foto da TAG:", uploadResult);
+      const fileUrl = await uploadPhoto(file, 'tag');
       
       // Verificar se a URL é acessível
-      const isUrlValid = await photoService.verifyPhotoUrl(uploadResult);
-      if (!isUrlValid) {
-        console.warn(`URL da TAG retornou status inválido`);
+      const isAccessible = await photoService.verifyPhotoUrl(fileUrl);
+      
+      if (!isAccessible) {
+        console.warn("URL da foto da TAG não é acessível, tentando regenerar:", fileUrl);
         
-        // Tentar regenerar a URL pública
-        const regeneratedUrl = photoService.regeneratePublicUrl(uploadResult);
+        const regeneratedUrl = photoService.regeneratePublicUrl(fileUrl);
         if (regeneratedUrl) {
-          console.log("URL pública regenerada:", regeneratedUrl);
-          toast.success("Foto da TAG capturada com sucesso");
+          console.log("URL regenerada:", regeneratedUrl);
           return regeneratedUrl;
         }
       }
       
-      toast.success("Foto da TAG capturada com sucesso");
-      return uploadResult;
+      return fileUrl;
     } catch (error) {
-      console.error('Erro ao fazer upload da foto da TAG:', error);
-      toast.error(`Erro ao fazer upload da foto da TAG: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      console.error("Erro ao fazer upload da foto da TAG:", error);
+      toast.error("Erro ao fazer upload da foto. Tente novamente.");
       return undefined;
     } finally {
-      setIsUploading(false);
+      setPhotoUploading(false);
     }
   };
 
-  /**
-   * Faz upload de uma ou mais fotos para um serviço específico
-   */
-  const handlePhotoUpload = async (serviceId: string, files: FileList, type: "before" | "after"): Promise<void> => {
-    if (!Array.isArray(services) || files.length === 0) return;
-    
-    setIsUploading(true);
+  // Function to handle service photo upload
+  const handleServicePhotoUpload = async (
+    serviceId: string, 
+    files: FileList
+  ): Promise<PhotoWithFile | undefined> => {
+    if (!files || files.length === 0) return undefined;
+
+    setPhotoUploading(true);
     try {
-      console.log(`Iniciando upload de ${files.length} foto(s) para o serviço ${serviceId}...`);
-      const updatedServices = [...services];
-      const serviceIndex = updatedServices.findIndex(service => service.id === serviceId);
+      const file = files[0];
+      const fileUrl = await uploadPhoto(file, `service-${serviceId}`);
       
-      if (serviceIndex === -1) {
-        toast.error("Serviço não encontrado");
-        return;
-      }
+      // Verificar se a URL é acessível
+      const isAccessible = await photoService.verifyPhotoUrl(fileUrl);
       
-      const service = updatedServices[serviceIndex];
-      const newPhotos = [...(service.photos || [])];
-      let successCount = 0;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      if (!isAccessible) {
+        console.warn("URL da foto de serviço não é acessível, tentando regenerar:", fileUrl);
         
-        try {
-          const uploadPath = `services/${serviceId}/${type}`;
-          console.log(`Enviando foto ${i+1} para ${uploadPath}...`);
+        const regeneratedUrl = photoService.regeneratePublicUrl(fileUrl);
+        if (regeneratedUrl) {
+          console.log("URL regenerada:", regeneratedUrl);
           
-          const photoUrl = await photoService.uploadPhoto(file, uploadPath);
-          
-          if (!photoUrl) {
-            console.error(`Upload da foto ${i+1} falhou`);
-            continue;
-          }
-          
-          // Verificar se a URL é acessível
-          let finalUrl = photoUrl;
-          const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
-          if (!isUrlValid) {
-            console.warn(`URL da foto retornou status inválido`);
-            
-            // Tentar regenerar a URL pública
-            const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
-            if (regeneratedUrl) {
-              console.log("URL pública regenerada:", regeneratedUrl);
-              finalUrl = regeneratedUrl;
-            }
-          }
-          
-          const newPhoto: PhotoWithFile = {
-            id: `photo-${Date.now()}-${i}`,
-            url: finalUrl,
-            type,
+          return {
+            id: `temp-${Date.now()}`,
+            url: regeneratedUrl,
             serviceId,
+            type: "before",
             file
           };
-          
-          newPhotos.push(newPhoto);
-          
-          console.log(`Foto ${i+1} adicionada com sucesso. URL: ${finalUrl}`);
-          successCount++;
-          
-          // Registrar no banco de dados
-          try {
-            await photoService.updateServicePhotos(service.id, serviceId, finalUrl, type);
-          } catch (dbError) {
-            console.error("Erro ao registrar foto no banco de dados:", dbError);
-          }
-        } catch (uploadError) {
-          console.error(`Erro ao fazer upload da foto ${i+1}:`, uploadError);
-          toast.error(`Erro ao fazer upload da foto ${i + 1}`);
         }
       }
       
-      // Atualizar o serviço com as novas fotos apenas se pelo menos uma foi enviada com sucesso
-      if (successCount > 0) {
-        updatedServices[serviceIndex] = {
+      return {
+        id: `temp-${Date.now()}`,
+        url: fileUrl,
+        serviceId,
+        type: "before",
+        file
+      };
+    } catch (error) {
+      console.error("Erro ao fazer upload da foto do serviço:", error);
+      toast.error("Erro ao fazer upload da foto do serviço. Tente novamente.");
+      return undefined;
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  // Function to add a photo to a service
+  const addPhotoToService = (
+    services: Service[],
+    serviceId: string,
+    photo: PhotoWithFile
+  ): Service[] => {
+    return services.map(service => {
+      if (service.id === serviceId) {
+        const existingPhotos = service.photos || [];
+        return {
           ...service,
-          photos: newPhotos
+          photos: [...existingPhotos, photo]
         };
-        
-        console.log(`Atualizando serviço com ${newPhotos.length} foto(s)...`);
-        setServices(updatedServices);
-        
-        toast.success(`${successCount} foto(s) adicionada(s) ao serviço`);
-      } else if (files.length > 0) {
-        toast.error("Nenhuma foto foi enviada com sucesso");
       }
-    } catch (error) {
-      console.error('Erro no processamento de fotos:', error);
-      toast.error(`Erro ao processar fotos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    } finally {
-      setIsUploading(false);
-    }
+      return service;
+    });
   };
 
-  /**
-   * Faz upload de fotos para sucateamento
-   */
-  const handleScrapPhotoUpload = async (files: FileList): Promise<PhotoWithFile[]> => {
-    if (files.length === 0) return [];
-    
-    setIsUploading(true);
-    const scrapPhotos: PhotoWithFile[] = [];
-    
-    try {
-      console.log(`Iniciando upload de ${files.length} foto(s) de sucateamento...`);
-      let successCount = 0;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        try {
-          const uploadPath = `scrap/${Date.now()}`;
-          console.log(`Enviando foto de sucateamento ${i+1} para ${uploadPath}...`);
-          
-          const photoUrl = await photoService.uploadPhoto(file, uploadPath);
-          
-          if (!photoUrl) {
-            console.error(`Upload da foto de sucateamento ${i+1} falhou`);
-            continue;
-          }
-          
-          // Verificar se a URL é acessível
-          let finalUrl = photoUrl;
-          const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
-          if (!isUrlValid) {
-            console.warn(`URL da foto retornou status inválido`);
-            
-            // Tentar regenerar a URL pública
-            const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
-            if (regeneratedUrl) {
-              console.log("URL pública regenerada:", regeneratedUrl);
-              finalUrl = regeneratedUrl;
-            }
-          }
-          
-          scrapPhotos.push({
-            id: `scrap-photo-${Date.now()}-${i}`,
-            url: finalUrl,
-            type: 'scrap',
-            file
-          });
-          
-          console.log(`Foto de sucateamento ${i+1} adicionada com sucesso. URL: ${finalUrl}`);
-          successCount++;
-        } catch (uploadError) {
-          console.error(`Erro ao fazer upload da foto de sucateamento ${i+1}:`, uploadError);
-          toast.error(`Erro ao fazer upload da foto ${i + 1}`);
-        }
+  // Function to remove a photo from a service
+  const removePhotoFromService = (
+    services: Service[],
+    serviceId: string,
+    photoId: string
+  ): Service[] => {
+    return services.map(service => {
+      if (service.id === serviceId && service.photos) {
+        return {
+          ...service,
+          photos: service.photos.filter(photo => photo.id !== photoId)
+        };
       }
-      
-      if (successCount > 0) {
-        toast.success(`${successCount} foto(s) de sucateamento adicionada(s)`);
-      } else if (files.length > 0) {
-        toast.error("Nenhuma foto de sucateamento foi enviada com sucesso");
-      }
-      
-      return scrapPhotos;
-    } catch (error) {
-      console.error('Erro no processamento de fotos de sucateamento:', error);
-      toast.error(`Erro ao processar fotos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      return [];
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  /**
-   * Abre a câmera para capturar uma foto
-   */
-  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
-    e.preventDefault();
-    
-    // Verificar se a API de câmera está disponível
-    if ('mediaDevices' in navigator && navigator.mediaDevices.getUserMedia) {
-      toast.info("Abrindo câmera...", {
-        description: "Esta funcionalidade ainda está em desenvolvimento."
-      });
-    } else {
-      toast.error("Câmera não disponível", {
-        description: "Seu dispositivo não suporta acesso à câmera ou o acesso foi negado."
-      });
-    }
+      return service;
+    });
   };
 
   return {
+    photoUploading,
     handleTagPhotoUpload,
-    handlePhotoUpload,
-    handleScrapPhotoUpload,
-    handleCameraCapture,
-    isUploading
+    handleServicePhotoUpload,
+    addPhotoToService,
+    removePhotoFromService
   };
 }

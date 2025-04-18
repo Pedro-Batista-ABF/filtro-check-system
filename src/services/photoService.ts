@@ -57,18 +57,19 @@ export const photoService = {
       // Obter URL pública
       const { data } = supabase.storage
         .from('sector_photos')
-        .getPublicUrl(fileName, {
-          download: false,
-          transform: {
-            quality: 80 // Qualidade de imagem (opcional)
-          }
-        });
+        .getPublicUrl(fileName);
         
       console.log(`Upload concluído. URL pública: ${data.publicUrl}`);
       
       // Verificar se a URL é acessível
       try {
-        const response = await fetch(data.publicUrl, { method: 'HEAD', cache: 'no-store' });
+        const response = await fetch(data.publicUrl, { 
+          method: 'HEAD', 
+          cache: 'no-store',
+          // Adicionar timeout
+          signal: AbortSignal.timeout(3000) 
+        });
+        
         console.log(`Verificação de URL: status ${response.status}`);
         
         if (!response.ok) {
@@ -131,7 +132,7 @@ export const photoService = {
       const response = await fetch(url, { 
         method: 'HEAD',
         // Adicionar timeout para evitar longa espera
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(3000),
         cache: 'no-store'
       });
       
@@ -157,12 +158,7 @@ export const photoService = {
       
       const { data } = supabase.storage
         .from('sector_photos')
-        .getPublicUrl(path, {
-          download: false,
-          transform: {
-            quality: 80
-          }
-        });
+        .getPublicUrl(path);
         
       return data.publicUrl;
     } catch (error) {
@@ -172,90 +168,14 @@ export const photoService = {
   },
 
   /**
-   * Atualiza as fotos de um serviço
-   */
-  updateServicePhotos: async (
-    sectorId: string,
-    serviceId: string,
-    photoUrl: string,
-    type: 'before' | 'after'
-  ): Promise<boolean> => {
-    try {
-      // Verificar se a URL da foto é acessível
-      const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
-      if (!isUrlValid) {
-        console.warn(`URL da foto não é acessível: ${photoUrl}`);
-        
-        // Tentar regenerar a URL
-        const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
-        if (!regeneratedUrl) {
-          console.error("Não foi possível regenerar a URL");
-          throw new Error("URL da foto inválida");
-        }
-        
-        photoUrl = regeneratedUrl;
-      }
-      
-      // Obter dados do usuário para o registro
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error("Usuário não autenticado");
-      }
-      
-      // Buscar o ciclo atual do setor
-      const { data: cycleData, error: cycleError } = await supabase
-        .from('cycles')
-        .select('id')
-        .eq('sector_id', sectorId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (cycleError || !cycleData || cycleData.length === 0) {
-        console.error("Erro ao buscar ciclo:", cycleError);
-        throw new Error("Ciclo não encontrado");
-      }
-      
-      const cycleId = cycleData[0].id;
-      
-      // Registrar a foto no banco de dados
-      const { data: photoData, error: photoError } = await supabase
-        .from('photos')
-        .insert({
-          cycle_id: cycleId,
-          service_id: serviceId,
-          url: photoUrl,
-          type: type,
-          created_by: user.id,
-          metadata: {
-            sector_id: sectorId,
-            service_id: serviceId,
-            type: type,
-            cycle_id: cycleId,
-            created_at: new Date().toISOString()
-          }
-        })
-        .select('id');
-        
-      if (photoError) {
-        console.error("Erro ao registrar foto:", photoError);
-        throw photoError;
-      }
-      
-      console.log(`Foto registrada com sucesso. ID: ${photoData?.[0]?.id}`);
-      return true;
-    } catch (error) {
-      console.error('Erro ao atualizar fotos do serviço:', error);
-      return false;
-    }
-  },
-  
-  /**
    * Baixa uma foto diretamente do Storage como fallback
    */
   downloadPhoto: async (url: string): Promise<string | null> => {
     try {
       const path = extractPathFromUrl(url);
       if (!path) return null;
+      
+      console.log("Tentando baixar arquivo diretamente:", path);
       
       const { data, error } = await supabase.storage
         .from('sector_photos')
@@ -268,10 +188,44 @@ export const photoService = {
       
       // Criar URL temporária para o arquivo baixado
       const objectUrl = URL.createObjectURL(data);
+      console.log("URL de objeto criada:", objectUrl);
       return objectUrl;
     } catch (error) {
       console.error("Erro ao baixar foto:", error);
       return null;
+    }
+  },
+  
+  /**
+   * Atualiza a URL da foto da TAG na tabela sectors
+   */
+  updateTagPhotoUrl: async (sectorId: string, url: string): Promise<boolean> => {
+    try {
+      if (!sectorId || !url) {
+        console.error("ID do setor ou URL inválidos:", { sectorId, url });
+        return false;
+      }
+      
+      console.log("Atualizando URL da foto da TAG:", { sectorId, url });
+      
+      const { error } = await supabase
+        .from('sectors')
+        .update({
+          tag_photo_url: url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', sectorId);
+        
+      if (error) {
+        console.error("Erro ao atualizar URL da foto da TAG:", error);
+        return false;
+      }
+      
+      console.log("URL da foto da TAG atualizada com sucesso");
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar URL da foto da TAG:", error);
+      return false;
     }
   }
 };

@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   name: string;
@@ -85,3 +86,6 @@ export interface ScrapData {
   scrapReturnInvoice: string;
   scrapPhotos: Photo[];
 }
+
+// Tipo para identificar o tipo de foto, usado para uploads e validações
+export type PhotoType = "before" | "after" | "scrap" | "tag";
