@@ -67,7 +67,6 @@ export interface Service {
   stage?: 'peritagem' | 'checagem';
 }
 
-// Atualização da interface Photo para incluir URL como string
 export interface Photo {
   id: string;
   url: string;
@@ -75,7 +74,6 @@ export interface Photo {
   serviceId?: string;
 }
 
-// Adicionar interfaces para PhotoWithFile e outras necessárias
 export interface PhotoWithFile extends Photo {
   file?: File;
 }

@@ -5,7 +5,10 @@ import { useApi } from "@/contexts/ApiContextExtended";
 import { toast } from "sonner";
 import { photoService } from "@/services/photoService";
 
-export function useSectorPhotoHandling() {
+export function useSectorPhotoHandling(
+  services?: Service[], 
+  setServices?: React.Dispatch<React.SetStateAction<Service[]>>
+) {
   const [photoUploading, setPhotoUploading] = useState(false);
   const { uploadPhoto } = useApi();
 
@@ -124,11 +127,53 @@ export function useSectorPhotoHandling() {
     });
   };
 
+  // New function to handle photo upload with type
+  const handlePhotoUpload = async (
+    serviceId: string, 
+    files: FileList, 
+    type: "before" | "after"
+  ) => {
+    if (!services || !setServices) {
+      console.error("Services or setServices not provided");
+      return;
+    }
+
+    try {
+      console.log(`Uploading ${type} photo for service ${serviceId}`);
+      const photo = await handleServicePhotoUpload(serviceId, files);
+      
+      if (photo) {
+        // Set the correct type for the photo
+        photo.type = type;
+        
+        // Add the photo to the service
+        const updatedServices = addPhotoToService(services, serviceId, photo);
+        setServices(updatedServices);
+        
+        console.log(`Photo added to service ${serviceId} with type ${type}`);
+      } else {
+        toast.error(`Falha ao adicionar foto ${type === "before" ? "antes" : "depois"}`);
+      }
+    } catch (error) {
+      console.error(`Error uploading ${type} photo:`, error);
+      toast.error(`Erro ao fazer upload da foto ${type === "before" ? "antes" : "depois"}`);
+    }
+  };
+
+  // Mock function for camera capture (can be implemented later)
+  const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
+    e.preventDefault();
+    toast.info("Funcionalidade de câmera não implementada");
+    console.log("Camera capture for service:", serviceId);
+  };
+
   return {
     photoUploading,
     handleTagPhotoUpload,
     handleServicePhotoUpload,
     addPhotoToService,
-    removePhotoFromService
+    removePhotoFromService,
+    handlePhotoUpload,
+    handleCameraCapture
   };
 }

@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { extractPathFromUrl } from "@/utils/photoUtils";
+import { extractPathFromUrl, addNoCacheParam, checkImageExists } from "@/utils/photoUtils";
 
 /**
  * Serviço para operações com fotos
@@ -58,35 +58,29 @@ export const photoService = {
       const { data } = supabase.storage
         .from('sector_photos')
         .getPublicUrl(fileName);
-        
-      console.log(`Upload concluído. URL pública: ${data.publicUrl}`);
+      
+      const publicUrl = addNoCacheParam(data.publicUrl);
+      console.log(`Upload concluído. URL pública: ${publicUrl}`);
       
       // Verificar se a URL é acessível
       try {
-        const response = await fetch(data.publicUrl, { 
-          method: 'HEAD', 
-          cache: 'no-store',
-          // Adicionar timeout
-          signal: AbortSignal.timeout(3000) 
-        });
+        const isAccessible = await checkImageExists(publicUrl);
         
-        console.log(`Verificação de URL: status ${response.status}`);
-        
-        if (!response.ok) {
-          console.warn(`A URL gerada pode não ser acessível: ${response.status}`);
+        if (!isAccessible) {
+          console.warn(`A URL gerada pode não ser acessível: ${publicUrl}`);
           
           // Tentar regenerar a URL
-          const regeneratedUrl = photoService.regeneratePublicUrl(data.publicUrl);
+          const regeneratedUrl = photoService.regeneratePublicUrl(publicUrl);
           if (regeneratedUrl) {
             console.log("URL regenerada:", regeneratedUrl);
-            return regeneratedUrl;
+            return addNoCacheParam(regeneratedUrl);
           }
         }
       } catch (urlCheckError) {
         console.error('Erro ao verificar URL:', urlCheckError);
       }
       
-      return data.publicUrl;
+      return publicUrl;
     } catch (error) {
       console.error('Erro ao fazer upload de foto:', error);
       toast.error(`Erro ao fazer upload de foto: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -129,14 +123,7 @@ export const photoService = {
     try {
       if (!url) return false;
       
-      const response = await fetch(url, { 
-        method: 'HEAD',
-        // Adicionar timeout para evitar longa espera
-        signal: AbortSignal.timeout(3000),
-        cache: 'no-store'
-      });
-      
-      return response.ok;
+      return await checkImageExists(url);
     } catch (error) {
       console.error('Erro ao verificar URL da foto:', error);
       return false;
@@ -160,7 +147,7 @@ export const photoService = {
         .from('sector_photos')
         .getPublicUrl(path);
         
-      return data.publicUrl;
+      return addNoCacheParam(data.publicUrl);
     } catch (error) {
       console.error('Erro ao regenerar URL pública:', error);
       return null;

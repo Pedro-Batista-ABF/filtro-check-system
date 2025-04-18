@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Service } from '@/types';
+import { Service, PhotoWithFile } from '@/types';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import PhotoUpload from '../PhotoUpload';
@@ -26,8 +26,18 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   const photos = service.photos || [];
   
   // Filtrar fotos pelo tipo (antes/depois)
-  const visiblePhotos = photos.filter(p => p.type === photoType);
-  const hasPhotos = visiblePhotos.length > 0;
+  const filteredPhotos = photos.filter(p => p.type === photoType);
+  
+  // Convert to PhotoWithFile type to satisfy the component props
+  const photoWithFiles: PhotoWithFile[] = filteredPhotos.map(photo => ({
+    ...photo,
+    id: photo.id,
+    url: photo.url,
+    type: photo.type || photoType,
+    serviceId: service.id
+  }));
+  
+  const hasPhotos = photoWithFiles.length > 0;
 
   return (
     <div className="space-y-3">
@@ -52,7 +62,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
         </div>
       ) : (
         <PhotoUpload
-          photos={visiblePhotos}
+          photos={photoWithFiles}
           onChange={onFileInputChange}
           disabled={disabled}
           title={`Fotos ${photoTypeLabel}`}

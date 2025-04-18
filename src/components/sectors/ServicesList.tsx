@@ -6,6 +6,7 @@ import ServiceQuantity from './service-parts/ServiceQuantity';
 import ServicePhotos from './service-parts/ServicePhotos';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface ServicesListProps {
   services: Service[];
@@ -34,6 +35,42 @@ const ServicesList: React.FC<ServicesListProps> = memo(({
 }) => {
   // Garantir que services é um array
   const safeServices = Array.isArray(services) ? services : [];
+
+  // Handler para upload de fotos com tratamento de erros
+  const handleFileInputChange = (serviceId: string, files: FileList, type: "before" | "after") => {
+    try {
+      if (!files || files.length === 0) {
+        console.log("Nenhum arquivo selecionado");
+        return;
+      }
+      
+      console.log(`Upload de foto ${type} para serviço ${serviceId}, ${files.length} arquivos`);
+      
+      // Verificar tamanho dos arquivos
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        
+        if (file.size > maxSize) {
+          toast.error(`Arquivo ${file.name} muito grande (${(file.size/1024/1024).toFixed(1)}MB). Máximo 10MB.`);
+          return;
+        }
+        
+        // Verificar tipo do arquivo
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+          toast.error(`Tipo de arquivo inválido: ${file.type}. Use JPG ou PNG.`);
+          return;
+        }
+      }
+      
+      // Chamar o handler de upload
+      onServicePhotoUpload(serviceId, files, type);
+    } catch (error) {
+      console.error("Erro ao processar arquivos:", error);
+      toast.error("Erro ao processar arquivos para upload");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -86,7 +123,7 @@ const ServicesList: React.FC<ServicesListProps> = memo(({
                       service={service}
                       photoType={readOnly ? "after" : "before"}
                       required={photoRequired}
-                      onFileInputChange={(files) => onServicePhotoUpload(service.id, files, readOnly ? "after" : "before")}
+                      onFileInputChange={(files) => handleFileInputChange(service.id, files, readOnly ? "after" : "before")}
                       disabled={!service.selected || disabled}
                       onCameraCapture={onCameraCapture ? (e) => onCameraCapture(e, service.id) : undefined}
                     />

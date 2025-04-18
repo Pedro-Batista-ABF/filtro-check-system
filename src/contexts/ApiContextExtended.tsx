@@ -1,227 +1,197 @@
-import { useContext, useState, createContext, ReactNode, useEffect } from "react";
-import { Sector } from "@/types";
-import { useApiOriginal, ApiContextType } from "./ApiContext";
-import { supabaseService } from "@/services/supabase";
-import { useSectorService } from "@/services/sectorService";
-import { photoService } from "@/services/photoService"; // Changed from usePhotoService to photoService
-import { toast } from "sonner";
 
-/**
- * Extended API context that includes additional methods for sector management
- */
-interface ApiContextExtendedType extends Omit<ApiContextType, 'updateSector'> {
-  isLoading: boolean;
+import React, { createContext, useState, useContext, ReactNode, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { ApiResponse, Service, PhotoType } from '@/types';
+import { toast } from 'sonner';
+import { photoService } from '@/services/photoService';
+
+interface ApiContextValue {
+  loading: boolean;
   error: string | null;
-  sectors: Sector[];
-  pendingSectors: Sector[];
-  inProgressSectors: Sector[];
-  qualityCheckSectors: Sector[];
-  completedSectors: Sector[];
-  addSector: (sectorData: Omit<Sector, 'id'>) => Promise<string>;
-  updateSector: (sectorId: string, sectorData: Partial<Sector>) => Promise<boolean>;
-  getSectorById: (id: string) => Promise<Sector | undefined>;
-  getSectorsByTag: (tagNumber: string) => Promise<Sector[]>;
   uploadPhoto: (file: File, folder?: string) => Promise<string>;
-  updateServicePhotos: (sectorId: string, serviceId: string, photoUrl: string, type: 'before' | 'after') => Promise<boolean>;
-  refreshData: () => Promise<void>;
+  deletePhoto: (url: string) => Promise<boolean>;
+  verifyPhotoUrl: (url: string) => Promise<boolean>;
+  regeneratePublicUrl: (url: string) => string | null;
+  downloadPhoto: (url: string) => Promise<string | null>;
+  updateTagPhotoUrl: (sectorId: string, url: string) => Promise<boolean>;
+  updateServicePhotos: (serviceId: string, photos: { url: string, type: PhotoType }[]) => Promise<boolean>;
 }
 
-/**
- * Default context values
- */
-const defaultContext: ApiContextExtendedType = {
-  isLoading: false,
-  error: null,
-  loading: false, 
-  sectors: [],
-  pendingSectors: [],
-  inProgressSectors: [],
-  qualityCheckSectors: [],
-  completedSectors: [],
-  addSector: async () => "",
-  updateSector: async () => false,
-  getSectorById: async () => undefined,
-  getSectorsByTag: async () => [],
-  uploadPhoto: async () => "",
-  updateServicePhotos: async () => false,
-  refreshData: async () => {},
-  
-  // Add these from ApiContextType
-  createSector: async () => ({} as Sector),
-  deleteSector: async () => {},
-  getDefaultServices: async () => []
-};
+const ApiContext = createContext<ApiContextValue | undefined>(undefined);
 
-/**
- * Create the context
- */
-const ApiContextExtended = createContext<ApiContextExtendedType>(defaultContext);
-
-/**
- * Provider component for the extended API context
- */
-export function ApiContextExtendedProvider({ children }: { children: ReactNode }) {
-  const originalApi = useApiOriginal();
-  const sectorService = useSectorService();
-  // Use photoService directly instead of usePhotoService
-  
-  const [isLoading, setIsLoading] = useState(false);
+export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sectors, setSectors] = useState<Sector[]>([]);
+  
+  // Abortable requests
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  /**
-   * Fetch all sectors from the API
-   */
-  const refreshData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log("Fetching all sectors...");
-      const result = await supabaseService.getAllSectors();
-      console.log("Fetched sectors:", result);
-      setSectors(result || []);
-    } catch (err) {
-      console.error("Error fetching sectors:", err);
-      setError(err instanceof Error ? err.message : "Unknown error fetching sectors");
-      toast.error("Error loading sectors", {
-        description: err instanceof Error ? err.message : "Unknown error"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Initial data load
-  useEffect(() => {
-    console.log("ApiContextExtended: Initializing and fetching data");
-    refreshData();
-  }, []);
-
-  // Filter sectors by status
-  const pendingSectors = sectors.filter(s => s.status === 'peritagemPendente');
-  const inProgressSectors = sectors.filter(s => s.status === 'emExecucao');
-  const qualityCheckSectors = sectors.filter(s => s.status === 'checagemFinalPendente');
-  const completedSectors = sectors.filter(s => s.status === 'concluido');
-
-  // Get sector by ID
-  const getSectorById = async (id: string): Promise<Sector | undefined> => {
-    try {
-      return await supabaseService.getSectorById(id);
-    } catch (error) {
-      console.error(`Error fetching sector ${id}:`, error);
-      return undefined;
-    }
-  };
-
-  // Get sectors by tag number
-  const getSectorsByTag = async (tagNumber: string): Promise<Sector[]> => {
-    try {
-      if (supabaseService.getSectorsByTag) {
-        return await supabaseService.getSectorsByTag(tagNumber);
-      } else {
-        console.error('Método getSectorsByTag não implementado');
-        return [];
-      }
-    } catch (error) {
-      console.error(`Error fetching sectors with tag ${tagNumber}:`, error);
-      return [];
-    }
-  };
-
-  // Upload a photo
   const uploadPhoto = async (file: File, folder: string = 'general'): Promise<string> => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      if (photoService.uploadPhoto) {
-        return await photoService.uploadPhoto(file, folder);
-      } else {
-        console.error('Método uploadPhoto não implementado');
-        throw new Error('Método uploadPhoto não implementado');
-      }
+      // Criar novo AbortController para cada requisição
+      abortControllerRef.current = new AbortController();
+      
+      // Adicionar timeout para a requisição
+      const timeoutId = setTimeout(() => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          throw new Error("Upload timeout: a operação demorou muito tempo");
+        }
+      }, 30000); // 30 segundos de timeout
+      
+      // Fazer upload da foto
+      const fileUrl = await photoService.uploadPhoto(file, folder);
+      
+      // Limpar timeout se o upload foi bem-sucedido
+      clearTimeout(timeoutId);
+      
+      return fileUrl;
     } catch (error) {
-      console.error("Error uploading photo:", error);
+      console.error("Erro no uploadPhoto:", error);
+      
+      let errorMessage = "Erro ao fazer upload da foto";
+      if (error instanceof Error) {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      setError(errorMessage);
       throw error;
+    } finally {
+      setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
-  // Update service photos
-  const updateServicePhotos = async (
-    sectorId: string,
-    serviceId: string,
-    photoUrl: string,
-    type: 'before' | 'after'
-  ): Promise<boolean> => {
+  const deletePhoto = async (url: string): Promise<boolean> => {
     try {
-      return await photoService.updateServicePhotos?.(sectorId, serviceId, photoUrl, type) || false;
+      return await photoService.deletePhoto(url);
     } catch (error) {
-      console.error("Error updating service photos:", error);
+      console.error("Erro ao excluir foto:", error);
       return false;
     }
   };
 
-  // Add a new sector
-  const addSector = async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
+  const verifyPhotoUrl = async (url: string): Promise<boolean> => {
     try {
-      const result = await sectorService.addSector(sectorData);
-      await refreshData();
-      return result;
+      return await photoService.verifyPhotoUrl(url);
     } catch (error) {
-      console.error("Error adding sector:", error);
-      throw error;
+      console.error("Erro ao verificar URL da foto:", error);
+      return false;
     }
   };
 
-  // Update sector - uses our implementation that returns boolean
-  const updateSector = async (sectorId: string, sectorData: Partial<Sector>): Promise<boolean> => {
+  const regeneratePublicUrl = (url: string): string | null => {
     try {
-      if (!sectorId) {
-        throw new Error("Sector ID is required for updates");
+      return photoService.regeneratePublicUrl(url);
+    } catch (error) {
+      console.error("Erro ao regenerar URL pública:", error);
+      return null;
+    }
+  };
+
+  const downloadPhoto = async (url: string): Promise<string | null> => {
+    try {
+      return await photoService.downloadPhoto(url);
+    } catch (error) {
+      console.error("Erro ao baixar foto:", error);
+      return null;
+    }
+  };
+
+  const updateTagPhotoUrl = async (sectorId: string, url: string): Promise<boolean> => {
+    try {
+      return await photoService.updateTagPhotoUrl(sectorId, url);
+    } catch (error) {
+      console.error("Erro ao atualizar URL da foto da TAG:", error);
+      return false;
+    }
+  };
+
+  const updateServicePhotos = async (
+    serviceId: string, 
+    photos: { url: string, type: PhotoType }[]
+  ): Promise<boolean> => {
+    try {
+      console.log(`Atualizando fotos para serviço ${serviceId}:`, photos);
+      
+      // Obter usuário atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Usuário não autenticado");
       }
       
-      const result = await sectorService.updateSector(sectorId, sectorData);
-      await refreshData();
-      return result;
+      // Verificar fotos existentes do serviço para evitar duplicação
+      const { data: existingPhotos, error: fetchError } = await supabase
+        .from('photos')
+        .select('url')
+        .eq('service_id', serviceId);
+        
+      if (fetchError) {
+        console.error("Erro ao buscar fotos existentes:", fetchError);
+        throw fetchError;
+      }
+      
+      // Filtrar fotos já existentes
+      const existingUrls = new Set(existingPhotos?.map(p => p.url) || []);
+      const newPhotos = photos.filter(p => !existingUrls.has(p.url));
+      
+      if (newPhotos.length === 0) {
+        console.log("Nenhuma foto nova para inserir");
+        return true;
+      }
+      
+      // Registrar fotos no banco de dados
+      const photosData = newPhotos.map(photo => ({
+        service_id: serviceId,
+        url: photo.url,
+        type: photo.type,
+        created_by: user.id,
+        metadata: {
+          service_id: serviceId,
+          type: photo.type
+        }
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('photos')
+        .insert(photosData);
+        
+      if (insertError) {
+        console.error("Erro ao inserir fotos:", insertError);
+        throw insertError;
+      }
+      
+      console.log(`${photosData.length} fotos inseridas com sucesso`);
+      return true;
     } catch (error) {
-      console.error("Error updating sector:", error);
-      throw error;
+      console.error("Erro ao atualizar fotos do serviço:", error);
+      toast.error("Falha ao salvar fotos do serviço");
+      return false;
     }
   };
 
-  return (
-    <ApiContextExtended.Provider
-      value={{
-        isLoading,
-        error,
-        loading: originalApi.loading, // Pass through original loading
-        sectors,
-        pendingSectors,
-        inProgressSectors,
-        qualityCheckSectors,
-        completedSectors,
-        addSector,
-        updateSector,
-        getSectorById,
-        getSectorsByTag,
-        uploadPhoto,
-        updateServicePhotos,
-        refreshData,
-        
-        // Pass through methods from the original context
-        createSector: originalApi.createSector,
-        deleteSector: originalApi.deleteSector,
-        getDefaultServices: originalApi.getDefaultServices
-      }}
-    >
-      {children}
-    </ApiContextExtended.Provider>
-  );
-}
+  const value = {
+    loading,
+    error,
+    uploadPhoto,
+    deletePhoto,
+    verifyPhotoUrl,
+    regeneratePublicUrl,
+    downloadPhoto,
+    updateTagPhotoUrl,
+    updateServicePhotos
+  };
 
-/**
- * Hook to use the extended API context
- */
-export function useApi() {
-  return useContext(ApiContextExtended);
-}
+  return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
+};
 
-export { ApiContextExtended };
+export const useApi = (): ApiContextValue => {
+  const context = useContext(ApiContext);
+  if (!context) {
+    throw new Error("useApi deve ser usado dentro de um ApiProvider");
+  }
+  return context;
+};
