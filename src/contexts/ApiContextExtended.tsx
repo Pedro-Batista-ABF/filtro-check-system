@@ -1,6 +1,7 @@
+
 import React, { createContext, useState, useContext, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Service, PhotoType } from '@/types';
+import { PhotoType } from '@/types';
 import { toast } from 'sonner';
 import { photoService } from '@/services/photoService';
 
@@ -156,7 +157,7 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
       
       const { error: insertError } = await supabase
         .from('photos')
-        .insert(photosData);
+        .upsert(photosData);
         
       if (insertError) {
         console.error("Erro ao inserir fotos:", insertError);
@@ -186,9 +187,6 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
 };
-
-// Also keep the original export for backward compatibility
-export const ApiProvider = ApiContextExtendedProvider;
 
 export const useApi = (): ApiContextValue => {
   const context = useContext(ApiContext);

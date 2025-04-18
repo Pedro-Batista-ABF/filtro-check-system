@@ -1,17 +1,18 @@
 
 import React from 'react';
-import { Service, PhotoWithFile } from '@/types';
+import { Service, PhotoWithFile, PhotoType } from '@/types';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import PhotoUpload from '../PhotoUpload';
 
 interface ServicePhotosProps {
   service: Service;
-  photoType: "before" | "after";
+  photoType: PhotoType;
   required: boolean;
   onFileInputChange: (files: FileList) => void;
   disabled?: boolean;
   onCameraCapture?: (e: React.MouseEvent) => void;
+  onPhotoUpload?: (id: string, files: FileList, type: PhotoType) => void;
 }
 
 const ServicePhotos: React.FC<ServicePhotosProps> = ({
@@ -20,7 +21,8 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   required,
   onFileInputChange,
   disabled = false,
-  onCameraCapture
+  onCameraCapture,
+  onPhotoUpload
 }) => {
   const photoTypeLabel = photoType === "before" ? "Antes" : "Depois";
   const photos = service.photos || [];
@@ -38,6 +40,14 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   }));
   
   const hasPhotos = photoWithFiles.length > 0;
+
+  const handleFileChange = (files: FileList) => {
+    if (onPhotoUpload) {
+      onPhotoUpload(service.id, files, photoType);
+    } else {
+      onFileInputChange(files);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -63,7 +73,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
       ) : (
         <PhotoUpload
           photos={photoWithFiles}
-          onChange={onFileInputChange}
+          onChange={handleFileChange}
           disabled={disabled}
           title={`Fotos ${photoTypeLabel}`}
           required={required}
