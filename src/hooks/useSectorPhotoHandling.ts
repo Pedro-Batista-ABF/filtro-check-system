@@ -3,11 +3,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Service, PhotoWithFile } from "@/types";
 import { photoService } from "@/services/photoService";
-import { supabase } from "@/integrations/supabase/client";
+import { extractPathFromUrl } from "@/utils/photoUtils";
 
 export function useSectorPhotoHandling(services: Service[], setServices: (services: Service[]) => void) {
   const [isUploading, setIsUploading] = useState(false);
 
+  /**
+   * Faz upload da foto da TAG do setor
+   */
   const handleTagPhotoUpload = async (files: FileList): Promise<string | undefined> => {
     if (files.length === 0) return undefined;
     
@@ -26,21 +29,17 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
       console.log("URL da foto da TAG:", uploadResult);
       
       // Verificar se a URL é acessível
-      try {
-        const isUrlValid = await photoService.verifyPhotoUrl(uploadResult);
-        if (!isUrlValid) {
-          console.warn(`URL da TAG retornou status inválido`);
-          
-          // Tentar regenerar a URL pública
-          const regeneratedUrl = photoService.regeneratePublicUrl(uploadResult);
-          if (regeneratedUrl) {
-            console.log("URL pública regenerada:", regeneratedUrl);
-            toast.success("Foto da TAG capturada com sucesso");
-            return regeneratedUrl;
-          }
+      const isUrlValid = await photoService.verifyPhotoUrl(uploadResult);
+      if (!isUrlValid) {
+        console.warn(`URL da TAG retornou status inválido`);
+        
+        // Tentar regenerar a URL pública
+        const regeneratedUrl = photoService.regeneratePublicUrl(uploadResult);
+        if (regeneratedUrl) {
+          console.log("URL pública regenerada:", regeneratedUrl);
+          toast.success("Foto da TAG capturada com sucesso");
+          return regeneratedUrl;
         }
-      } catch (error) {
-        console.error("Erro ao verificar URL:", error);
       }
       
       toast.success("Foto da TAG capturada com sucesso");
@@ -54,6 +53,9 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
     }
   };
 
+  /**
+   * Faz upload de uma ou mais fotos para um serviço específico
+   */
   const handlePhotoUpload = async (serviceId: string, files: FileList, type: "before" | "after"): Promise<void> => {
     if (!Array.isArray(services) || files.length === 0) return;
     
@@ -88,29 +90,27 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
           
           // Verificar se a URL é acessível
           let finalUrl = photoUrl;
-          try {
-            const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
-            if (!isUrlValid) {
-              console.warn(`URL da foto retornou status inválido`);
-              
-              // Tentar regenerar a URL pública
-              const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
-              if (regeneratedUrl) {
-                console.log("URL pública regenerada:", regeneratedUrl);
-                finalUrl = regeneratedUrl;
-              }
+          const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
+          if (!isUrlValid) {
+            console.warn(`URL da foto retornou status inválido`);
+            
+            // Tentar regenerar a URL pública
+            const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
+            if (regeneratedUrl) {
+              console.log("URL pública regenerada:", regeneratedUrl);
+              finalUrl = regeneratedUrl;
             }
-          } catch (urlError) {
-            console.error("Erro ao verificar URL:", urlError);
           }
           
-          newPhotos.push({
+          const newPhoto: PhotoWithFile = {
             id: `photo-${Date.now()}-${i}`,
             url: finalUrl,
             type,
             serviceId,
             file
-          });
+          };
+          
+          newPhotos.push(newPhoto);
           
           console.log(`Foto ${i+1} adicionada com sucesso. URL: ${finalUrl}`);
           successCount++;
@@ -149,6 +149,9 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
     }
   };
 
+  /**
+   * Faz upload de fotos para sucateamento
+   */
   const handleScrapPhotoUpload = async (files: FileList): Promise<PhotoWithFile[]> => {
     if (files.length === 0) return [];
     
@@ -175,20 +178,16 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
           
           // Verificar se a URL é acessível
           let finalUrl = photoUrl;
-          try {
-            const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
-            if (!isUrlValid) {
-              console.warn(`URL da foto retornou status inválido`);
-              
-              // Tentar regenerar a URL pública
-              const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
-              if (regeneratedUrl) {
-                console.log("URL pública regenerada:", regeneratedUrl);
-                finalUrl = regeneratedUrl;
-              }
+          const isUrlValid = await photoService.verifyPhotoUrl(photoUrl);
+          if (!isUrlValid) {
+            console.warn(`URL da foto retornou status inválido`);
+            
+            // Tentar regenerar a URL pública
+            const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
+            if (regeneratedUrl) {
+              console.log("URL pública regenerada:", regeneratedUrl);
+              finalUrl = regeneratedUrl;
             }
-          } catch (urlError) {
-            console.error("Erro ao verificar URL:", urlError);
           }
           
           scrapPhotos.push({
@@ -222,6 +221,9 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
     }
   };
 
+  /**
+   * Abre a câmera para capturar uma foto
+   */
   const handleCameraCapture = (e: React.MouseEvent, serviceId?: string) => {
     e.preventDefault();
     
@@ -234,15 +236,6 @@ export function useSectorPhotoHandling(services: Service[], setServices: (servic
       toast.error("Câmera não disponível", {
         description: "Seu dispositivo não suporta acesso à câmera ou o acesso foi negado."
       });
-    }
-  };
-
-  // Função auxiliar para extrair o caminho do bucket de uma URL pública
-  const extractPathFromUrl = (url: string): string | null => {
-    try {
-      return photoService.extractPathFromUrl(url);
-    } catch (e) {
-      return null;
     }
   };
 

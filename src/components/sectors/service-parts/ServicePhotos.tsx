@@ -24,6 +24,8 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
 }) => {
   const photoTypeLabel = photoType === "before" ? "Antes" : "Depois";
   const photos = service.photos || [];
+  
+  // Filtrar fotos pelo tipo (antes/depois)
   const visiblePhotos = photos.filter(p => p.type === photoType);
   const hasPhotos = visiblePhotos.length > 0;
 

@@ -1,89 +1,44 @@
-
-import { Sector, Service } from "@/types";
-
 /**
- * Validates sector data for peritagem submission
- * @param data Partial sector data
- * @returns Object with error message or null if valid
+ * Valida os dados do formulário de peritagem
  */
-export const validatePeritagemData = (data: Partial<Sector>): { error: string } | null => {
-  // Validate required fields
+export const validatePeritagemData = (data: any): { valid: boolean; error: string } | null => {
   if (!data.tagNumber) {
-    return { error: "Número do TAG é obrigatório" };
+    return { valid: false, error: "Número da TAG do setor é obrigatório" };
   }
 
   if (!data.entryInvoice) {
-    return { error: "Nota fiscal de entrada é obrigatória" };
+    return { valid: false, error: "Nota fiscal de entrada é obrigatória" };
   }
 
-  if (!data.tagPhotoUrl) {
-    return { error: "Foto do TAG é obrigatória" };
+  if (!data.entryDate) {
+    return { valid: false, error: "Data de entrada é obrigatória" };
   }
 
-  // Verify services
-  const selectedServices = data.services?.filter(service => service.selected) || [];
+  if (!data.services || !Array.isArray(data.services) || data.services.length === 0) {
+    return { valid: false, error: "Selecione pelo menos um serviço" };
+  }
+
+  const selectedServices = data.services.filter((service: any) => service.selected);
   if (selectedServices.length === 0) {
-    return { error: "Selecione pelo menos um serviço" };
-  }
-
-  // Verificar se todos os serviços selecionados têm pelo menos uma foto
-  const servicesWithoutPhotos = findServicesWithoutPhotos(selectedServices);
-  if (servicesWithoutPhotos.length > 0) {
-    return { 
-      error: `Os seguintes serviços estão sem fotos: ${servicesWithoutPhotos.join(", ")}` 
-    };
+    return { valid: false, error: "Selecione pelo menos um serviço" };
   }
 
   return null;
 };
 
 /**
- * Finds services without photos and returns their names
- * @param services Services to check
- * @returns Array of service names that don't have photos
+ * Encontra serviços que não possuem fotos
  */
-export const findServicesWithoutPhotos = (services: Service[]): string[] => {
-  const servicesWithoutPhotos = services
-    .filter(service => service.selected && (!service.photos || service.photos.length === 0))
-    .map(s => s.name);
+export const findServicesWithoutPhotos = (services: any[]): any[] => {
+  if (!services || !Array.isArray(services)) return [];
+  
+  return services.filter(service => {
+    // Verificar se o serviço tem a propriedade photos definida e se é um array
+    if (!service.photos || !Array.isArray(service.photos)) {
+      return true;
+    }
     
-  return servicesWithoutPhotos;
-};
-
-/**
- * Validar se formulário possui todos os dados obrigatórios
- * @param data 
- * @returns Objeto com erros do formulário
- */
-export const validatePeritagemForm = (data: {
-  tagNumber?: string,
-  tagPhotoUrl?: string,
-  entryInvoice?: string,
-  entryDate?: Date | string,
-  services?: Service[]
-}) => {
-  const errors = {
-    tagNumber: !data.tagNumber?.trim(),
-    tagPhoto: !data.tagPhotoUrl,
-    entryInvoice: !data.entryInvoice?.trim(),
-    entryDate: !data.entryDate,
-    services: false,
-    photos: false
-  };
-
-  // Verificar serviços
-  const selectedServices = data.services?.filter(s => s.selected) || [];
-  errors.services = selectedServices.length === 0;
-
-  // Verificar fotos dos serviços
-  const servicesWithoutPhotos = selectedServices.filter(
-    service => !service.photos || service.photos.length === 0
-  );
-  errors.photos = servicesWithoutPhotos.length > 0;
-
-  return {
-    errors,
-    hasErrors: Object.values(errors).some(error => error),
-    servicesWithoutPhotos: servicesWithoutPhotos.map(s => s.name)
-  };
+    // Verificar se há pelo menos uma foto com URL definida
+    return service.photos.length === 0 || !service.photos.some(photo => photo.url);
+  });
 };

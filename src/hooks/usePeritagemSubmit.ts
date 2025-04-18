@@ -123,7 +123,14 @@ export function usePeritagemSubmit() {
         throw new Error(`Os seguintes serviços estão sem quantidade válida: ${serviceNames}`);
       }
 
-      // Processar fotos
+      // Verificar se todos os serviços selecionados têm pelo menos uma foto
+      const servicesWithoutPhotos = findServicesWithoutPhotos(selectedServices);
+      if (servicesWithoutPhotos.length > 0) {
+        const serviceNames = servicesWithoutPhotos.map(s => s.name).join(", ");
+        throw new Error(`Os seguintes serviços não possuem fotos: ${serviceNames}`);
+      }
+
+      // Processar fotos (verificar validade das URLs)
       const processedPhotos = await processServicePhotos(data.services || [], uploadPhoto);
       const status = isEditing ? (data.status as SectorStatus) || 'peritagemPendente' : 'emExecucao';
 

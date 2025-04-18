@@ -3,9 +3,9 @@ import React, { useRef, useState, useEffect } from 'react';
 import { PhotoWithFile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Plus, Camera, Eye } from 'lucide-react';
+import { X, Plus, Camera, Eye, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
+import { photoService } from '@/services/photoService';
 import { toast } from 'sonner';
 
 interface PhotoUploadProps {
@@ -32,6 +32,7 @@ export default function PhotoUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [fallbackUrls, setFallbackUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // Limpar erros quando as fotos mudam
@@ -45,35 +46,32 @@ export default function PhotoUpload({
         const photoId = photo.id || `temp-${Date.now()}`;
         
         if (photo.url) {
-          // Se já temos uma URL, vamos verificar se é válida tentando pegar metadados
+          // Verificar se é uma URL válida
           try {
-            const response = await fetch(photo.url, { method: 'HEAD' });
-            if (response.ok) {
+            // Se for arquivo, criar objeto URL
+            if (photo.file instanceof File) {
+              newPhotoUrls[photoId] = URL.createObjectURL(photo.file);
+              continue;
+            }
+            
+            // Tentar verificar a URL
+            const isValid = await photoService.verifyPhotoUrl(photo.url);
+            if (isValid) {
               newPhotoUrls[photoId] = photo.url;
             } else {
-              console.warn(`URL da foto ${photoId} retornou código ${response.status}`);
-              // Tentar obter a URL pública novamente se for uma URL do Supabase
-              if (photo.url.includes('supabase.co')) {
-                const urlParts = photo.url.split('/object/public/');
-                if (urlParts.length > 1) {
-                  const path = urlParts[1];
-                  try {
-                    const { data } = supabase.storage
-                      .from('sector_photos')
-                      .getPublicUrl(path);
-                    
-                    if (data.publicUrl) {
-                      newPhotoUrls[photoId] = data.publicUrl;
-                      console.log(`Recuperada URL pública para ${photoId}: ${data.publicUrl}`);
-                    }
-                  } catch (storageError) {
-                    console.error(`Erro ao obter URL pública: ${storageError}`);
-                  }
-                }
+              console.warn(`URL da foto ${photoId} não é válida, tentando regenerar...`);
+              
+              // Tentar regenerar URL
+              const regeneratedUrl = photoService.regeneratePublicUrl(photo.url);
+              if (regeneratedUrl) {
+                newPhotoUrls[photoId] = regeneratedUrl;
+                console.log(`URL regenerada para ${photoId}: ${regeneratedUrl}`);
+              } else {
+                console.error(`Não foi possível regenerar URL para foto ${photoId}`);
               }
             }
           } catch (error) {
-            console.error(`Erro ao verificar URL da foto ${photoId}: ${error}`);
+            console.error(`Erro ao processar URL da foto ${photoId}:`, error);
           }
         } else if (photo.file instanceof File) {
           // Se temos um arquivo mas não URL, criamos uma URL de objeto
@@ -93,6 +91,12 @@ export default function PhotoUpload({
           URL.revokeObjectURL(url);
         }
       });
+      
+      Object.values(fallbackUrls).forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
     };
   }, [photos]);
 
@@ -104,56 +108,42 @@ export default function PhotoUpload({
   // Função para obter URL segura da foto
   const getPhotoUrl = (photo: PhotoWithFile): string => {
     const photoId = photo.id || `temp-${Date.now()}`;
+    
+    // Verificar se temos uma URL de fallback primeiro
+    if (fallbackUrls[photoId]) {
+      return fallbackUrls[photoId];
+    }
+    
+    // Caso contrário, usar a URL processada ou vazia
     return photoUrls[photoId] || '';
   };
   
   // Função para lidar com erros de carregamento de imagem
-  const handleImageError = (photoId: string) => {
+  const handleImageError = async (photoId: string, photoUrl: string) => {
     console.log("Erro ao carregar imagem:", photoId);
     setImageErrors(prev => ({
       ...prev,
       [photoId]: true
     }));
     
-    // Tentar fazer download direto como fallback
-    if (photo.url && photo.url.includes('supabase.co')) {
-      tryDownloadImage(photo.url, photoId);
-    }
-  };
-  
-  // Função para tentar fazer download da imagem como fallback
-  const tryDownloadImage = async (url: string, photoId: string) => {
+    // Tentar baixar a imagem diretamente como fallback
     try {
-      // Extrair o caminho do bucket da URL
-      const urlParts = url.split('/object/public/');
-      if (urlParts.length > 1) {
-        const path = urlParts[1];
-        console.log(`Tentando download direto para ${photoId}: ${path}`);
+      const fallbackUrl = await photoService.downloadPhoto(photoUrl);
+      if (fallbackUrl) {
+        console.log(`Fallback URL criada para ${photoId}: ${fallbackUrl}`);
+        setFallbackUrls(prev => ({
+          ...prev,
+          [photoId]: fallbackUrl
+        }));
         
-        const { data, error } = await supabase.storage
-          .from('sector_photos')
-          .download(path);
-          
-        if (error) {
-          console.error(`Erro ao fazer download da imagem: ${error.message}`);
-          return;
-        }
-        
-        if (data) {
-          const newUrl = URL.createObjectURL(data);
-          setPhotoUrls(prev => ({
-            ...prev,
-            [photoId]: newUrl
-          }));
-          setImageErrors(prev => ({
-            ...prev,
-            [photoId]: false
-          }));
-          console.log(`Criada URL local para ${photoId}: ${newUrl}`);
-        }
+        // Limpar erro já que agora temos uma URL de fallback
+        setImageErrors(prev => ({
+          ...prev,
+          [photoId]: false
+        }));
       }
     } catch (error) {
-      console.error(`Erro ao processar download: ${error}`);
+      console.error(`Erro ao criar fallback para ${photoId}:`, error);
     }
   };
 
@@ -161,11 +151,18 @@ export default function PhotoUpload({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {photos && photos.map((photo, index) => {
-          const photoUrl = getPhotoUrl(photo);
-          if (!photoUrl) return null;
-          
           const photoId = photo.id || `temp-${index}`;
+          const photoUrl = getPhotoUrl(photo);
           const hasError = imageErrors[photoId];
+          
+          if (!photoUrl) {
+            return (
+              <div key={photoId} className="w-20 h-20 flex items-center justify-center rounded-md border bg-gray-100">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <span className="text-xs text-gray-500 text-center ml-1">URL inválida</span>
+              </div>
+            );
+          }
           
           return (
             <div key={photoId} className="relative group">
@@ -174,14 +171,15 @@ export default function PhotoUpload({
                   <div className="cursor-pointer">
                     {hasError ? (
                       <div className="w-20 h-20 flex items-center justify-center rounded-md border bg-gray-100">
-                        <span className="text-xs text-gray-500 text-center px-1">Erro ao carregar</span>
+                        <AlertTriangle className="h-5 w-5 text-amber-500" />
+                        <span className="text-xs text-gray-500 text-center ml-1">Erro</span>
                       </div>
                     ) : (
                       <img
                         src={photoUrl}
                         alt={`Foto ${index + 1}`}
                         className="w-20 h-20 rounded-md object-cover border"
-                        onError={() => handleImageError(photoId)}
+                        onError={() => handleImageError(photoId, photo.url || '')}
                       />
                     )}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded-md">
@@ -193,6 +191,7 @@ export default function PhotoUpload({
                   <div className="relative">
                     {hasError ? (
                       <div className="w-full h-[80vh] flex items-center justify-center bg-gray-100">
+                        <AlertTriangle className="h-6 w-6 text-amber-500 mr-2" />
                         <span className="text-gray-500">Não foi possível carregar a imagem</span>
                       </div>
                     ) : (
@@ -200,7 +199,7 @@ export default function PhotoUpload({
                         src={photoUrl} 
                         alt={`Visualização da foto ${index + 1}`} 
                         className="w-full h-auto max-h-[80vh] object-contain"
-                        onError={() => handleImageError(photoId)}
+                        onError={() => handleImageError(photoId, photo.url || '')}
                       />
                     )}
                     {allowRemove && onRemove && (

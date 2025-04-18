@@ -3,6 +3,8 @@ import { supabaseService } from '@/services/supabase';
 import { Sector } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
+import { photoService } from './photoService';
+import { extractPathFromUrl } from '@/utils/photoUtils';
 
 /**
  * Helper service for sector data operations
@@ -13,6 +15,45 @@ export const sectorService = {
    */
   addSector: async (sectorData: Omit<Sector, 'id'>): Promise<string> => {
     try {
+      // Verificar se as URLs das fotos são válidas
+      if (sectorData.tagPhotoUrl) {
+        const isTagPhotoValid = await photoService.verifyPhotoUrl(sectorData.tagPhotoUrl);
+        if (!isTagPhotoValid) {
+          console.warn('URL da foto da TAG não é acessível, tentando regenerar...');
+          const regeneratedUrl = photoService.regeneratePublicUrl(sectorData.tagPhotoUrl);
+          if (regeneratedUrl) {
+            sectorData.tagPhotoUrl = regeneratedUrl;
+            console.log('URL da foto da TAG regenerada:', regeneratedUrl);
+          }
+        }
+      }
+      
+      // Verificar fotos dos serviços (se houver)
+      if (sectorData.services && Array.isArray(sectorData.services)) {
+        for (const service of sectorData.services) {
+          if (service.photos && Array.isArray(service.photos)) {
+            const validatedPhotos = await Promise.all(
+              service.photos.map(async (photo) => {
+                if (!photo.url) return photo;
+                
+                const isPhotoValid = await photoService.verifyPhotoUrl(photo.url);
+                if (!isPhotoValid) {
+                  console.warn(`URL da foto ${photo.id} não é acessível, tentando regenerar...`);
+                  const regeneratedUrl = photoService.regeneratePublicUrl(photo.url);
+                  if (regeneratedUrl) {
+                    console.log(`URL da foto ${photo.id} regenerada:`, regeneratedUrl);
+                    return { ...photo, url: regeneratedUrl };
+                  }
+                }
+                return photo;
+              })
+            );
+            
+            service.photos = validatedPhotos;
+          }
+        }
+      }
+      
       // Map sector data to the format expected by supabaseService
       const result = await supabaseService.addSector(sectorData);
       
@@ -78,9 +119,48 @@ export const sectorService = {
         }
         
         // Verificar fotos para operações de sucateamento
-        if (!sectorData.scrapPhotos || sectorData.scrapPhotos.length === 0) {
+        if (!sectorData.scrapPhotos || !Array.isArray(sectorData.scrapPhotos) || sectorData.scrapPhotos.length === 0) {
           console.error("Campo obrigatório ausente: scrapPhotos");
           throw new Error('Fotos de sucateamento são obrigatórias');
+        }
+      }
+      
+      // Verificar se as URLs das fotos são válidas
+      if (sectorData.tagPhotoUrl) {
+        const isTagPhotoValid = await photoService.verifyPhotoUrl(sectorData.tagPhotoUrl);
+        if (!isTagPhotoValid) {
+          console.warn('URL da foto da TAG não é acessível, tentando regenerar...');
+          const regeneratedUrl = photoService.regeneratePublicUrl(sectorData.tagPhotoUrl);
+          if (regeneratedUrl) {
+            sectorData.tagPhotoUrl = regeneratedUrl;
+            console.log('URL da foto da TAG regenerada:', regeneratedUrl);
+          }
+        }
+      }
+      
+      // Verificar fotos dos serviços (se houver)
+      if (sectorData.services && Array.isArray(sectorData.services)) {
+        for (const service of sectorData.services) {
+          if (service.photos && Array.isArray(service.photos)) {
+            const validatedPhotos = await Promise.all(
+              service.photos.map(async (photo) => {
+                if (!photo.url) return photo;
+                
+                const isPhotoValid = await photoService.verifyPhotoUrl(photo.url);
+                if (!isPhotoValid && typeof photo.url === 'string') {
+                  console.warn(`URL da foto ${photo.id} não é acessível, tentando regenerar...`);
+                  const regeneratedUrl = photoService.regeneratePublicUrl(photo.url);
+                  if (regeneratedUrl) {
+                    console.log(`URL da foto ${photo.id} regenerada:`, regeneratedUrl);
+                    return { ...photo, url: regeneratedUrl };
+                  }
+                }
+                return photo;
+              })
+            );
+            
+            service.photos = validatedPhotos;
+          }
         }
       }
       

@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { extractPathFromUrl } from "@/utils/photoUtils";
 
 /**
  * Serviço para operações com fotos
@@ -41,7 +42,7 @@ export const photoService = {
       const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       
       // Fazer upload
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('sector_photos')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -54,7 +55,7 @@ export const photoService = {
       }
       
       // Obter URL pública
-      const result = supabase.storage
+      const { data } = supabase.storage
         .from('sector_photos')
         .getPublicUrl(fileName, {
           download: false,
@@ -63,18 +64,18 @@ export const photoService = {
           }
         });
         
-      console.log(`Upload concluído. URL pública: ${result.data.publicUrl}`);
+      console.log(`Upload concluído. URL pública: ${data.publicUrl}`);
       
       // Verificar se a URL é acessível
       try {
-        const response = await fetch(result.data.publicUrl, { method: 'HEAD' });
+        const response = await fetch(data.publicUrl, { method: 'HEAD', cache: 'no-store' });
         console.log(`Verificação de URL: status ${response.status}`);
         
         if (!response.ok) {
           console.warn(`A URL gerada pode não ser acessível: ${response.status}`);
           
           // Tentar regenerar a URL
-          const regeneratedUrl = photoService.regeneratePublicUrl(result.data.publicUrl);
+          const regeneratedUrl = photoService.regeneratePublicUrl(data.publicUrl);
           if (regeneratedUrl) {
             console.log("URL regenerada:", regeneratedUrl);
             return regeneratedUrl;
@@ -84,7 +85,7 @@ export const photoService = {
         console.error('Erro ao verificar URL:', urlCheckError);
       }
       
-      return result.data.publicUrl;
+      return data.publicUrl;
     } catch (error) {
       console.error('Erro ao fazer upload de foto:', error);
       toast.error(`Erro ao fazer upload de foto: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -130,7 +131,8 @@ export const photoService = {
       const response = await fetch(url, { 
         method: 'HEAD',
         // Adicionar timeout para evitar longa espera
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(5000),
+        cache: 'no-store'
       });
       
       return response.ok;
@@ -245,38 +247,31 @@ export const photoService = {
       console.error('Erro ao atualizar fotos do serviço:', error);
       return false;
     }
-  }
-};
-
-/**
- * Função auxiliar para extrair o caminho do bucket de uma URL pública
- */
-export const extractPathFromUrl = (url: string): string | null => {
-  if (!url) return null;
+  },
   
-  try {
-    // Formato padrão: https://xxxx.supabase.co/storage/v1/object/public/sector_photos/folder/file.jpg
-    const storageMatch = url.match(/storage\/v1\/object\/public\/([^?]+)/);
-    if (storageMatch && storageMatch[1]) {
-      return storageMatch[1];
+  /**
+   * Baixa uma foto diretamente do Storage como fallback
+   */
+  downloadPhoto: async (url: string): Promise<string | null> => {
+    try {
+      const path = extractPathFromUrl(url);
+      if (!path) return null;
+      
+      const { data, error } = await supabase.storage
+        .from('sector_photos')
+        .download(path);
+        
+      if (error || !data) {
+        console.error("Erro ao baixar foto:", error);
+        return null;
+      }
+      
+      // Criar URL temporária para o arquivo baixado
+      const objectUrl = URL.createObjectURL(data);
+      return objectUrl;
+    } catch (error) {
+      console.error("Erro ao baixar foto:", error);
+      return null;
     }
-    
-    // Formato alternativo: https://xxxx.supabase.co/storage/v1/object/sector_photos/folder/file.jpg
-    const urlParts = url.split('/object/public/');
-    if (urlParts.length > 1) {
-      return urlParts[1];
-    }
-    
-    // Alternativa se o formato for diferente
-    const match = url.match(/sector_photos\/([^?]+)/);
-    if (match && match[1]) {
-      return match[1];
-    }
-    
-    console.error("Formato de URL não reconhecido:", url);
-    return null;
-  } catch (e) {
-    console.error('Erro ao extrair caminho da URL:', e);
-    return null;
   }
 };
