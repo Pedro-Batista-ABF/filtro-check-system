@@ -38,38 +38,36 @@ const AppRoutes = () => {
       <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
       
       {/* Protected routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<Home />} />
-        
-        {/* Peritagem routes */}
-        <Route path="/peritagem" element={<Peritagem />} />
-        <Route path="/peritagem/novo" element={<PeritagemForm />} />
-        <Route path="/peritagem/editar/:id" element={<PeritagemForm />} />
-        <Route path="/peritagem/pendente" element={<PeritagemPendente />} />
-        
-        {/* Execução routes */}
-        <Route path="/execucao" element={<Execucao />} />
-        <Route path="/execucao/:id" element={<ExecucaoDetails />} />
-        
-        {/* Checagem routes */}
-        <Route path="/checagem" element={<Checagem />} />
-        <Route path="/checagem/:id" element={<CheckagemForm />} />
-        <Route path="/checagem/final" element={<CheckagemFinal />} />
-        
-        {/* Completed sectors routes */}
-        <Route path="/concluidos" element={<Concluidos />} />
-        
-        {/* Reports routes */}
-        <Route path="/relatorios" element={<Relatorios />} />
-        <Route path="/relatorios/preview/:id" element={<ReportPreview />} />
-        <Route path="/relatorios/setor/:id" element={<SectorReport />} />
-        <Route path="/relatorios/consolidado" element={<ConsolidatedReport />} />
-        
-        {/* Scrap routes */}
-        <Route path="/sucateamento" element={<Sucateamento />} />
-        <Route path="/sucateamento/validacao" element={<ScrapValidation />} />
-        <Route path="/sucateamento/validacao/:id" element={<ScrapValidationForm />} />
-      </Route>
+      <Route path="/" element={<ProtectedRoute>{<Home />}</ProtectedRoute>} />
+      
+      {/* Peritagem routes */}
+      <Route path="/peritagem" element={<ProtectedRoute>{<Peritagem />}</ProtectedRoute>} />
+      <Route path="/peritagem/novo" element={<ProtectedRoute>{<PeritagemForm />}</ProtectedRoute>} />
+      <Route path="/peritagem/editar/:id" element={<ProtectedRoute>{<PeritagemForm />}</ProtectedRoute>} />
+      <Route path="/peritagem/pendente" element={<ProtectedRoute>{<PeritagemPendente />}</ProtectedRoute>} />
+      
+      {/* Execução routes */}
+      <Route path="/execucao" element={<ProtectedRoute>{<Execucao />}</ProtectedRoute>} />
+      <Route path="/execucao/:id" element={<ProtectedRoute>{<ExecucaoDetails />}</ProtectedRoute>} />
+      
+      {/* Checagem routes */}
+      <Route path="/checagem" element={<ProtectedRoute>{<Checagem />}</ProtectedRoute>} />
+      <Route path="/checagem/:id" element={<ProtectedRoute>{<CheckagemForm />}</ProtectedRoute>} />
+      <Route path="/checagem/final" element={<ProtectedRoute>{<CheckagemFinal />}</ProtectedRoute>} />
+      
+      {/* Completed sectors routes */}
+      <Route path="/concluidos" element={<ProtectedRoute>{<Concluidos />}</ProtectedRoute>} />
+      
+      {/* Reports routes */}
+      <Route path="/relatorios" element={<ProtectedRoute>{<Relatorios />}</ProtectedRoute>} />
+      <Route path="/relatorios/preview/:id" element={<ProtectedRoute>{<ReportPreview />}</ProtectedRoute>} />
+      <Route path="/relatorios/setor/:id" element={<ProtectedRoute>{<SectorReport />}</ProtectedRoute>} />
+      <Route path="/relatorios/consolidado" element={<ProtectedRoute>{<ConsolidatedReport />}</ProtectedRoute>} />
+      
+      {/* Scrap routes */}
+      <Route path="/sucateamento" element={<ProtectedRoute>{<Sucateamento />}</ProtectedRoute>} />
+      <Route path="/sucateamento/validacao" element={<ProtectedRoute>{<ScrapValidation />}</ProtectedRoute>} />
+      <Route path="/sucateamento/validacao/:id" element={<ProtectedRoute>{<ScrapValidationForm />}</ProtectedRoute>} />
       
       {/* Fallback route */}
       <Route path="*" element={<NotFound />} />

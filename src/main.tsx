@@ -3,9 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
-import { AuthProvider } from './contexts/AuthContext';
-import { ApiProvider } from './contexts/ApiContext';
-import { ApiContextExtendedProvider } from './contexts/ApiContextExtended';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
@@ -132,25 +129,17 @@ setupConnectionMonitoring();
 
 root.render(
   <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ApiProvider>
-          <ApiContextExtendedProvider>
-            <Suspense fallback={<div>Carregando...</div>}>
-              <App />
-            </Suspense>
-            <Toaster 
-              position="top-right"
-              richColors 
-              closeButton
-              expand={false}
-              toastOptions={{
-                duration: 5000,
-              }}
-            />
-          </ApiContextExtendedProvider>
-        </ApiProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <Suspense fallback={<div>Carregando...</div>}>
+      <App />
+    </Suspense>
+    <Toaster 
+      position="top-right"
+      richColors 
+      closeButton
+      expand={false}
+      toastOptions={{
+        duration: 5000,
+      }}
+    />
   </BrowserRouter>
 );
