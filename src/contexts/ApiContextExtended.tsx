@@ -1,5 +1,4 @@
-
-import React, { createContext, useState, useContext, ReactNode, useRef, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Sector, Service, Photo } from '@/types';
 import { toast } from 'sonner';
