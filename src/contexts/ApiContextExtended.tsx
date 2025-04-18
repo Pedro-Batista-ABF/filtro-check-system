@@ -1,7 +1,6 @@
-
 import React, { createContext, useState, useContext, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ApiResponse, Service, PhotoType } from '@/types';
+import { Service, PhotoType } from '@/types';
 import { toast } from 'sonner';
 import { photoService } from '@/services/photoService';
 
@@ -19,7 +18,7 @@ interface ApiContextValue {
 
 const ApiContext = createContext<ApiContextValue | undefined>(undefined);
 
-export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -187,6 +186,9 @@ export const ApiProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
 };
+
+// Also keep the original export for backward compatibility
+export const ApiProvider = ApiContextExtendedProvider;
 
 export const useApi = (): ApiContextValue => {
   const context = useContext(ApiContext);

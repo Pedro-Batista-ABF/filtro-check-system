@@ -70,8 +70,11 @@ export interface Service {
 export interface Photo {
   id: string;
   url: string;
-  type?: "before" | "after" | "scrap" | "tag";
+  type?: PhotoType;
   serviceId?: string;
+  metadata?: any;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PhotoWithFile extends Photo {
@@ -86,4 +89,4 @@ export interface ScrapData {
 }
 
 // Tipo para identificar o tipo de foto, usado para uploads e validações
-export type PhotoType = "before" | "after" | "scrap" | "tag";
+export type PhotoType = "before" | "after" | "scrap" | "tag" | "service";
