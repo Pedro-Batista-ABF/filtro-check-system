@@ -22,6 +22,7 @@ export default function CheckagemForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [hasPermissionError, setHasPermissionError] = useState(false);
 
   // Verificar status da conexão periodicamente
   useEffect(() => {
@@ -47,10 +48,11 @@ export default function CheckagemForm() {
       try {
         console.log("Buscando setor com ID:", id);
         setLoading(true);
+        setHasPermissionError(false);
         
         if (!id) {
           toast.error("ID do setor não fornecido.");
-          navigate("/checagem");
+          navigate("/checagem/final");
           return;
         }
 
@@ -72,15 +74,34 @@ export default function CheckagemForm() {
         console.log("Dados do setor:", sectorData);
         
         if (!sectorData) {
-          toast.error("Setor não encontrado.");
-          navigate("/checagem");
+          toast.error("Setor não encontrado ou sem permissão para acesso.");
+          navigate("/checagem/final");
           return;
         }
         
+        // Verificar se o setor está no status correto para checagem
+        if (sectorData.status !== 'checagemFinalPendente') {
+          toast.warning("Este setor não está pendente de checagem final.", {
+            description: `Status atual: ${sectorData.status}`
+          });
+          // Ainda permite visualizar, mas exibe aviso
+        }
+        
         setSector(sectorData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao buscar setor:", error);
-        toast.error("Erro ao buscar informações do setor.");
+        
+        // Verificar se o erro é relacionado a permissões
+        if (error?.message?.includes('permission denied') || 
+            error?.code === 'PGRST301' || 
+            error?.message?.includes('violates row-level security policy')) {
+          setHasPermissionError(true);
+          toast.error("Sem permissão para acessar este setor");
+        } else {
+          toast.error("Erro ao buscar informações do setor", {
+            description: error?.message || "Tente novamente mais tarde."
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -109,14 +130,16 @@ export default function CheckagemForm() {
       // Ensure that the status is correctly set
       const updatedData = { 
         ...data, 
-        status: 'checado' as SectorStatus 
+        status: 'concluido' as SectorStatus 
       };
       await updateSector(sector.id, updatedData);
       toast.success("Setor atualizado com sucesso!");
       navigate('/concluidos');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao atualizar setor:", error);
-      toast.error("Erro ao atualizar o setor.");
+      toast.error("Erro ao atualizar o setor", {
+        description: error?.message || "Tente novamente mais tarde."
+      });
     } finally {
       setSaving(false);
     }
@@ -155,6 +178,28 @@ export default function CheckagemForm() {
     );
   }
 
+  if (hasPermissionError) {
+    return (
+      <PageLayoutWrapper>
+        <div className="p-6 flex justify-center items-center">
+          <div className="text-center max-w-md">
+            <h2 className="text-xl font-semibold text-red-500 mb-4">Erro de permissão</h2>
+            <p className="mb-6">Você não tem permissão para acessar este setor. Verifique suas credenciais ou entre em contato com o administrador.</p>
+            <div className="flex gap-4 justify-center">
+              <Button variant="outline" onClick={() => navigate('/checagem/final')}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar para lista
+              </Button>
+              <Button onClick={handleRetryConnection}>
+                Tentar novamente
+              </Button>
+            </div>
+          </div>
+        </div>
+      </PageLayoutWrapper>
+    );
+  }
+
   if (!sector) {
     return (
       <PageLayoutWrapper>
@@ -162,7 +207,7 @@ export default function CheckagemForm() {
           <div className="text-center">
             <h2 className="text-xl font-semibold text-red-500 mb-4">Setor não encontrado</h2>
             <p className="mb-6">Não foi possível encontrar as informações do setor solicitado.</p>
-            <Button onClick={() => navigate('/checagem')}>
+            <Button onClick={() => navigate('/checagem/final')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar para lista de setores
             </Button>
@@ -182,7 +227,7 @@ export default function CheckagemForm() {
               status={connectionStatus} 
               onRetryConnection={handleRetryConnection}
             />
-            <Button variant="outline" onClick={() => navigate('/checagem')}>
+            <Button variant="outline" onClick={() => navigate('/checagem/final')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar
             </Button>
