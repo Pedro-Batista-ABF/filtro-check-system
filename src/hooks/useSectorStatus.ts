@@ -13,26 +13,34 @@ export function useSectorStatus() {
         throw new Error("ID do setor inválido");
       }
 
+      // Prepara os dados para a atualização
+      const updateData = {
+        current_status: status,
+        current_outcome: data.outcome || 'EmAndamento',
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("Dados para atualização do setor:", updateData);
+
       // Usa any para contornar verificação de tipagem do TypeScript
-      const { error } = await supabase
+      const { data: updateResult, error } = await supabase
         .from('sectors')
-        .update({
-          current_status: status,
-          current_outcome: data.outcome || 'EmAndamento',
-          updated_at: new Date().toISOString()
-        } as any)
-        .eq('id', sectorId as any);
+        .update(updateData)
+        .eq('id', sectorId)
+        .select();
         
       if (error) {
         console.error(`Erro ao atualizar tabela sectors para o setor ${sectorId}:`, error);
         throw error;
       }
       
+      console.log("Resultado da atualização do setor:", updateResult);
+      
       // Buscar o ciclo mais recente para este setor
       const { data: cycleData, error: cycleQueryError } = await supabase
         .from('cycles')
         .select('id')
-        .eq('sector_id', sectorId as any)
+        .eq('sector_id', sectorId)
         .order('created_at', { ascending: false })
         .limit(1);
         
@@ -48,26 +56,38 @@ export function useSectorStatus() {
       
       const cycleId = cycleData[0].id;
       
+      // Prepara os dados para a atualização do ciclo
+      const cycleUpdateData = {
+        status: status,
+        outcome: data.outcome || 'EmAndamento',
+        updated_at: new Date().toISOString(),
+        entry_invoice: data.entryInvoice,
+        tag_number: data.tagNumber,
+        peritagem_date: data.peritagemDate,
+        scrap_validated: status === 'sucateado' ? true : false,
+        scrap_observations: data.scrapObservations,
+        scrap_return_date: data.scrapReturnDate,
+        scrap_return_invoice: data.scrapReturnInvoice
+      };
+      
+      console.log("Dados para atualização do ciclo:", cycleUpdateData);
+      
       // Atualizar o ciclo
-      const { error: cycleError } = await supabase
+      const { data: cycleUpdateResult, error: cycleError } = await supabase
         .from('cycles')
-        .update({
-          status: status,
-          outcome: data.outcome || 'EmAndamento',
-          updated_at: new Date().toISOString(),
-          entry_invoice: data.entryInvoice,
-          tag_number: data.tagNumber,
-          peritagem_date: data.peritagemDate
-        } as any)
-        .eq('id', cycleId);
+        .update(cycleUpdateData)
+        .eq('id', cycleId)
+        .select();
         
       if (cycleError) {
         console.error(`Erro ao atualizar ciclo ${cycleId} para o setor ${sectorId}:`, cycleError);
         throw cycleError;
       }
       
-      if (status === 'sucateadoPendente') {
-        await verifyScrapStatus(sectorId);
+      console.log("Resultado da atualização do ciclo:", cycleUpdateResult);
+      
+      if (status === 'sucateadoPendente' || status === 'sucateado') {
+        await verifyScrapStatus(sectorId, status);
       }
       
       return true;
@@ -78,12 +98,12 @@ export function useSectorStatus() {
     }
   };
 
-  const verifyScrapStatus = async (sectorId: string) => {
+  const verifyScrapStatus = async (sectorId: string, targetStatus: SectorStatus) => {
     try {
       const { data: checkData, error: checkError } = await supabase
         .from('sectors')
         .select('current_status')
-        .eq('id', sectorId as any)
+        .eq('id', sectorId)
         .single();
         
       if (checkError) {
@@ -97,17 +117,22 @@ export function useSectorStatus() {
         return;
       }
 
-      if (checkData.current_status !== 'sucateadoPendente') {
-        const { error: forceError } = await supabase
+      if (checkData.current_status !== targetStatus) {
+        console.log(`Status atual (${checkData.current_status}) é diferente do desejado (${targetStatus}). Forçando atualização...`);
+        
+        const { data: forceResult, error: forceError } = await supabase
           .from('sectors')
           .update({
-            current_status: 'sucateadoPendente',
+            current_status: targetStatus,
             updated_at: new Date().toISOString()
-          } as any)
-          .eq('id', sectorId as any);
+          })
+          .eq('id', sectorId)
+          .select();
           
         if (forceError) {
           console.error("Erro ao forçar status:", forceError);
+        } else {
+          console.log("Status forçado com sucesso:", forceResult);
         }
       }
     } catch (error) {

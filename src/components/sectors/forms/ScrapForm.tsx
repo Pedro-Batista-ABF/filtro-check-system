@@ -1,5 +1,5 @@
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, ImageIcon, Camera } from "lucide-react";
+import { CalendarIcon, ImageIcon, Camera, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PhotoWithFile } from "@/types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ScrapFormProps {
   tagNumber: string;
@@ -65,11 +66,24 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
   disabled = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const handleClick = () => {
     if (disabled) return;
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setPhotoError(null);
+      try {
+        handleScrapPhotoUpload(e.target.files);
+      } catch (error) {
+        console.error("Erro ao processar fotos:", error);
+        setPhotoError("Erro ao processar as fotos. Tente novamente.");
+      }
     }
   };
 
@@ -97,11 +111,11 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
                 value={scrapObservations}
                 onChange={(e) => setScrapObservations(e.target.value)}
                 placeholder="Adicione o motivo pelo qual este setor deve ser sucateado..."
-                className={formErrors.scrapObservations ? "border-red-500" : ""}
+                className={cn(formErrors.scrapObservations ? "border-red-500" : "", "min-h-[100px]")}
                 disabled={disabled}
               />
               {formErrors.scrapObservations && (
-                <p className="text-xs text-red-500">Motivo do sucateamento é obrigatório</p>
+                <p className="text-xs text-red-500 mt-1">Motivo do sucateamento é obrigatório</p>
               )}
             </div>
 
@@ -117,6 +131,7 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = '/placeholder.svg';
+                        console.error(`Erro ao carregar imagem ${photo.url || 'file'}`);
                       }}
                     />
                   </div>
@@ -151,7 +166,7 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
               <input
                 type="file"
                 ref={fileInputRef}
-                onChange={(e) => e.target.files && handleScrapPhotoUpload(e.target.files)}
+                onChange={handleFileChange}
                 accept="image/*"
                 className="hidden"
                 multiple
@@ -162,6 +177,15 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
                 <p className="text-xs text-red-500 mt-1">
                   É necessário adicionar pelo menos uma foto do estado de sucateamento
                 </p>
+              )}
+              
+              {photoError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {photoError}
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </div>
@@ -220,6 +244,13 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
               </div>
             </div>
           </div>
+          
+          <Alert className="mt-4 bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-800" />
+            <AlertDescription className="text-yellow-800">
+              Ao validar o sucateamento, o setor será <strong>permanentemente</strong> marcado como sucateado no sistema.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     </div>

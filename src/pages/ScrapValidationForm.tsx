@@ -97,6 +97,27 @@ export default function ScrapValidationForm() {
       return;
     }
 
+    // Validar campos obrigatórios
+    if (!data.scrapObservations) {
+      toast.error("O motivo do sucateamento é obrigatório.");
+      return;
+    }
+
+    if (!data.scrapReturnInvoice) {
+      toast.error("A nota fiscal de devolução é obrigatória.");
+      return;
+    }
+
+    if (!data.scrapReturnDate) {
+      toast.error("A data de devolução é obrigatória.");
+      return;
+    }
+
+    if (!data.scrapPhotos || data.scrapPhotos.length === 0) {
+      toast.error("É necessário incluir pelo menos uma foto do estado de sucateamento.");
+      return;
+    }
+
     setSaving(true);
     try {
       // Forçar refresh da sessão antes de atualizar o setor
@@ -108,17 +129,33 @@ export default function ScrapValidationForm() {
         throw new Error("Sessão inválida");
       }
       
+      console.log("Validando sucateamento do setor:", sector.id);
+      console.log("Dados a serem enviados:", {
+        ...data,
+        status: 'sucateado',
+        scrapValidated: true
+      });
+      
       // Ensure that the status is set to 'sucateado' with proper type
       const updatedData = { 
         ...data, 
-        status: 'sucateado' as SectorStatus 
+        status: 'sucateado' as SectorStatus,
+        scrapValidated: true,
+        outcome: 'Sucateado'
       };
-      await updateSector(sector.id, updatedData);
-      toast.success("Setor atualizado e sucateado com sucesso!");
+      
+      const result = await updateSector(sector.id, updatedData);
+      
+      if (!result) {
+        console.error("Resultado da atualização foi falso ou nulo");
+        throw new Error("Falha ao atualizar o setor");
+      }
+      
+      toast.success("Setor validado e sucateado com sucesso!");
       navigate('/sucateamento');
     } catch (error) {
       console.error("Erro ao atualizar setor:", error);
-      toast.error("Erro ao atualizar o setor.");
+      toast.error(`Erro ao atualizar o setor: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setSaving(false);
     }
@@ -184,7 +221,7 @@ export default function ScrapValidationForm() {
                 initialSector={sector}
                 onSubmit={handleSubmit}
                 mode="scrap"
-                photoRequired={false}
+                photoRequired={true}
                 isLoading={saving}
                 disableEntryFields={true}
               />
