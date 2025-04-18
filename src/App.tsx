@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Peritagem } from './pages/Peritagem';
@@ -13,6 +12,7 @@ import { runConnectionDiagnostics } from './utils/connectionUtils';
 import Checagem from './pages/Checagem';
 import Execucao from './pages/Execucao';
 import CheckagemForm from './pages/CheckagemForm';
+import CheckagemFinal from './pages/CheckagemFinal';
 import ScrapValidation from './pages/ScrapValidation';
 import ScrapValidationForm from './pages/ScrapValidationForm';
 import Sucateamento from './pages/Sucateamento';
@@ -25,9 +25,7 @@ import Home from './pages/Home';
 import { supabase } from './integrations/supabase/client';
 import Relatorios from './pages/Relatorios';
 
-/**
- * Componente principal da aplicação
- */
+// Componente principal da aplicação
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [diagnosticsRun, setDiagnosticsRun] = useState(false);
@@ -130,6 +128,11 @@ function App() {
           <Route path="/checagem/:id" element={
             <ProtectedRoute>
               <CheckagemForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/checagem-final" element={
+            <ProtectedRoute>
+              <CheckagemFinal />
             </ProtectedRoute>
           } />
           

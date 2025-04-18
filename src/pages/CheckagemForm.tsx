@@ -41,16 +41,19 @@ export default function CheckagemForm() {
     return () => clearInterval(interval);
   }, []);
 
+  // Buscar informações do setor com base no ID
   useEffect(() => {
     const fetchSector = async () => {
-      if (!id) {
-        toast.error("ID do setor não fornecido.");
-        navigate("/checagem");
-        return;
-      }
-
-      setLoading(true);
       try {
+        console.log("Buscando setor com ID:", id);
+        setLoading(true);
+        
+        if (!id) {
+          toast.error("ID do setor não fornecido.");
+          navigate("/checagem");
+          return;
+        }
+
         // Forçar refresh da sessão antes de buscar o setor
         await refreshAuthSession();
         
@@ -64,7 +67,9 @@ export default function CheckagemForm() {
           return;
         }
         
+        // Buscar setor pelo ID
         const sectorData = await getSectorById(id);
+        console.log("Dados do setor:", sectorData);
         
         if (!sectorData) {
           toast.error("Setor não encontrado.");
@@ -137,11 +142,31 @@ export default function CheckagemForm() {
     }
   };
 
-  if (loading || !sector) {
+  if (loading) {
     return (
       <PageLayoutWrapper>
         <div className="p-6 flex justify-center items-center">
-          <p className="text-lg">Carregando informações do setor...</p>
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-lg">Carregando informações do setor...</p>
+          </div>
+        </div>
+      </PageLayoutWrapper>
+    );
+  }
+
+  if (!sector) {
+    return (
+      <PageLayoutWrapper>
+        <div className="p-6 flex justify-center items-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-red-500 mb-4">Setor não encontrado</h2>
+            <p className="mb-6">Não foi possível encontrar as informações do setor solicitado.</p>
+            <Button onClick={() => navigate('/checagem')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar para lista de setores
+            </Button>
+          </div>
         </div>
       </PageLayoutWrapper>
     );

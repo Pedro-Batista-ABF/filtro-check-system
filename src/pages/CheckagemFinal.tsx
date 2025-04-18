@@ -92,7 +92,13 @@ export default function CheckagemFinal() {
   }, [sectors, loading, localSectors]);
 
   const handleSectorSelect = (sector: Sector) => {
-    navigate(`/checagem/${sector.id}`);
+    // Adicionar verificação de ID válido antes de redirecionar
+    if (sector?.id) {
+      console.log("Navegando para checagem do setor:", sector.id);
+      navigate(`/checagem/${sector.id}`);
+    } else {
+      toast.error("Setor inválido, não é possível navegar.");
+    }
   };
 
   const handleRefresh = async () => {

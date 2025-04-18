@@ -47,12 +47,19 @@ export function useServiceDataFetching() {
         throw error;
       }
       
-      const services: Service[] = (data || []).map(service => ({
-        id: service.id,
-        name: service.name,
+      // Garantir que data é um array antes de mapear
+      if (!data || !Array.isArray(data)) {
+        console.error("Dados de serviços inválidos:", data);
+        return [];
+      }
+      
+      const services: Service[] = data.map(service => ({
+        id: service.id || "",
+        name: service.name || "",
         description: service.description || '',
         selected: false,
-        photos: []
+        photos: [],
+        quantity: 1
       }));
       
       console.log(`Carregados ${services.length} tipos de serviços`);

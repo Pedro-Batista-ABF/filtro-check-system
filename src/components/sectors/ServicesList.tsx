@@ -32,10 +32,6 @@ const ServicesList: React.FC<ServicesListProps> = memo(({
   readOnly = false,
   onCameraCapture
 }) => {
-  console.log("🔄 ServicesList render", Date.now());
-  console.log("🔄 services:", Array.isArray(services) ? services.length : 'não é array');
-  console.log("🔄 error:", error);
-
   // Garantir que services é um array
   const safeServices = Array.isArray(services) ? services : [];
 
@@ -107,4 +103,4 @@ const ServicesList: React.FC<ServicesListProps> = memo(({
 
 ServicesList.displayName = 'ServicesList';
 
-export default memo(ServicesList);
+export default ServicesList;
