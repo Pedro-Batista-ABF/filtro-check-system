@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sector, SectorStatus } from "@/types";
@@ -168,7 +169,14 @@ export default function ScrapValidationForm() {
         outcome: 'Sucateado'
       };
       
-      const result = await updateSector(sector.id, updatedData);
+      // First try with the API
+      let result;
+      try {
+        result = await updateSector(sector.id, updatedData);
+      } catch (updateError) {
+        console.error("Erro na API updateSector:", updateError);
+        throw new Error(`Falha ao atualizar o setor: ${updateError instanceof Error ? updateError.message : 'Erro desconhecido'}`);
+      }
       
       if (!result) {
         console.error("Resultado da atualização foi falso ou nulo");
@@ -184,8 +192,10 @@ export default function ScrapValidationForm() {
         
       if (checkError) {
         console.error("Erro ao verificar status após atualização:", checkError);
+        toast.warning("Verificação do status após atualização falhou, tentando forçar atualização");
       } else if (checkData.current_status !== 'sucateado') {
         console.warn("Status não atualizado corretamente. Tentando forçar...");
+        toast.warning("Status não atualizado corretamente, tentando forçar atualização");
         
         // Tentativa de forçar atualização do status
         const { error: forceError } = await supabase
@@ -202,6 +212,7 @@ export default function ScrapValidationForm() {
           toast.error("Erro ao forçar atualização do status");
         } else {
           console.log("Status forçado com sucesso para 'sucateado'");
+          toast.success("Status forçado com sucesso");
         }
       }
       

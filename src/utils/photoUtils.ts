@@ -76,6 +76,7 @@ export const fileToBase64 = (file: File): Promise<string> => {
 /**
  * Verifica se uma URL de imagem é acessível
  * Implementação mais robusta com timeout e tratamento de CORS
+ * Modificado para ser mais tolerante a erros
  */
 export const checkImageExists = async (url: string): Promise<boolean> => {
   try {
@@ -93,7 +94,9 @@ export const checkImageExists = async (url: string): Promise<boolean> => {
     return response.ok;
   } catch (error) {
     console.warn(`Erro ao verificar URL da imagem via HEAD: ${url}`, error);
-    return false;
+    // Retorna true para permitir que o componente <img> tente carregar mesmo assim
+    // e use seu próprio tratamento de erro onError
+    return true;
   }
 };
 

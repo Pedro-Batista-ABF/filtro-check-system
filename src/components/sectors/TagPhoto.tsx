@@ -17,14 +17,12 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fallbackAttempted, setFallbackAttempted] = useState(false);
-  const [directRenderAttempted, setDirectRenderAttempted] = useState(false);
   
   useEffect(() => {
     // Reset states when sector changes
     setImgError(false);
     setIsLoading(true);
     setFallbackAttempted(false);
-    setDirectRenderAttempted(false);
     
     async function loadImage() {
       if (!sector.tagPhotoUrl) {
@@ -41,27 +39,13 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
       }
       
       try {
-        // Add a cache-busting parameter
+        // Add a cache-busting parameter and set it directly without verification
         const noCacheUrl = addNoCacheParam(sector.tagPhotoUrl);
-        
-        // Primeiro vamos tentar definir a URL diretamente e confiar no onError nativo
-        console.log("Tentando carregar imagem diretamente:", noCacheUrl);
         setImgUrl(noCacheUrl);
-        setDirectRenderAttempted(true);
-        
-        // Vamos verificar em paralelo se a URL é acessível
-        const isAccessible = await photoService.verifyPhotoUrl(noCacheUrl);
-        
-        if (isAccessible) {
-          console.log("URL da TAG validada com sucesso");
-          setImgError(false);
-        } else {
-          console.warn("Verificação da URL falhou, mas mantendo URL direta com tratamento de erro no <img>");
-        }
+        setIsLoading(false);
       } catch (error) {
-        console.error("Erro ao verificar URL da foto da TAG:", error);
-        // Mesmo com erro, vamos manter a URL e deixar o onError do <img> tratar
-      } finally {
+        console.error("Erro ao processar URL da foto da TAG:", error);
+        setImgError(true);
         setIsLoading(false);
       }
     }
@@ -72,14 +56,13 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
   const handleImageError = async () => {
     console.warn("Erro ao carregar imagem diretamente:", imgUrl);
     
-    // Se já tentamos todas as abordagens, mostrar erro
+    // Avoid multiple fallback attempts
     if (fallbackAttempted || !sector.tagPhotoUrl) {
       setImgError(true);
       return;
     }
 
     setFallbackAttempted(true);
-    setIsLoading(true);
     
     try {
       console.log("Tentando abordagens alternativas para carregar a imagem");
@@ -90,7 +73,6 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
         console.log("URL regenerada, tentando carregar:", regeneratedUrl);
         setImgUrl(regeneratedUrl);
         setImgError(false);
-        setIsLoading(false);
         return;
       }
       
@@ -109,8 +91,6 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     } catch (error) {
       console.error("Falha no fallback da foto da TAG:", error);
       setImgError(true);
-    } finally {
-      setIsLoading(false);
     }
   };
   

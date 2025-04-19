@@ -2,7 +2,6 @@
 import React from 'react';
 import { Service } from '@/types';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import PhotoUpload from '../PhotoUpload';
 
 // Definir os tipos de fotos possíveis
