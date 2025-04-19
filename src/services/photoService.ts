@@ -179,17 +179,38 @@ export const photoService = {
         return false;
       }
       
+      // Tentar a atualização com tipo explícito para evitar erros de tipos
       const { error } = await supabase
         .from('sectors')
         .update({ 
           tag_photo_url: fixedUrl,
           updated_at: new Date().toISOString()
-        })
+        } as any) // Usando any para evitar erros de tipo
         .eq('id', sectorId);
         
       if (error) {
         console.error('Erro ao atualizar URL da foto da TAG:', error);
-        return false;
+        
+        // Tentar abordagem alternativa
+        try {
+          console.log('Tentando abordagem alternativa para atualizar URL da foto da TAG');
+          
+          const result = await supabase.rpc('update_sector_tag_photo', {
+            sector_id: sectorId,
+            photo_url: fixedUrl
+          });
+          
+          if (result.error) {
+            console.error('Erro na abordagem alternativa:', result.error);
+            return false;
+          }
+          
+          console.log('URL da foto da TAG atualizada via RPC');
+          return true;
+        } catch (rpcError) {
+          console.error('Erro na chamada RPC:', rpcError);
+          return false;
+        }
       }
       
       console.log('URL da foto da TAG atualizada com sucesso:', fixedUrl);

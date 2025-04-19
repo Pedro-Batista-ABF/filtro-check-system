@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { photoService } from '@/services/photoService';
 import { Service, PhotoWithFile } from '@/types';
 import { useApi } from '@/contexts/ApiContextExtended';
-import { fileToBase64, isValidUrl } from '@/utils/photoUtils';
+import { fileToBase64, isValidUrl, fixDuplicatedStoragePath } from '@/utils/photoUtils';
 import { toast } from 'sonner';
 
 export const useSectorPhotoHandling = (
@@ -48,7 +48,11 @@ export const useSectorPhotoHandling = (
         throw new Error("URL da foto inválida");
       }
       
-      return url;
+      // Corrigir possíveis problemas na URL
+      const fixedUrl = fixDuplicatedStoragePath(url);
+      console.log("URL da foto da TAG corrigida:", fixedUrl);
+      
+      return fixedUrl;
     } catch (error) {
       console.error("Erro ao fazer upload da foto da TAG:", error);
       toast.error("Erro ao fazer upload da foto");
@@ -103,12 +107,14 @@ export const useSectorPhotoHandling = (
             return null;
           }
           
-          console.log(`Foto ${type} para serviço ${serviceId} enviada, URL:`, url);
+          // Corrigir possíveis problemas na URL
+          const fixedUrl = fixDuplicatedStoragePath(url);
+          console.log(`Foto ${type} para serviço ${serviceId} enviada, URL:`, fixedUrl);
           
           // Criar objeto de foto
           const newPhoto: PhotoWithFile = {
             id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            url,
+            url: fixedUrl,
             type,
             serviceId,
             file

@@ -4,14 +4,18 @@ import { Image } from "@/components/ui/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Camera } from "lucide-react";
+import { fixDuplicatedStoragePath } from "@/utils/photoUtils";
 
 interface TagPhotoProps {
   sector: Sector;
 }
 
 export default function TagPhoto({ sector }: TagPhotoProps) {
-  // Ensure we have a valid tag photo URL
-  const hasPhotoUrl = !!sector.tagPhotoUrl && sector.tagPhotoUrl.length > 0;
+  // Corrigir possíveis problemas na URL da foto da TAG
+  const tagPhotoUrl = sector.tagPhotoUrl ? fixDuplicatedStoragePath(sector.tagPhotoUrl) : '';
+  
+  // Verificar se temos uma URL válida
+  const hasPhotoUrl = !!tagPhotoUrl && tagPhotoUrl.length > 0;
 
   return (
     <Card className="overflow-hidden">
@@ -21,7 +25,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
           <div className="rounded-md overflow-hidden border">
             {hasPhotoUrl ? (
               <Image
-                src={sector.tagPhotoUrl}
+                src={tagPhotoUrl}
                 alt={`Foto da TAG ${sector.tagNumber}`}
                 className="w-full h-auto max-h-40 object-contain bg-gray-50"
                 fallbackSrc="/placeholder-image.png"

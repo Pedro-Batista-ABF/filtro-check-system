@@ -62,7 +62,7 @@ export function TagPhotoField({
   return (
     <div className="space-y-2">
       <Label htmlFor="tagPhoto" className={error ? "text-red-500" : ""}>
-        Foto do TAG
+        Foto da TAG
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       <div className="flex space-x-2">
@@ -98,7 +98,7 @@ export function TagPhotoField({
       )}
       
       {error && !tagPhotoUrl && !localPhotoUrl && (
-        <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
+        <p className="text-xs text-red-500">Foto da TAG é obrigatória</p>
       )}
     </div>
   );
