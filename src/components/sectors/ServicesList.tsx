@@ -96,11 +96,13 @@ const ServicesList: React.FC<ServicesListProps> = memo(({
                     disabled={disabled || readOnly}
                   />
                   
-                  <ServiceQuantity
-                    service={service}
-                    onQuantityChange={onQuantityChange}
-                    disabled={disabled || !service.selected}
-                  />
+                  {service.selected && (
+                    <ServiceQuantity
+                      value={service.quantity || 1}
+                      onChange={(quantity) => onQuantityChange(service.id, quantity)}
+                      disabled={disabled || !service.selected}
+                    />
+                  )}
                 </div>
                 
                 {service.selected && (

@@ -1,4 +1,5 @@
-export type PhotoType = "before" | "after";
+
+export type PhotoType = "before" | "after" | "tag";
 
 export interface Photo {
   id: string;
@@ -17,7 +18,8 @@ export type SectorStatus =
   | "qualidadePendente"
   | "finalizado"
   | "sucateadoPendente"
-  | "sucateado";
+  | "sucateado"
+  | "checagemFinalPendente";
 
 export type SectorOutcome =
   | "EmAndamento"
@@ -40,7 +42,7 @@ export interface Service {
   observations?: string;
   photos?: Photo[];
   completed?: boolean;
-  stage?: string; // Add stage property to Service interface
+  stage?: string;
 }
 
 export interface Sector {
@@ -60,4 +62,7 @@ export interface Sector {
   scrapReturnInvoice?: string;
   scrapReturnDate?: string;
   scrapPhotos?: Photo[];
+  exitInvoice?: string;
+  exitDate?: string;
+  exitObservations?: string;
 }

@@ -1,20 +1,17 @@
 
 import React from 'react';
-import { Service } from '@/types';
+import { Service, PhotoType } from '@/types';
 import { Label } from '@/components/ui/label';
 import PhotoUpload from '../PhotoUpload';
 
-// Definir os tipos de fotos possíveis
-export type PhotoType = "before" | "after";
-
 interface ServicePhotosProps {
   service: Service;
-  photoType: PhotoType;
+  photoType: "before" | "after";
   required: boolean;
   onFileInputChange: (files: FileList) => void;
   disabled?: boolean;
   onCameraCapture?: (e: React.MouseEvent) => void;
-  onPhotoUpload?: (id: string, files: FileList, type: PhotoType) => void;
+  onPhotoUpload?: (id: string, files: FileList, type: "before" | "after") => void;
 }
 
 const ServicePhotos: React.FC<ServicePhotosProps> = ({

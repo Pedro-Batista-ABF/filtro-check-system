@@ -9,13 +9,15 @@ interface ServiceQuantityProps {
   onChange: (quantity: number) => void;
   min?: number;
   max?: number;
+  disabled?: boolean;
 }
 
 export default function ServiceQuantity({
   value,
   onChange,
   min = 1,
-  max = 100
+  max = 100,
+  disabled = false
 }: ServiceQuantityProps) {
   const handleIncrement = () => {
     if (value < max) {
@@ -39,7 +41,7 @@ export default function ServiceQuantity({
           size="sm"
           className="h-8 w-8 p-0"
           onClick={handleDecrement}
-          disabled={value <= min}
+          disabled={disabled || value <= min}
         >
           <MinusIcon className="h-4 w-4" />
         </Button>
@@ -50,7 +52,7 @@ export default function ServiceQuantity({
           size="sm"
           className="h-8 w-8 p-0"
           onClick={handleIncrement}
-          disabled={value >= max}
+          disabled={disabled || value >= max}
         >
           <PlusIcon className="h-4 w-4" />
         </Button>
