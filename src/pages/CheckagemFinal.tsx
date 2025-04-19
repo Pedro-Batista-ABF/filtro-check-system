@@ -29,13 +29,14 @@ export default function CheckagemFinal() {
       
       try {
         console.log("Buscando setores em checagem final...");
-        const emChecagemSectors = await getSectorsByStatus("emChecagem");
+        // Corrigindo para buscar o status correto
+        const checagemSectors = await getSectorsByStatus("checagemFinalPendente");
         
-        if (emChecagemSectors && Array.isArray(emChecagemSectors)) {
-          console.log(`Encontrados ${emChecagemSectors.length} setores em checagem final`);
-          setSectors(emChecagemSectors);
+        if (checagemSectors && Array.isArray(checagemSectors)) {
+          console.log(`Encontrados ${checagemSectors.length} setores em checagem final`);
+          setSectors(checagemSectors);
         } else {
-          console.error("Resultado inesperado ao buscar setores:", emChecagemSectors);
+          console.error("Resultado inesperado ao buscar setores:", checagemSectors);
           setSectors([]);
         }
       } catch (error) {

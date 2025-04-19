@@ -50,9 +50,9 @@ const AppRoutes = () => {
       <Route path="/execucao" element={<ProtectedRoute>{<Execucao />}</ProtectedRoute>} />
       <Route path="/execucao/:id" element={<ProtectedRoute>{<ExecucaoDetails />}</ProtectedRoute>} />
       
-      {/* Checagem routes - Corrigido a ordem para garantir que /checagem/final seja reconhecida antes de /checagem/:id */}
+      {/* Checagem routes - Corrigido a ordem para garantir que /checagem/final e /checagem-final funcionem */}
       <Route path="/checagem" element={<ProtectedRoute>{<Checagem />}</ProtectedRoute>} />
-      <Route path="/checagem/final" element={<ProtectedRoute>{<CheckagemFinal />}</ProtectedRoute>} />
+      <Route path="/checagem-final" element={<ProtectedRoute>{<CheckagemFinal />}</ProtectedRoute>} />
       <Route path="/checagem/:id" element={<ProtectedRoute>{<CheckagemForm />}</ProtectedRoute>} />
       
       {/* Completed sectors routes */}
