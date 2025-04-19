@@ -21,7 +21,7 @@ export function SummaryCards() {
       try {
         setLoading(true);
         
-        // Buscar contadores por status
+        // Buscar contadores por status usando is()
         // Peritagem
         const { count: peritagemCount, error: peritagemError } = await supabase
           .from('sectors')

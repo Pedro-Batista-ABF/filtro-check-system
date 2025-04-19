@@ -112,7 +112,7 @@ export const photoService = {
   /**
    * Tenta regenerar a URL pública de uma foto
    */
-  regeneratePublicUrl: (url: string): string | null => {
+  regeneratePublicUrl: async (url: string): Promise<string | null> => {
     try {
       if (!url) return null;
       

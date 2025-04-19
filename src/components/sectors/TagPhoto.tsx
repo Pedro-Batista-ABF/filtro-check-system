@@ -40,7 +40,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     if (sector.tagPhotoUrl) {
       try {
         // Tentar regenerar URL
-        const regeneratedUrl = photoService.regeneratePublicUrl(sector.tagPhotoUrl);
+        const regeneratedUrl = await photoService.regeneratePublicUrl(sector.tagPhotoUrl);
         if (regeneratedUrl && regeneratedUrl !== sector.tagPhotoUrl) {
           console.log("Tentando URL regenerada:", regeneratedUrl);
           setImgUrl(addNoCacheParam(regeneratedUrl));
@@ -73,7 +73,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
       setImgUrl(directUrl);
       
       // Tentar regenerar URL
-      const regeneratedUrl = photoService.regeneratePublicUrl(sector.tagPhotoUrl);
+      const regeneratedUrl = await photoService.regeneratePublicUrl(sector.tagPhotoUrl);
       if (regeneratedUrl) {
         setImgUrl(addNoCacheParam(regeneratedUrl));
         toast.success("Imagem atualizada com sucesso");

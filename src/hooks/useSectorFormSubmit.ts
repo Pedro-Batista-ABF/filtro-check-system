@@ -31,6 +31,8 @@ export function useSectorFormSubmit() {
       exitDate: false,
       exitInvoice: false,
       scrapObservations: formData.isScrap && !formData.scrapObservations.trim(),
+      scrapDate: formData.isScrap && !formData.scrapDate,
+      scrapInvoice: formData.isScrap && !formData.scrapInvoice.trim(),
       scrapPhotos: formData.isScrap && (!formData.scrapPhotos || formData.scrapPhotos.length === 0)
     };
 

@@ -5,7 +5,7 @@ import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
-import PageLayout from "@/components/layout/PageLayout";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
@@ -314,16 +314,16 @@ export default function ScrapValidationForm() {
 
   if (loading) {
     return (
-      <PageLayout>
+      <DashboardLayout>
         <div className="p-6 flex justify-center items-center">
           <p>Carregando informações do setor...</p>
         </div>
-      </PageLayout>
+      </DashboardLayout>
     );
   }
 
   return (
-    <PageLayout HeaderExtra={
+    <DashboardLayout HeaderExtra={
       <ConnectionStatus 
         status={connectionStatus} 
         onRetryConnection={handleRetryConnection}
@@ -373,6 +373,6 @@ export default function ScrapValidationForm() {
           </Card>
         )}
       </div>
-    </PageLayout>
+    </DashboardLayout>
   );
 }
