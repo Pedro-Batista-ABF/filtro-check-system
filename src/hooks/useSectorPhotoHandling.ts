@@ -31,9 +31,11 @@ export const useSectorPhotoHandling = (
       }
       
       // Upload da foto
+      console.log("Iniciando upload da foto da TAG com file:", file.name, file.size);
       const url = await uploadPhoto(file);
       
       if (!url) {
+        console.error("Upload falhou: URL indefinida");
         throw new Error("Erro ao obter URL da foto");
       }
       
@@ -83,6 +85,8 @@ export const useSectorPhotoHandling = (
             return null;
           }
           
+          console.log(`Fazendo upload de foto ${type} para serviço ${serviceId}:`, file.name);
+          
           // Obter URL da foto
           const url = await uploadPhoto(file);
           
@@ -90,6 +94,8 @@ export const useSectorPhotoHandling = (
             console.error('Erro ao obter URL da foto durante upload');
             return null;
           }
+          
+          console.log(`Foto ${type} para serviço ${serviceId} enviada, URL:`, url);
           
           // Criar objeto de foto
           const newPhoto: PhotoWithFile = {

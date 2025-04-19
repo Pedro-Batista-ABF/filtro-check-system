@@ -6,6 +6,9 @@ export function isValidUrl(urlString?: string): boolean {
   if (!urlString) return false;
   
   try {
+    // Verificar se é uma URL de dados
+    if (urlString.startsWith('data:')) return true;
+    
     new URL(urlString);
     return true;
   } catch (e) {
@@ -20,6 +23,9 @@ export function addNoCacheParam(url: string): string {
   if (!url) return url;
   
   try {
+    // Verificar se é uma URL de dados
+    if (url.startsWith('data:')) return url;
+    
     const urlObj = new URL(url);
     urlObj.searchParams.set('t', Date.now().toString());
     return urlObj.toString();
@@ -59,20 +65,28 @@ export function extractPathFromUrl(url: string): string | null {
     const parts = pathname.split('/storage/v1/object/public/');
     if (parts.length !== 2) return null;
     
-    const fullPath = parts[1];
+    let fullPath = parts[1];
     
-    // Verificar se o caminho já tem o prefixo "sector_photos/"
-    if (fullPath.startsWith('sector_photos/')) {
-      // Verificar duplicação - se temos sector_photos/sector_photos/
-      const duplicatedCheck = fullPath.split('/');
-      if (duplicatedCheck.length > 1 && duplicatedCheck[0] === 'sector_photos' && duplicatedCheck[1] === 'sector_photos') {
-        // Temos duplicação, remover a primeira ocorrência
-        return fullPath.substring(13); // Remove "sector_photos/"
-      }
-      return fullPath;
+    // Verificar se temos o nome do bucket
+    if (!fullPath.includes('/')) {
+      console.warn('Caminho inválido ou incompleto:', fullPath);
+      return null;
     }
     
-    // Se não tem o prefixo, adicionar
+    // Extrair o caminho removendo bucket_name/
+    const pathParts = fullPath.split('/', 1);
+    const bucketName = pathParts[0];
+    const filePath = fullPath.substring(bucketName.length + 1);
+    
+    // Para o bucket sector_photos, verificar duplicações
+    if (bucketName === 'sector_photos') {
+      // Verificar padrão sector_photos/sector_photos/
+      if (filePath.startsWith('sector_photos/')) {
+        console.log('Detectada duplicação de caminho em: ' + fullPath);
+        return filePath;
+      }
+    }
+    
     return fullPath;
   } catch (e) {
     console.error('Erro ao extrair caminho da URL:', e);
@@ -100,20 +114,9 @@ export function fixDuplicatedStoragePath(url: string): string {
     
     // Verificar e remover duplicação em sector_photos/sector_photos
     if (pathname.indexOf('/sector_photos/sector_photos/') !== -1) {
+      console.log('Corrigindo caminho duplicado:', pathname);
       const correctedPath = pathname.replace('/sector_photos/sector_photos/', '/sector_photos/');
       return url.replace(pathname, correctedPath);
-    }
-    
-    // Verificar se o prefixo do bucket está faltando no caminho
-    const parts = pathname.split('/storage/v1/object/public/');
-    if (parts.length === 2) {
-      const pathPart = parts[1];
-      
-      // Se o caminho não começa com 'sector_photos/' e não está vazio, adicionar o prefixo
-      if (!pathPart.startsWith('sector_photos/') && pathPart.length > 0) {
-        const correctedPath = `/storage/v1/object/public/sector_photos/${pathPart}`;
-        return url.replace(pathname, correctedPath);
-      }
     }
     
     return url;

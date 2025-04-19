@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -19,7 +20,7 @@ export type SectorStatus =
 export type CycleOutcome =
   | 'EmAndamento'
   | 'Aprovado'
-  | 'Reprovado'
+  | 'Reprovado';
 
 export interface Sector {
   id: string;
@@ -38,6 +39,18 @@ export interface Sector {
   outcome?: CycleOutcome;
   updated_at?: string;
   scrapObservations?: string;
+  entryObservations?: string;
+  exitObservations?: string;
+  exitInvoice?: string;
+  exitDate?: string;
+  checagemDate?: string;
+  scrapValidated?: boolean;
+  scrapReturnDate?: string;
+  scrapReturnInvoice?: string;
+  nf_entrada?: string;
+  nf_saida?: string;
+  data_entrada?: string;
+  data_saida?: string;
 }
 
 export interface Photo {
@@ -46,6 +59,11 @@ export interface Photo {
   type: 'before' | 'after' | 'scrap' | 'tag';
   serviceId?: string;
   cycleId?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface PhotoWithFile extends Photo {
+  file?: File;
 }
 
 export interface ServiceType {

@@ -23,6 +23,7 @@ export function TagPhotoField({
   required = false
 }: TagPhotoFieldProps) {
   const [uploading, setUploading] = useState(false);
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string | undefined>(tagPhotoUrl);
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -38,6 +39,7 @@ export function TagPhotoField({
         throw new Error("Nenhuma URL retornada pelo upload");
       }
       
+      setLocalPhotoUrl(result);
       console.log("Upload concluído com sucesso, URL:", result);
       toast.success("Foto da TAG carregada com sucesso");
     } catch (error) {
@@ -46,10 +48,6 @@ export function TagPhotoField({
     } finally {
       setUploading(false);
     }
-  };
-
-  const handleImageError = (error: any) => {
-    console.error("Erro ao carregar imagem da TAG:", error);
   };
 
   return (
@@ -78,18 +76,19 @@ export function TagPhotoField({
         </Button>
       </div>
       
-      {tagPhotoUrl && (
+      {(localPhotoUrl || tagPhotoUrl) && (
         <div className="mt-2">
           <Image 
-            src={tagPhotoUrl} 
+            src={localPhotoUrl || tagPhotoUrl} 
             alt="TAG do Setor" 
             className="w-32 h-32 object-cover rounded-md border"
-            onLoadError={handleImageError}
+            fallbackSrc="/placeholder-image.png"
+            showRefresh={true}
           />
         </div>
       )}
       
-      {error && !tagPhotoUrl && (
+      {error && !tagPhotoUrl && !localPhotoUrl && (
         <p className="text-xs text-red-500">Foto do TAG é obrigatória</p>
       )}
     </div>
