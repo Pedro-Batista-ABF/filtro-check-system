@@ -63,14 +63,13 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
         </Label>
       </div>
 
-      {/* Sempre usar o componente PhotoUpload, independentemente de ter fotos ou não */}
+      {/* PhotoUpload component with proper props */}
       <PhotoUpload
         photos={photoWithFiles}
         onChange={handleFileChange}
         disabled={disabled}
         title={`Fotos ${photoTypeLabel}`}
         required={required}
-        onCameraCapture={onCameraCapture}
       />
     </div>
   );

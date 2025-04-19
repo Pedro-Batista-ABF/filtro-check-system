@@ -59,7 +59,11 @@ export default function SectorCard({ sector }: SectorCardProps) {
   };
 
   const status = getStatusInfo(sector.status);
-  const selectedServices = sector.services.filter(service => service.selected);
+  
+  // Make sure services exists before filtering
+  const selectedServices = sector.services ? 
+    sector.services.filter(service => service.selected) : 
+    [];
 
   return (
     <Card className="h-full flex flex-col shadow-md hover:shadow-lg transition-shadow">
