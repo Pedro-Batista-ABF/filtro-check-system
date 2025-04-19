@@ -2,20 +2,21 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
-export default function PrivateRoute() {
-  const { user, loading } = useAuth();
+const PrivateRoute: React.FC = () => {
+  const { isAuthenticated, loading } = useAuth();
 
-  // Show loading indicator while checking authentication
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Verificando autenticação...</span>
+      </div>
+    );
   }
 
-  // If not authenticated, redirect to login
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+};
 
-  // If authenticated, render the child routes
-  return <Outlet />;
-}
+export default PrivateRoute;

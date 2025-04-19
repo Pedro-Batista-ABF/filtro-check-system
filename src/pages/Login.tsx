@@ -34,15 +34,13 @@ const Login = () => {
         throw new Error('Por favor, preencha todos os campos');
       }
 
+      console.log("Login: Tentando login com email:", email);
       await signIn(email, password);
-      toast.success("Login realizado com sucesso");
+      console.log("Login: Login bem-sucedido");
       navigate('/');
     } catch (err: any) {
       const errorMessage = err.message || 'Falha no login. Verifique suas credenciais.';
       setError(errorMessage);
-      toast.error("Erro no login", {
-        description: errorMessage
-      });
       console.error('Login error:', err);
     } finally {
       setIsSubmitting(false);
