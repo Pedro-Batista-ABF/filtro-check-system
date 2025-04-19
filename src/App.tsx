@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 // Pages
-import LoginPage from "@/pages/LoginPage";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Peritagem from "@/pages/Peritagem";
 import PeritagemForm from "@/pages/PeritagemForm";
@@ -34,7 +34,7 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       
       <Route path="/" element={<PrivateRoute />}>
         <Route index element={<Dashboard />} />

@@ -1,152 +1,97 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Photo, PhotoWithFile } from '@/types';
 
 export const photoService = {
-  /**
-   * Uploads a photo to Supabase Storage
-   */
-  async uploadPhoto(file: File, folder: string = 'general'): Promise<string> {
+  // Regenerar URL pública para uma foto
+  regeneratePublicUrl: async (url: string): Promise<string | null> => {
     try {
-      // Ensure folder path is sanitized and safe
-      const safeFolderPath = folder.replace(/\.\./g, '').replace(/\/\//g, '/');
-      const timestamp = Date.now();
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${safeFolderPath}/${timestamp}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-
-      // Upload file to Supabase
+      if (!url) return null;
+      
+      // Extrair o caminho do bucket a partir da URL
+      const urlParts = url.split('/');
+      const bucketName = urlParts[3]; // Assumindo formato: https://[project].supabase.co/storage/v1/object/public/[bucket]/[path]
+      const filePath = urlParts.slice(4).join('/');
+      
+      if (!bucketName || !filePath) {
+        console.error('URL inválida para regeneração:', url);
+        return null;
+      }
+      
+      // Obter URL pública com nova assinatura
       const { data, error } = await supabase.storage
-        .from('photos')
+        .from(bucketName)
+        .createSignedUrl(filePath, 60 * 60); // Expiração em 1 hora
+      
+      if (error) {
+        console.error('Erro ao regenerar URL da foto:', error);
+        
+        // Fallback: tentar URL pública direta
+        const { data: publicURL } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+          
+        return publicURL?.publicUrl || null;
+      }
+      
+      return data?.signedUrl || null;
+    } catch (error) {
+      console.error('Erro crítico ao regenerar URL:', error);
+      return null;
+    }
+  },
+  
+  // Função para fazer upload de uma foto para o bucket
+  uploadPhoto: async (file: File, bucketName: string, filePath: string): Promise<Photo | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucketName)
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
         });
-
+      
       if (error) {
-        console.error("Erro ao fazer upload:", error);
-        throw new Error(`Erro ao fazer upload: ${error.message}`);
+        console.error("Erro ao fazer upload da foto:", error);
+        return null;
       }
-
-      if (!data) {
-        throw new Error("Falha ao fazer upload da foto");
+      
+      // Obter a URL pública da foto
+      const { data: publicURL } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+      
+      if (!publicURL?.publicUrl) {
+        console.error("Erro ao obter URL pública da foto");
+        return null;
       }
-
-      // Generate public URL
-      const publicURL = await this.regeneratePublicUrl(data.path);
-      return publicURL;
+      
+      return {
+        id: data?.path || filePath,
+        url: publicURL.publicUrl,
+        file: file,
+      };
     } catch (error) {
-      console.error("Erro no serviço de foto:", error);
-      toast.error("Falha ao processar a foto");
-      throw error;
-    }
-  },
-
-  /**
-   * Delete a photo from Supabase Storage
-   */
-  async deletePhoto(url: string): Promise<boolean> {
-    try {
-      // Extract path from URL
-      const urlObj = new URL(url);
-      const path = decodeURIComponent(urlObj.pathname).split('/').slice(2).join('/');
-
-      // Delete the file
-      const { error } = await supabase.storage
-        .from('photos')
-        .remove([path]);
-
-      if (error) {
-        console.error("Erro ao excluir foto:", error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Erro ao excluir foto:", error);
-      return false;
-    }
-  },
-
-  /**
-   * Verify if a photo URL is accessible
-   */
-  async verifyPhotoUrl(url: string): Promise<boolean> {
-    try {
-      const response = await fetch(url, { method: 'HEAD' });
-      return response.ok;
-    } catch (error) {
-      console.error("Erro ao verificar URL da foto:", error);
-      return false;
-    }
-  },
-
-  /**
-   * Regenerate a public URL for a photo
-   */
-  async regeneratePublicUrl(path: string): Promise<string> {
-    try {
-      // Generate public URL using Supabase
-      const { data } = await supabase.storage
-        .from('photos')
-        .getPublicUrl(path);
-
-      if (!data.publicUrl) {
-        throw new Error("Falha ao gerar URL pública");
-      }
-
-      // Add cache-busting parameter
-      return this.addCacheBustingParam(data.publicUrl);
-    } catch (error) {
-      console.error("Erro ao regenerar URL pública:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Add a cache-busting parameter to URL
-   */
-  addCacheBustingParam(url: string): string {
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}_cb=${Date.now()}`;
-  },
-
-  /**
-   * Download a photo and convert to data URL
-   */
-  async downloadPhoto(url: string): Promise<string | null> {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
-    } catch (error) {
-      console.error("Erro ao baixar foto:", error);
+      console.error("Erro ao fazer upload da foto:", error);
       return null;
     }
   },
 
-  /**
-   * Update a sector's tag photo URL
-   */
-  async updateTagPhotoUrl(sectorId: string, url: string): Promise<boolean> {
+  // Função para excluir uma foto do bucket
+  deletePhoto: async (bucketName: string, filePath: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('sectors')
-        .update({ tag_photo_url: url })
-        .eq('id', sectorId);
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .remove([filePath]);
 
       if (error) {
-        console.error("Erro ao atualizar URL da foto da TAG:", error);
+        console.error("Erro ao excluir a foto:", error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error("Erro ao atualizar URL da foto da TAG:", error);
+      console.error("Erro ao excluir a foto:", error);
       return false;
     }
-  }
+  },
 };

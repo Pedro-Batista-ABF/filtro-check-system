@@ -1,187 +1,156 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { CameraIcon, RefreshCw, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import React, { useState } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Camera, RefreshCw } from "lucide-react";
+import { useCamera } from '@/hooks/useCamera';
+import { useToast } from '@/hooks/use-toast';
 import { photoService } from '@/services/photoService';
 
 interface TagPhotoFieldProps {
-  tagPhotoUrl?: string;
-  onPhotoChange: (url: string) => void;
-  error?: boolean;
+  value?: string;
+  onChange: (url: string) => void;
+  onFileChange?: (file: File) => void;
   disabled?: boolean;
-  onCameraCapture?: () => void;
+  required?: boolean;
 }
 
-export default function TagPhotoField({
-  tagPhotoUrl,
-  onPhotoChange,
-  error = false,
+const TagPhotoField: React.FC<TagPhotoFieldProps> = ({
+  value,
+  onChange,
+  onFileChange,
   disabled = false,
-  onCameraCapture
-}: TagPhotoFieldProps) {
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  required = false
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { openCamera, isCameraSupported } = useCamera();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (tagPhotoUrl) {
-      setImageUrl(tagPhotoUrl);
-      setHasError(false);
-    } else {
-      setImageUrl('');
-    }
-  }, [tagPhotoUrl]);
+  // Estado para controlar a exibição de imagem
+  const [imageError, setImageError] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(value || null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) {
-      return;
-    }
-
-    const file = e.target.files[0];
+  // Função para regenerar a URL da imagem
+  const regenerateImageUrl = async () => {
+    if (!value) return;
     
     try {
-      setIsLoading(true);
-      setHasError(false);
+      setLoading(true);
+      setError(null);
+      setImageError(false);
       
-      // Upload the file
-      const uploadedUrl = await photoService.uploadPhoto(file, 'tags');
-      
-      // Update state and notify parent
-      setImageUrl(uploadedUrl);
-      onPhotoChange(uploadedUrl);
-    } catch (error) {
-      console.error("Erro ao fazer upload da foto:", error);
-      setHasError(true);
-      toast.error("Falha ao fazer upload da foto");
-    } finally {
-      setIsLoading(false);
-      // Reset the input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      // Utilizar o photoService para regenerar a URL pública
+      const regeneratedUrl = await photoService.regeneratePublicUrl(value);
+      if (regeneratedUrl) {
+        setImageUrl(regeneratedUrl);
+      } else {
+        setImageError(true);
+        setError("Não foi possível carregar a imagem");
       }
+    } catch (err) {
+      console.error("Erro ao regenerar URL da imagem:", err);
+      setImageError(true);
+      setError("Erro ao obter URL da imagem");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRefresh = async () => {
-    if (!tagPhotoUrl) return;
+  React.useEffect(() => {
+    if (value) {
+      regenerateImageUrl();
+    } else {
+      setImageUrl(null);
+      setImageError(false);
+    }
+  }, [value]);
+
+  const handleCameraCapture = async () => {
+    if (disabled) return;
     
     try {
-      setIsLoading(true);
-      setHasError(false);
-      
-      // Try to regenerate URL
-      const regeneratedUrl = await photoService.regeneratePublicUrl(tagPhotoUrl);
-      setImageUrl(regeneratedUrl);
-      onPhotoChange(regeneratedUrl);
-      
-      toast.success("Imagem atualizada com sucesso");
-    } catch (error) {
-      console.error("Erro ao atualizar imagem:", error);
-      setHasError(true);
-      toast.error("Erro ao atualizar imagem");
-    } finally {
-      setIsLoading(false);
+      const file = await openCamera();
+      if (file) {
+        const objectUrl = URL.createObjectURL(file);
+        setImageUrl(objectUrl);
+        setImageError(false);
+        onChange(objectUrl);
+        if (onFileChange) {
+          onFileChange(file);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao capturar imagem:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível capturar a imagem. Verifique se a câmera está disponível.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleImageError = () => {
-    setHasError(true);
+    setImageError(true);
+    setError("A imagem não pôde ser carregada");
   };
 
   return (
-    <div>
-      <Label className={cn(error ? "text-red-500" : "")}>
-        Foto da TAG*
-      </Label>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-        <div className="space-y-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleFileChange}
-            disabled={disabled || isLoading}
-          />
-          
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <label className="block text-sm font-medium">
+          Foto da TAG {required && <span className="text-red-500">*</span>}
+        </label>
+        {value && imageError && (
           <Button
             type="button"
+            size="sm"
             variant="outline"
-            className="w-full"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isLoading}
+            onClick={regenerateImageUrl}
+            disabled={loading}
           >
-            {isLoading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Carregando...
-              </>
-            ) : (
-              "Selecionar arquivo"
-            )}
+            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+            Recarregar
           </Button>
-          
-          {onCameraCapture && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={onCameraCapture}
-              disabled={disabled || isLoading}
-            >
-              <CameraIcon className="mr-2 h-4 w-4" />
-              Usar câmera
-            </Button>
-          )}
-          
-          {error && (
-            <p className="text-xs text-red-500">Foto da TAG é obrigatória</p>
-          )}
-        </div>
-        
-        <div className="bg-gray-50 border rounded-md overflow-hidden h-40 flex items-center justify-center relative">
-          {!imageUrl || hasError ? (
-            <div className="text-center p-4">
-              {hasError ? (
-                <div className="flex flex-col items-center">
-                  <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Não foi possível carregar a imagem
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">
-                  Nenhuma foto selecionada
-                </p>
-              )}
-            </div>
-          ) : (
-            <>
+        )}
+      </div>
+      
+      <Card className={`${disabled ? 'opacity-70' : ''}`}>
+        <CardContent className="p-3">
+          {imageUrl && !imageError ? (
+            <div className="relative">
               <img
                 src={imageUrl}
                 alt="Foto da TAG"
-                className="max-h-40 max-w-full object-contain"
+                className="w-full h-40 object-contain rounded-md"
                 onError={handleImageError}
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="absolute top-1 right-1 bg-white/70 hover:bg-white/90 h-7 w-7"
-                onClick={handleRefresh}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            </>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-40 bg-gray-50 rounded-md">
+              {error ? (
+                <p className="text-sm text-red-500">{error}</p>
+              ) : (
+                <p className="text-sm text-gray-500">Nenhuma foto da TAG</p>
+              )}
+            </div>
           )}
-        </div>
-      </div>
+          
+          {!disabled && isCameraSupported && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mt-3"
+              onClick={handleCameraCapture}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              {imageUrl ? "Tirar nova foto" : "Capturar foto da TAG"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default TagPhotoField;
