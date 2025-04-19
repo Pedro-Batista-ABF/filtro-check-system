@@ -17,6 +17,16 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
   // Verificar se temos uma URL válida
   const hasPhotoUrl = !!tagPhotoUrl && tagPhotoUrl.length > 0;
 
+  console.log("TagPhoto rendering with URL:", tagPhotoUrl);
+
+  const handleImageLoadSuccess = () => {
+    console.log("TagPhoto: imagem carregada com sucesso");
+  };
+
+  const handleImageLoadError = (error: any) => {
+    console.error("TagPhoto: erro ao carregar imagem:", error);
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
@@ -30,6 +40,8 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
                 className="w-full h-auto max-h-40 object-contain bg-gray-50"
                 fallbackSrc="/placeholder-image.png"
                 showRefresh={true}
+                onLoadSuccess={handleImageLoadSuccess}
+                onLoadError={handleImageLoadError}
               />
             ) : (
               <div className="bg-gray-100 border rounded-md flex flex-col items-center justify-center h-40">

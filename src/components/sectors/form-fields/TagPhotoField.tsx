@@ -30,6 +30,7 @@ export function TagPhotoField({
   // Update local URL when prop changes
   useEffect(() => {
     if (tagPhotoUrl !== localPhotoUrl) {
+      console.log("TagPhotoField: tagPhotoUrl changed:", tagPhotoUrl);
       setLocalPhotoUrl(tagPhotoUrl);
     }
   }, [tagPhotoUrl]);
@@ -57,6 +58,15 @@ export function TagPhotoField({
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleImageLoadSuccess = () => {
+    console.log("Imagem da TAG carregada com sucesso");
+  };
+
+  const handleImageLoadError = (error: any) => {
+    console.error("Erro ao carregar imagem da TAG:", error);
+    toast.error("Erro ao carregar imagem da TAG");
   };
 
   return (
@@ -93,6 +103,8 @@ export function TagPhotoField({
             className="w-32 h-32 object-cover rounded-md border"
             fallbackSrc="/placeholder-image.png"
             showRefresh={true}
+            onLoadSuccess={handleImageLoadSuccess}
+            onLoadError={handleImageLoadError}
           />
         </div>
       )}

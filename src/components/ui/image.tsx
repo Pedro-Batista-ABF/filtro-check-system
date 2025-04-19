@@ -50,13 +50,19 @@ export function Image({
 
   useEffect(() => {
     // Reset states when src changes
-    setImgSrc(prepareImageUrl(src));
-    setIsLoading(true);
-    setHasError(false);
-    setRetryCount(0);
+    if (src !== imgSrc) {
+      console.log("Image source changed, preparing URL:", src);
+      const preparedUrl = prepareImageUrl(src);
+      console.log("Prepared URL:", preparedUrl);
+      setImgSrc(preparedUrl);
+      setIsLoading(true);
+      setHasError(false);
+      setRetryCount(0);
+    }
   }, [src]);
 
   const handleImageLoad = () => {
+    console.log("Image loaded successfully:", imgSrc);
     setIsLoading(false);
     setHasError(false);
     if (onLoadSuccess) onLoadSuccess();
@@ -98,6 +104,7 @@ export function Image({
         
         // If all else fails, use the fallback if provided
         if (fallbackSrc) {
+          console.log('Using fallback image source');
           setImgSrc(fallbackSrc);
           return;
         }

@@ -13,7 +13,7 @@ export const photoService = {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `sector_photos/${fileName}`;
+      const filePath = `${fileName}`;
       
       console.log(`Iniciando upload para ${filePath}`);
       
@@ -170,7 +170,7 @@ export const photoService = {
         return false;
       }
       
-      console.log(`Atualizando URL da foto da TAG para o setor ${sectorId}`);
+      console.log(`Atualizando URL da foto da TAG para o setor ${sectorId}: ${url}`);
       
       // Garantir que a URL é válida antes de salvar
       const fixedUrl = fixDuplicatedStoragePath(url);
@@ -179,36 +179,27 @@ export const photoService = {
         return false;
       }
       
-      // Tentar a atualização com tipo explícito para evitar erros de tipos
       const { error } = await supabase
         .from('sectors')
         .update({ 
           tag_photo_url: fixedUrl,
           updated_at: new Date().toISOString()
-        } as any) // Usando any para evitar erros de tipo
+        })
         .eq('id', sectorId);
         
       if (error) {
         console.error('Erro ao atualizar URL da foto da TAG:', error);
         
-        // Tentar abordagem alternativa
-        try {
-          console.log('Tentando abordagem alternativa para atualizar URL da foto da TAG');
+        // Tentar novamente com método alternativo
+        const { error: retryError } = await supabase
+          .from('sectors')
+          .update({
+            tag_photo_url: fixedUrl
+          })
+          .match({ id: sectorId });
           
-          const result = await supabase.rpc('update_sector_tag_photo', {
-            sector_id: sectorId,
-            photo_url: fixedUrl
-          });
-          
-          if (result.error) {
-            console.error('Erro na abordagem alternativa:', result.error);
-            return false;
-          }
-          
-          console.log('URL da foto da TAG atualizada via RPC');
-          return true;
-        } catch (rpcError) {
-          console.error('Erro na chamada RPC:', rpcError);
+        if (retryError) {
+          console.error('Erro na segunda tentativa:', retryError);
           return false;
         }
       }
