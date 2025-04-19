@@ -29,10 +29,11 @@ export function TagPhotoField({
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    // Quando a URL muda, atualizar a preview diretamente sem verificações demoradas
+    // Quando a URL muda, atualizar a preview com cache-busting
     if (tagPhotoUrl) {
       try {
-        // Simplesmente definir a URL com cache-busting para evitar cache
+        console.log("Atualizando preview com URL:", tagPhotoUrl);
+        // Adicionar parâmetro de timestamp para evitar cache
         setPreviewUrl(addNoCacheParam(tagPhotoUrl));
         setPreviewError(false);
       } catch (error) {
@@ -50,6 +51,7 @@ export function TagPhotoField({
     
     setUploading(true);
     try {
+      console.log("Iniciando upload da foto da TAG...");
       // Chamar a função de upload passada via props
       const result = await onPhotoUpload(e.target.files);
       
@@ -58,9 +60,11 @@ export function TagPhotoField({
         throw new Error("Nenhuma URL retornada pelo upload");
       }
       
-      // Atualizar a preview com a nova URL
+      console.log("Upload concluído com sucesso, URL:", result);
+      // Atualizar a preview com a nova URL e evitar cache
       setPreviewUrl(addNoCacheParam(result));
       setPreviewError(false);
+      toast.success("Foto da TAG carregada com sucesso");
     } catch (error) {
       console.error('Erro ao fazer upload da foto da TAG:', error);
       toast.error("Erro ao fazer upload da foto da TAG");
@@ -71,6 +75,7 @@ export function TagPhotoField({
   };
 
   const handleImageError = async () => {
+    console.error("Erro ao carregar imagem da TAG:", previewUrl);
     setPreviewError(true);
     
     // Tentar carregar a imagem diretamente como fallback
@@ -79,16 +84,20 @@ export function TagPhotoField({
         // Tentar regenerar a URL e tentar novamente
         const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
         if (regeneratedUrl) {
-          console.log("URL regenerada:", regeneratedUrl);
+          console.log("Tentando com URL regenerada:", regeneratedUrl);
           setPreviewUrl(addNoCacheParam(regeneratedUrl));
           return; // Tentar carregar novamente com a URL regenerada
         }
         
         // Se não conseguir regenerar, tentar download direto
+        console.log("Tentando baixar imagem diretamente...");
         const directUrl = await photoService.downloadPhoto(tagPhotoUrl);
         if (directUrl) {
+          console.log("Download direto bem-sucedido, usando URL local");
           setPreviewUrl(directUrl);
           setPreviewError(false);
+        } else {
+          console.error("Não foi possível baixar a imagem diretamente");
         }
       } catch (error) {
         console.error("Erro ao carregar imagem como fallback:", error);
@@ -103,10 +112,13 @@ export function TagPhotoField({
     setPreviewError(false);
     
     try {
+      console.log("Tentando recarregar a imagem:", tagPhotoUrl);
+      
       // Tentar regenerar URL primeiro
       const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
       
       if (regeneratedUrl) {
+        console.log("URL regenerada com sucesso:", regeneratedUrl);
         setPreviewUrl(addNoCacheParam(regeneratedUrl));
         setPreviewError(false);
         toast.success("Imagem recarregada com sucesso");
@@ -114,13 +126,16 @@ export function TagPhotoField({
       }
       
       // Se não conseguir regenerar, tentar download direto
+      console.log("Tentando baixar a imagem diretamente...");
       const directUrl = await photoService.downloadPhoto(tagPhotoUrl);
       
       if (directUrl) {
+        console.log("Download direto bem-sucedido");
         setPreviewUrl(directUrl);
         setPreviewError(false);
         toast.success("Imagem carregada via download direto");
       } else {
+        console.error("Não foi possível baixar a imagem diretamente");
         setPreviewError(true);
         toast.error("Não foi possível carregar a imagem");
       }

@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { extractPathFromUrl } from "@/utils/photoUtils";
 
 /**
  * Serviço para operações com fotos
@@ -39,11 +40,25 @@ export const photoService = {
       if (!url || typeof url !== 'string') return false;
 
       // Tentar acessar a URL para verificar se está disponível
-      const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      // Usando no-cors para evitar problemas de CORS
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       
-      // No-cors sempre retorna 'opaque' response sem status, então não podemos verificar status
-      // Vamos considerar que a URL é válida se não houve erro
-      return true;
+      try {
+        await fetch(url, { 
+          method: 'HEAD', 
+          mode: 'no-cors',
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        
+        // No-cors sempre retorna 'opaque' response sem status, então não podemos verificar status
+        clearTimeout(timeoutId);
+        return true;
+      } catch (e) {
+        console.warn("Erro ao verificar URL com fetch:", e);
+        return false;
+      }
     } catch (error) {
       console.error('Erro ao verificar URL da foto:', error);
       return false;
@@ -57,11 +72,24 @@ export const photoService = {
     try {
       if (!url || typeof url !== 'string') return null;
 
-      // Se a URL já contém token de download ou expiração, remover isso
-      const simplifiedUrl = url.split('?')[0];
+      // Extrair o caminho da URL usando a função auxiliar
+      const path = extractPathFromUrl(url);
+      if (!path) {
+        console.warn("Não foi possível extrair o caminho da URL:", url);
+        return null;
+      }
       
-      // Gerar uma nova URL pública adicionando um timestamp como busca
-      return `${simplifiedUrl}?t=${Date.now()}`;
+      // Gerar nova URL pública
+      const { data } = supabase.storage
+        .from('sector_photos')
+        .getPublicUrl(path);
+      
+      if (!data || !data.publicUrl) {
+        console.warn("Falha ao regenerar URL pública");
+        return null;
+      }
+      
+      return data.publicUrl;
     } catch (error) {
       console.error('Erro ao regenerar URL pública:', error);
       return null;
@@ -76,8 +104,7 @@ export const photoService = {
       if (!url || typeof url !== 'string') return false;
 
       // Extrair caminho do arquivo da URL
-      const path = url.split('/').slice(4).join('/').split('?')[0];
-      
+      const path = extractPathFromUrl(url);
       if (!path) {
         console.error('URL inválida para exclusão:', url);
         return false;
@@ -103,21 +130,43 @@ export const photoService = {
     try {
       if (!url || typeof url !== 'string') return null;
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      // Extrair caminho do arquivo da URL
+      const path = extractPathFromUrl(url);
+      if (!path) {
+        console.warn('Caminho não extraído da URL:', url);
+        
+        // Tentar baixar diretamente a URL como fallback
+        try {
+          const response = await fetch(url, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          
+          const blob = await response.blob();
+          return URL.createObjectURL(blob);
+        } catch (fetchError) {
+          console.error('Erro ao baixar URL diretamente:', fetchError);
+          return null;
+        }
       }
       
-      const blob = await response.blob();
-      
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      // Baixar do Supabase Storage
+      try {
+        const { data, error } = await supabase.storage
+          .from('sector_photos')
+          .download(path);
+          
+        if (error || !data) {
+          console.error('Erro ao baixar foto do Supabase:', error);
+          return null;
+        }
+        
+        // Converter para URL local
+        return URL.createObjectURL(data);
+      } catch (downloadError) {
+        console.error('Erro ao baixar do Supabase:', downloadError);
+        return null;
+      }
     } catch (error) {
-      console.error('Erro ao baixar foto:', error);
+      console.error('Erro ao fazer download de foto:', error);
       return null;
     }
   },
@@ -127,12 +176,20 @@ export const photoService = {
    */
   updateTagPhotoUrl: async (sectorId: string, url: string): Promise<boolean> => {
     try {
+      if (!sectorId || !url) return false;
+      
       const { error } = await supabase
         .from('sectors')
-        .update({ tag_photo_url: url })
+        .update({ 
+          tag_photo_url: url,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', sectorId);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar URL da foto da TAG:', error);
+        return false;
+      }
       
       return true;
     } catch (error) {

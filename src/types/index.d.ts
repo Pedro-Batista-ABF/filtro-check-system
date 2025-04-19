@@ -8,6 +8,7 @@ export interface Photo {
   serviceId: string;
   file?: File | null;
   cycle_id?: string | null;
+  metadata?: Record<string, any>;
 }
 
 export type SectorStatus =

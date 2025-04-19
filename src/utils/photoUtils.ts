@@ -57,7 +57,7 @@ export const addNoCacheParam = (url: string): string => {
     urlObj.searchParams.set('t', Date.now().toString());
     return urlObj.toString();
   } catch (e) {
-    // Se não conseguir processar como URL, retornar original
+    // Se não conseguir processar como URL, retornar original com parâmetro
     return `${url}?t=${Date.now()}`;
   }
 };
