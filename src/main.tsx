@@ -7,6 +7,7 @@ import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Suspense } from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ApiContextExtendedProvider } from '@/contexts/ApiContextExtended';
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -131,20 +132,22 @@ setupConnectionMonitoring();
 root.render(
   <BrowserRouter>
     <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <Suspense fallback={<div>Carregando...</div>}>
-          <App />
-        </Suspense>
-        <Toaster 
-          position="top-right"
-          richColors 
-          closeButton
-          expand={false}
-          toastOptions={{
-            duration: 5000,
-          }}
-        />
-      </QueryClientProvider>
+      <ApiContextExtendedProvider>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<div>Carregando...</div>}>
+            <App />
+          </Suspense>
+          <Toaster 
+            position="top-right"
+            richColors 
+            closeButton
+            expand={false}
+            toastOptions={{
+              duration: 5000,
+            }}
+          />
+        </QueryClientProvider>
+      </ApiContextExtendedProvider>
     </AuthProvider>
   </BrowserRouter>
 );
