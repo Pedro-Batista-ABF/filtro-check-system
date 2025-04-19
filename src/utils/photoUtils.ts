@@ -20,8 +20,8 @@ export const extractPathFromUrl = (url: string): string | null => {
     
     // Alternativa se o formato for diferente
     const match = url.match(/sector_photos\/([^?]+)/);
-    if (match && match[1]) {
-      return `sector_photos/${match[1]}`;
+    if (match && match[0]) { // Aqui usamos match[0] para pegar o path completo
+      return match[0];
     }
     
     console.warn("Formato de URL não reconhecido:", url);
@@ -58,7 +58,8 @@ export const addNoCacheParam = (url: string): string => {
     return urlObj.toString();
   } catch (e) {
     // Se não conseguir processar como URL, retornar original com parâmetro
-    return `${url}?t=${Date.now()}`;
+    const hasParams = url.includes('?');
+    return `${url}${hasParams ? '&' : '?'}t=${Date.now()}`;
   }
 };
 
@@ -87,12 +88,11 @@ export const checkImageExists = async (url: string): Promise<boolean> => {
     const response = await fetch(url, { 
       method: 'HEAD',
       signal: controller.signal,
-      mode: 'no-cors',
       cache: 'no-store'
     });
     
     clearTimeout(timeoutId);
-    return true;
+    return response.ok;
   } catch (error) {
     console.warn('Erro ao verificar se imagem existe:', error);
     return false;
@@ -112,4 +112,59 @@ export const getImagePlaceholder = (): string => {
 export const isDataUrl = (url: string | undefined): boolean => {
   if (!url) return false;
   return url.startsWith('data:');
+};
+
+/**
+ * Corrige URL duplicadas no path do Supabase Storage
+ */
+export const fixDuplicatedStoragePath = (url: string): string => {
+  if (!url) return url;
+  
+  // Corrigir caso de duplicação de 'sector_photos/sector_photos'
+  const duplicatePathPattern = /(sector_photos\/sector_photos)/;
+  if (duplicatePathPattern.test(url)) {
+    return url.replace(duplicatePathPattern, 'sector_photos');
+  }
+  
+  return url;
+};
+
+/**
+ * Tenta várias estratégias para obter uma URL válida de imagem
+ */
+export const getValidImageUrl = async (url: string): Promise<string | null> => {
+  if (!url) return null;
+  
+  // Verificar se é uma URL de dados (base64)
+  if (isDataUrl(url)) return url;
+  
+  try {
+    // Adicionar parâmetro para evitar cache
+    const noCacheUrl = addNoCacheParam(url);
+    
+    // Tentar verificar se a URL é acessível diretamente
+    try {
+      const exists = await checkImageExists(noCacheUrl);
+      if (exists) return noCacheUrl;
+    } catch (e) {
+      console.warn('Erro ao verificar URL diretamente:', e);
+    }
+    
+    // Se falhar, tentar corrigir possíveis problemas na URL
+    const fixedUrl = fixDuplicatedStoragePath(url);
+    if (fixedUrl !== url) {
+      const fixedNoCacheUrl = addNoCacheParam(fixedUrl);
+      try {
+        const exists = await checkImageExists(fixedNoCacheUrl);
+        if (exists) return fixedNoCacheUrl;
+      } catch (e) {
+        console.warn('Erro ao verificar URL corrigida:', e);
+      }
+    }
+    
+    return null;
+  } catch (e) {
+    console.error('Erro ao processar URL da imagem:', e);
+    return null;
+  }
 };

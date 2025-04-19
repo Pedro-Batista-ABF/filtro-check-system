@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { photoService } from "@/services/photoService";
 import { toast } from "sonner";
-import { isValidUrl } from "@/utils/photoUtils";
+import { isValidUrl, fixDuplicatedStoragePath } from "@/utils/photoUtils";
 
 export function useTagPhotoUpload() {
   const handleTagPhoto = async (tagPhotoUrl: string, cycleId: string, sectorId: string, userId: string) => {
@@ -15,16 +15,19 @@ export function useTagPhotoUpload() {
         throw new Error("URL da foto da TAG é inválida");
       }
       
+      // Corrigir possíveis problemas na URL
+      const fixedUrl = fixDuplicatedStoragePath(tagPhotoUrl);
+      
       // Verificar se a URL é acessível (com tratamento mais tolerante)
-      let finalUrl = tagPhotoUrl;
+      let finalUrl = fixedUrl;
       
       try {
-        const isAccessible = await photoService.verifyPhotoUrl(tagPhotoUrl);
+        const isAccessible = await photoService.verifyPhotoUrl(fixedUrl);
         
         if (!isAccessible) {
-          console.warn("URL da foto da TAG não é acessível, tentando regenerar:", tagPhotoUrl);
+          console.warn("URL da foto da TAG não é acessível, tentando regenerar:", fixedUrl);
           
-          const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
+          const regeneratedUrl = photoService.regeneratePublicUrl(fixedUrl);
           if (regeneratedUrl) {
             console.log("URL regenerada:", regeneratedUrl);
             finalUrl = regeneratedUrl;

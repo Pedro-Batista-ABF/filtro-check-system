@@ -1,7 +1,7 @@
 
 import { Sector } from "@/types";
 import { useEffect, useState } from "react";
-import { addNoCacheParam } from "@/utils/photoUtils";
+import { addNoCacheParam, fixDuplicatedStoragePath, isDataUrl } from "@/utils/photoUtils";
 import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -16,17 +16,30 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
   const [imgUrl, setImgUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+  
+  // Função para preparar URL da imagem
+  const prepareImageUrl = (url?: string): string => {
+    if (!url) return "";
+    
+    // Se for URL de dados, retornar diretamente
+    if (isDataUrl(url)) return url;
+    
+    // Corrigir possíveis problemas e adicionar anti-cache
+    const fixedUrl = fixDuplicatedStoragePath(url);
+    return addNoCacheParam(fixedUrl);
+  };
   
   useEffect(() => {
     // Reset states when sector changes
     setImgError(false);
     setIsLoading(true);
+    setRetryCount(0);
     
     // Carregar imagem diretamente
     if (sector.tagPhotoUrl) {
-      // Adicionar parâmetro para evitar cache
-      const noCacheUrl = addNoCacheParam(sector.tagPhotoUrl);
-      setImgUrl(noCacheUrl);
+      setImgUrl(prepareImageUrl(sector.tagPhotoUrl));
     } else {
       setImgUrl("");
     }
@@ -36,7 +49,15 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
 
   const handleImageError = async () => {
     console.warn("Erro ao carregar imagem diretamente:", imgUrl);
-    setImgError(true);
+    
+    // Se já tentamos muitas vezes, desistir
+    if (retryCount >= maxRetries) {
+      console.warn(`Excedido número máximo de tentativas (${maxRetries})`);
+      setImgError(true);
+      return;
+    }
+    
+    setRetryCount(prev => prev + 1);
     
     // Tentar alternativas automaticamente
     if (sector.tagPhotoUrl) {
@@ -46,7 +67,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
         if (regeneratedUrl && regeneratedUrl !== sector.tagPhotoUrl) {
           console.log("Tentando URL regenerada:", regeneratedUrl);
           setImgUrl(addNoCacheParam(regeneratedUrl));
-          setImgError(false);
+          // Não resetar o erro até que a imagem carregue com sucesso
           return;
         }
         
@@ -56,10 +77,16 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
           console.log("Usando URL de download direto como fallback");
           setImgUrl(downloadUrl);
           setImgError(false);
+          return;
         }
+        
+        setImgError(true);
       } catch (error) {
         console.error("Falha no fallback da foto da TAG:", error);
+        setImgError(true);
       }
+    } else {
+      setImgError(true);
     }
   };
   
@@ -68,22 +95,41 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     
     setIsRefreshing(true);
     setImgError(false);
+    setRetryCount(0);
     
     try {
-      // Tentar URL direta com parâmetro de cache
-      const directUrl = addNoCacheParam(sector.tagPhotoUrl);
-      setImgUrl(directUrl);
+      // Se for URL de dados, não precisa recarregar
+      if (isDataUrl(sector.tagPhotoUrl)) {
+        setImgUrl(sector.tagPhotoUrl);
+        setImgError(false);
+        toast.success("Imagem atualizada com sucesso");
+        return;
+      }
+      
+      // Corrigir possíveis problemas na URL
+      const fixedUrl = fixDuplicatedStoragePath(sector.tagPhotoUrl);
+      
+      // Verificar se a URL é acessível diretamente
+      const isAccessible = await photoService.verifyPhotoUrl(fixedUrl);
+      
+      if (isAccessible) {
+        setImgUrl(addNoCacheParam(fixedUrl));
+        setImgError(false);
+        toast.success("Imagem atualizada com sucesso");
+        return;
+      }
       
       // Tentar regenerar URL
-      const regeneratedUrl = photoService.regeneratePublicUrl(sector.tagPhotoUrl);
+      const regeneratedUrl = photoService.regeneratePublicUrl(fixedUrl);
       if (regeneratedUrl) {
         setImgUrl(addNoCacheParam(regeneratedUrl));
+        setImgError(false);
         toast.success("Imagem atualizada com sucesso");
         return;
       }
       
       // Tentar download direto como último recurso
-      const downloadUrl = await photoService.downloadPhoto(sector.tagPhotoUrl);
+      const downloadUrl = await photoService.downloadPhoto(fixedUrl);
       if (downloadUrl) {
         setImgUrl(downloadUrl);
         setImgError(false);

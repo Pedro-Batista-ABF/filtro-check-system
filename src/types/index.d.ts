@@ -11,6 +11,10 @@ export interface Photo {
   metadata?: Record<string, any>;
 }
 
+export interface PhotoWithFile extends Photo {
+  file: File;
+}
+
 export type SectorStatus =
   | "peritagemPendente"
   | "emExecucao"

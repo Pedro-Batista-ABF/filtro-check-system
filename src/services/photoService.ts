@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { extractPathFromUrl } from "@/utils/photoUtils";
+import { extractPathFromUrl, addNoCacheParam, fixDuplicatedStoragePath } from "@/utils/photoUtils";
 
 /**
  * Serviço para operações com fotos
@@ -39,22 +39,23 @@ export const photoService = {
       // Verificar se a URL é válida
       if (!url || typeof url !== 'string') return false;
 
+      // Tentar corrigir URL com problemas de duplicação de path
+      const fixedUrl = fixDuplicatedStoragePath(url);
+      
       // Tentar acessar a URL para verificar se está disponível
       // Usando no-cors para evitar problemas de CORS
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000);
       
       try {
-        await fetch(url, { 
+        const response = await fetch(fixedUrl, { 
           method: 'HEAD', 
-          mode: 'no-cors',
           signal: controller.signal,
           cache: 'no-store'
         });
         
-        // No-cors sempre retorna 'opaque' response sem status, então não podemos verificar status
         clearTimeout(timeoutId);
-        return true;
+        return response.ok;
       } catch (e) {
         console.warn("Erro ao verificar URL com fetch:", e);
         return false;
@@ -72,6 +73,9 @@ export const photoService = {
     try {
       if (!url || typeof url !== 'string') return null;
 
+      // Tentar corrigir possível duplicação no caminho
+      url = fixDuplicatedStoragePath(url);
+
       // Extrair o caminho da URL usando a função auxiliar
       const path = extractPathFromUrl(url);
       if (!path) {
@@ -79,10 +83,13 @@ export const photoService = {
         return null;
       }
       
+      // Remover possíveis duplicações no path extraído
+      const cleanPath = path.replace(/^sector_photos\/sector_photos\//, 'sector_photos/');
+      
       // Gerar nova URL pública
       const { data } = supabase.storage
         .from('sector_photos')
-        .getPublicUrl(path);
+        .getPublicUrl(cleanPath);
       
       if (!data || !data.publicUrl) {
         console.warn("Falha ao regenerar URL pública");
@@ -124,11 +131,14 @@ export const photoService = {
   },
 
   /**
-   * Baixa uma foto do bucket do Storage como base64
+   * Baixa uma foto do bucket do Storage como base64 ou URL local
    */
   downloadPhoto: async (url: string): Promise<string | null> => {
     try {
       if (!url || typeof url !== 'string') return null;
+
+      // Corrigir problemas comuns na URL
+      url = fixDuplicatedStoragePath(url);
 
       // Extrair caminho do arquivo da URL
       const path = extractPathFromUrl(url);
@@ -148,14 +158,31 @@ export const photoService = {
         }
       }
       
+      // Limpar path duplicado se existir
+      const cleanPath = path.replace(/^sector_photos\/sector_photos\//, 'sector_photos/');
+      
       // Baixar do Supabase Storage
       try {
         const { data, error } = await supabase.storage
           .from('sector_photos')
-          .download(path);
+          .download(cleanPath);
           
         if (error || !data) {
           console.error('Erro ao baixar foto do Supabase:', error);
+          
+          // Se falhar com o path limpo, tentar com o path original
+          if (cleanPath !== path) {
+            const fallbackResult = await supabase.storage
+              .from('sector_photos')
+              .download(path);
+              
+            if (fallbackResult.error || !fallbackResult.data) {
+              throw new Error('Falha em todas as tentativas de download');
+            }
+            
+            return URL.createObjectURL(fallbackResult.data);
+          }
+          
           return null;
         }
         
