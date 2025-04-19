@@ -37,13 +37,17 @@ export function useTagPhotoUpload() {
       }
     
       // Verificar se a foto já existe para evitar duplicação
-      const { data: existingTagPhoto } = await supabase
+      const { data: existingTagPhoto, error: queryError } = await supabase
         .from('photos')
         .select('id')
         .eq('url', finalUrl)
         .eq('type', 'tag')
         .eq('cycle_id', cycleId)
         .maybeSingle();
+
+      if (queryError) {
+        console.warn("Erro ao verificar existência da foto da TAG:", queryError);
+      }
         
       if (existingTagPhoto) {
         console.log("Foto da TAG já existe, ignorando:", finalUrl);

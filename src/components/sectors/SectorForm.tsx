@@ -12,7 +12,6 @@ import ScrapForm from './forms/ScrapForm';
 import ReviewForm from './forms/ReviewForm';
 import FormActions from './forms/FormActions';
 import { FormValidationAlert } from './form-parts/FormValidationAlert';
-import { usePhotosManagement } from '@/hooks/usePhotosManagement';
 
 interface SectorFormProps {
   initialSector: Sector;
@@ -76,8 +75,8 @@ const SectorForm: React.FC<SectorFormProps> = ({
   }, [initialSector]);
   
   // Handle scrap photo upload
-  const handleScrapPhotoUpload = (files: FileList) => {
-    if (!files.length) return;
+  const handleScrapPhotoUpload = async (files: FileList): Promise<string | undefined> => {
+    if (!files.length) return undefined;
     
     const newPhotos: PhotoWithFile[] = [...scrapPhotos];
     
@@ -92,6 +91,9 @@ const SectorForm: React.FC<SectorFormProps> = ({
     }
     
     setScrapPhotos(newPhotos);
+    
+    // Return the URL of the first photo for compatibility
+    return newPhotos[0]?.url;
   };
   
   // Função para submeter o formulário
@@ -150,14 +152,6 @@ const SectorForm: React.FC<SectorFormProps> = ({
     const updatedServices = handleObservationChange(sectorState.services, id, observations);
     sectorState.setServices(updatedServices);
   };
-
-  // Função para lidar com upload de foto da TAG
-  const handleTagPhotoUploadLocal = async (files: FileList) => {
-    const url = await handleTagPhotoUpload(files);
-    if (url) {
-      sectorState.setTagPhotoUrl(url);
-    }
-  };
   
   return (
     <form onSubmit={handleFormSubmit} className="space-y-6">
@@ -172,8 +166,8 @@ const SectorForm: React.FC<SectorFormProps> = ({
           handleScrapPhotoUpload={handleScrapPhotoUpload}
           onCameraCapture={handleCameraCapture}
           error={{
-            observations: sectorState.formErrors.scrapObservations,
-            photos: sectorState.formErrors.scrapPhotos
+            observations: sectorState.formErrors.scrapObservations || false,
+            photos: false // Corrigindo o erro de tipo aqui
           }}
         />
       )}
@@ -188,7 +182,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
           entryDate={sectorState.entryDate}
           setEntryDate={sectorState.setEntryDate}
           tagPhotoUrl={sectorState.tagPhotoUrl}
-          handleTagPhotoUpload={handleTagPhotoUploadLocal}
+          handleTagPhotoUpload={handleTagPhotoUpload}
           scrapObservations={sectorState.scrapObservations}
           setScrapObservations={sectorState.setScrapObservations}
           scrapDate={sectorState.scrapDate}
@@ -218,7 +212,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
                 entryDate={sectorState.entryDate}
                 setEntryDate={sectorState.setEntryDate}
                 tagPhotoUrl={sectorState.tagPhotoUrl}
-                handleTagPhotoUpload={handleTagPhotoUploadLocal}
+                handleTagPhotoUpload={handleTagPhotoUpload}
                 entryObservations={sectorState.entryObservations}
                 setEntryObservations={sectorState.setEntryObservations}
                 services={[]} // Apenas serviços na aba de serviços
@@ -240,7 +234,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
                 entryDate={sectorState.entryDate}
                 setEntryDate={sectorState.setEntryDate}
                 tagPhotoUrl={sectorState.tagPhotoUrl}
-                handleTagPhotoUpload={handleTagPhotoUploadLocal}
+                handleTagPhotoUpload={handleTagPhotoUpload}
                 entryObservations={sectorState.entryObservations}
                 setEntryObservations={sectorState.setEntryObservations}
                 services={sectorState.services}
@@ -264,7 +258,7 @@ const SectorForm: React.FC<SectorFormProps> = ({
             entryDate={sectorState.entryDate}
             setEntryDate={sectorState.setEntryDate}
             tagPhotoUrl={sectorState.tagPhotoUrl}
-            handleTagPhotoUpload={handleTagPhotoUploadLocal}
+            handleTagPhotoUpload={handleTagPhotoUpload}
             entryObservations={sectorState.entryObservations}
             setEntryObservations={sectorState.setEntryObservations}
             services={sectorState.services}

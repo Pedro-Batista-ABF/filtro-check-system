@@ -31,9 +31,14 @@ export function TagPhotoField({
   useEffect(() => {
     // Quando a URL muda, atualizar a preview diretamente sem verificações demoradas
     if (tagPhotoUrl) {
-      // Simplesmente definir a URL com cache-busting para evitar cache
-      setPreviewUrl(addNoCacheParam(tagPhotoUrl));
-      setPreviewError(false);
+      try {
+        // Simplesmente definir a URL com cache-busting para evitar cache
+        setPreviewUrl(addNoCacheParam(tagPhotoUrl));
+        setPreviewError(false);
+      } catch (error) {
+        console.error("Erro ao processar URL da tag:", error);
+        setPreviewError(true);
+      }
     } else {
       setPreviewUrl(undefined);
       setPreviewError(false);
@@ -45,13 +50,17 @@ export function TagPhotoField({
     
     setUploading(true);
     try {
-      const newUrl = await onPhotoUpload(e.target.files);
-      if (newUrl) {
-        setPreviewUrl(addNoCacheParam(newUrl));
-        setPreviewError(false);
-      } else {
-        throw new Error("Erro ao obter URL da foto");
+      // Chamar a função de upload passada via props
+      const result = await onPhotoUpload(e.target.files);
+      
+      // Verificar se temos um resultado válido
+      if (!result) {
+        throw new Error("Nenhuma URL retornada pelo upload");
       }
+      
+      // Atualizar a preview com a nova URL
+      setPreviewUrl(addNoCacheParam(result));
+      setPreviewError(false);
     } catch (error) {
       console.error('Erro ao fazer upload da foto da TAG:', error);
       toast.error("Erro ao fazer upload da foto da TAG");
@@ -70,6 +79,7 @@ export function TagPhotoField({
         // Tentar regenerar a URL e tentar novamente
         const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
         if (regeneratedUrl) {
+          console.log("URL regenerada:", regeneratedUrl);
           setPreviewUrl(addNoCacheParam(regeneratedUrl));
           return; // Tentar carregar novamente com a URL regenerada
         }

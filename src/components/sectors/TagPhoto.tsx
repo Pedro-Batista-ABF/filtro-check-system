@@ -27,6 +27,8 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
       // Adicionar parâmetro para evitar cache
       const noCacheUrl = addNoCacheParam(sector.tagPhotoUrl);
       setImgUrl(noCacheUrl);
+    } else {
+      setImgUrl("");
     }
     
     setIsLoading(false);

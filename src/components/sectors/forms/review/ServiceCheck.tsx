@@ -1,135 +1,93 @@
 
 import React, { useState } from 'react';
-import { Service, Photo } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ServicePhotos } from '../../service-parts/ServicePhotos';
-import { Camera } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import ServiceQuantity from "../../service-parts/ServiceQuantity";
+import { Service } from "@/types";
+import ServicePhotos from "../../service-parts/ServicePhotos";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ServiceCheckProps {
   service: Service;
-  onServiceChange: (service: Service) => void;
+  onChange: (id: string, checked: boolean) => void;
+  onQuantityChange: (id: string, quantity: number) => void;
+  onObservationChange: (id: string, observations: string) => void;
   onPhotoUpload: (id: string, files: FileList, type: "before" | "after") => void;
-  onCameraCapture: (e: React.MouseEvent, serviceId: string, type: "before" | "after") => void;
-  disabled?: boolean;
+  onCameraCapture?: (e: React.MouseEvent, serviceId: string) => void;
+  photoRequired?: boolean;
+  error?: boolean;
 }
 
 export default function ServiceCheck({
   service,
-  onServiceChange,
+  onChange,
+  onQuantityChange,
+  onObservationChange,
   onPhotoUpload,
   onCameraCapture,
-  disabled = false
+  photoRequired = true,
+  error = false
 }: ServiceCheckProps) {
-  const [showBeforePhotos, setShowBeforePhotos] = useState(true);
+  const hasPhotos = Array.isArray(service.photos) && service.photos.length > 0;
   
-  // Inicializar arrays vazios para evitar erros
-  const beforePhotos = service.photos?.filter(p => p.type === 'before') || [];
-  const afterPhotos = service.photos?.filter(p => p.type === 'after') || [];
-  
-  const handleCompletedChange = (checked: boolean) => {
-    const updatedService = {
-      ...service,
-      completed: checked
-    };
-    onServiceChange(updatedService);
+  const handleCheckboxChange = (checked: boolean) => {
+    onChange(service.id, checked);
   };
   
-  const handleAddAfterPhoto = (serviceId: string, files: FileList) => {
-    if (files.length === 0) return;
-    
-    if (!service.completed) {
-      toast.warning("Marque o serviço como concluído antes de adicionar fotos do depois");
-      return;
+  const handleCameraCapture = (e: React.MouseEvent) => {
+    if (onCameraCapture) {
+      onCameraCapture(e, service.id);
     }
-    
-    onPhotoUpload(serviceId, files, "after");
   };
-  
-  const handleCameraCapture = (e: React.MouseEvent, type: "before" | "after") => {
-    if (type === "after" && !service.completed) {
-      toast.warning("Marque o serviço como concluído antes de adicionar fotos do depois");
-      return;
-    }
-    
-    onCameraCapture(e, service.id, type);
-  };
-  
-  const togglePhotosView = () => {
-    setShowBeforePhotos(!showBeforePhotos);
-  };
-  
-  const hasBeforePhotos = beforePhotos.length > 0;
-  const hasAfterPhotos = afterPhotos.length > 0;
 
   return (
-    <Card className="mb-4">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium flex justify-between">
-          <div className="flex items-center">
-            <Checkbox
-              id={`service-${service.id}`}
-              checked={service.completed}
-              onCheckedChange={handleCompletedChange}
-              disabled={disabled}
-              className="mr-2"
-            />
-            <Label 
-              htmlFor={`service-${service.id}`}
-              className="cursor-pointer"
-            >
-              {service.name} ({service.quantity || 1})
-            </Label>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={togglePhotosView}
-            disabled={!hasBeforePhotos && !hasAfterPhotos}
-          >
-            {showBeforePhotos ? "Ver Depois" : "Ver Antes"}
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {showBeforePhotos ? (
-            <ServicePhotos
-              service={service}
-              photoType="before"
-              required={false}
-              onFileInputChange={() => {}}
-              disabled={true}
-              onPhotoUpload={onPhotoUpload}
-            />
-          ) : (
-            <ServicePhotos
-              service={service}
-              photoType="after"
-              required={service.completed}
-              onFileInputChange={(files) => handleAddAfterPhoto(service.id, files)}
-              disabled={disabled || !service.completed}
-              onCameraCapture={(e) => handleCameraCapture(e, "after")}
-              onPhotoUpload={onPhotoUpload}
-            />
-          )}
-          
-          {!showBeforePhotos && !hasAfterPhotos && service.completed && (
-            <div className="mt-2 flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => handleCameraCapture(e, "after")}
-                disabled={disabled || !service.completed}
+    <Card className={`${error ? 'border-red-500' : ''}`}>
+      <CardContent className="pt-6 px-4 pb-4">
+        <div className="flex items-start space-x-2">
+          <Checkbox
+            id={`service-${service.id}`}
+            checked={service.selected}
+            onCheckedChange={handleCheckboxChange}
+          />
+          <div className="grid gap-1.5 leading-none w-full">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center w-full">
+              <Label
+                htmlFor={`service-${service.id}`}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                <Camera className="h-4 w-4 mr-2" />
-                Capturar Foto do Depois
-              </Button>
+                {service.name}
+              </Label>
             </div>
-          )}
+            
+            {service.selected && (
+              <div className="mt-2 space-y-4">
+                <ServiceQuantity
+                  quantity={service.quantity || 1}
+                  onChange={(quantity) => onQuantityChange(service.id, quantity)}
+                />
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Observações</Label>
+                  <Textarea
+                    value={service.observations || ''}
+                    onChange={(e) => onObservationChange(service.id, e.target.value)}
+                    placeholder="Observações sobre o serviço..."
+                    className="resize-none h-20"
+                  />
+                </div>
+                
+                <ServicePhotos
+                  service={service}
+                  photoType="before"
+                  required={photoRequired}
+                  onFileInputChange={() => {}}
+                  onPhotoUpload={onPhotoUpload}
+                  onCameraCapture={handleCameraCapture}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

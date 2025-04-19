@@ -58,7 +58,7 @@ export const addNoCacheParam = (url: string): string => {
     return urlObj.toString();
   } catch (e) {
     // Se não conseguir processar como URL, retornar original
-    return url;
+    return `${url}?t=${Date.now()}`;
   }
 };
 
@@ -79,9 +79,24 @@ export const fileToBase64 = (file: File): Promise<string> => {
  * Implementação mais tolerante a erros - apenas faz a verificação básica
  */
 export const checkImageExists = async (url: string): Promise<boolean> => {
-  // Simplificando para tornar mais robusto - retornar true para permitir
-  // que o elemento <img> tente carregar e use fallback se necessário
-  return true;
+  try {
+    // Simplificando para tornar mais robusto - usar fetch com timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(url, { 
+      method: 'HEAD',
+      signal: controller.signal,
+      mode: 'no-cors',
+      cache: 'no-store'
+    });
+    
+    clearTimeout(timeoutId);
+    return true;
+  } catch (error) {
+    console.warn('Erro ao verificar se imagem existe:', error);
+    return false;
+  }
 };
 
 /**

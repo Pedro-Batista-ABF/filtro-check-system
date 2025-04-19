@@ -70,6 +70,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
         disabled={disabled}
         title={`Fotos ${photoTypeLabel}`}
         required={required}
+        onCameraCapture={onCameraCapture}
       />
     </div>
   );

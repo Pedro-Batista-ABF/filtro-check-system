@@ -104,6 +104,10 @@ export const photoService = {
       if (!url || typeof url !== 'string') return null;
 
       const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+      
       const blob = await response.blob();
       
       return new Promise((resolve, reject) => {
