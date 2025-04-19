@@ -16,10 +16,12 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { signIn, isAuthenticated } = useAuth();
+  const { signIn, isAuthenticated, refreshSession } = useAuth();
 
   useEffect(() => {
+    // Se já estiver autenticado, redirecionar para a página inicial
     if (isAuthenticated) {
+      console.log("Login: Usuário já autenticado, redirecionando...");
       navigate('/');
     }
   }, [isAuthenticated, navigate]);
@@ -35,8 +37,21 @@ const Login = () => {
       }
 
       console.log("Login: Tentando login com email:", email);
+      
+      // Verificar se signIn está disponível
+      if (typeof signIn !== 'function') {
+        console.error("Login: signIn não é uma função válida", signIn);
+        throw new Error('Erro interno: método de login não disponível');
+      }
+      
+      // Tenta fazer login
       await signIn(email, password);
+      
       console.log("Login: Login bem-sucedido");
+      
+      // Atualiza a sessão após o login
+      await refreshSession();
+      
       navigate('/');
     } catch (err: any) {
       const errorMessage = err.message || 'Falha no login. Verifique suas credenciais.';

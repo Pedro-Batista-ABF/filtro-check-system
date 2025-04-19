@@ -18,12 +18,13 @@ import RelatorioDetalhado from "@/pages/RelatorioDetalhado";
 import RelatorioPreview from "@/pages/RelatorioPreview";
 import Sucateamento from "@/pages/Sucateamento";
 import ScrapValidationForm from "@/pages/ScrapValidationForm";
+import AuthDiagnostic from "@/pages/AuthDiagnostic";
 
 // Components
 import PrivateRoute from "@/components/auth/PrivateRoute";
 
 function App() {
-  const { user, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">
@@ -34,8 +35,13 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+      {/* Rota de login - redireciona para / se já estiver autenticado */}
+      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
       
+      {/* Rota de diagnóstico de autenticação - acessível mesmo sem login */}
+      <Route path="/auth-diagnostic" element={<AuthDiagnostic />} />
+      
+      {/* Todas as rotas protegidas */}
       <Route path="/" element={<PrivateRoute />}>
         <Route index element={<Dashboard />} />
         
