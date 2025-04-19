@@ -1,55 +1,22 @@
 
 /**
- * Extrai o caminho do arquivo do Supabase Storage a partir da URL pública
- */
-export const extractPathFromUrl = (url: string): string | null => {
-  if (!url) return null;
-  
-  try {
-    // Formato padrão: https://xxxx.supabase.co/storage/v1/object/public/sector_photos/folder/file.jpg
-    const storageMatch = url.match(/storage\/v1\/object\/public\/([^?]+)/);
-    if (storageMatch && storageMatch[1]) {
-      return storageMatch[1];
-    }
-    
-    // Formato alternativo: https://xxxx.supabase.co/storage/v1/object/sector_photos/folder/file.jpg
-    const urlParts = url.split('/object/public/');
-    if (urlParts.length > 1) {
-      return urlParts[1];
-    }
-    
-    // Alternativa se o formato for diferente
-    const match = url.match(/sector_photos\/([^?]+)/);
-    if (match && match[0]) { // Aqui usamos match[0] para pegar o path completo
-      return match[0];
-    }
-    
-    console.warn("Formato de URL não reconhecido:", url);
-    return null;
-  } catch (e) {
-    console.error('Erro ao extrair caminho da URL:', e);
-    return null;
-  }
-};
-
-/**
  * Verifica se uma URL é válida
  */
-export const isValidUrl = (url: string | undefined): boolean => {
-  if (!url) return false;
+export function isValidUrl(urlString?: string): boolean {
+  if (!urlString) return false;
   
   try {
-    new URL(url);
+    new URL(urlString);
     return true;
   } catch (e) {
     return false;
   }
-};
+}
 
 /**
- * Adiciona um timestamp ao URL para evitar cache
+ * Adiciona um parâmetro para evitar cache em uma URL
  */
-export const addNoCacheParam = (url: string): string => {
+export function addNoCacheParam(url: string): string {
   if (!url) return url;
   
   try {
@@ -57,114 +24,106 @@ export const addNoCacheParam = (url: string): string => {
     urlObj.searchParams.set('t', Date.now().toString());
     return urlObj.toString();
   } catch (e) {
-    // Se não conseguir processar como URL, retornar original com parâmetro
-    const hasParams = url.includes('?');
-    return `${url}${hasParams ? '&' : '?'}t=${Date.now()}`;
+    console.warn('URL inválida ao adicionar parâmetro de cache:', url);
+    return url;
   }
-};
+}
 
 /**
- * Converte um Blob/File para Base64
+ * Verifica se uma string é uma URL de dados (data:image)
  */
-export const fileToBase64 = (file: File): Promise<string> => {
+export function isDataUrl(url?: string): boolean {
+  return !!url && typeof url === 'string' && url.startsWith('data:');
+}
+
+/**
+ * Extrai o caminho do arquivo da URL do Supabase Storage
+ */
+export function extractPathFromUrl(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  
+  try {
+    // Não processar URLs de dados
+    if (isDataUrl(url)) return null;
+    
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    
+    // Verificar se é uma URL do Supabase Storage
+    if (!pathname.includes('/storage/v1/object/public/')) {
+      return null;
+    }
+    
+    // Extrair o caminho após o nome do bucket
+    const parts = pathname.split('/storage/v1/object/public/');
+    if (parts.length !== 2) return null;
+    
+    const fullPath = parts[1];
+    
+    // Verificar se já temos o prefixo 'sector_photos/'
+    if (fullPath.startsWith('sector_photos/')) {
+      return fullPath;
+    }
+    
+    // Adicionar o prefixo se necessário
+    return `sector_photos/${fullPath}`;
+  } catch (e) {
+    console.error('Erro ao extrair caminho da URL:', e);
+    return null;
+  }
+}
+
+/**
+ * Corrige URLs com caminhos duplicados (problema comum)
+ */
+export function fixDuplicatedStoragePath(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  
+  try {
+    // Não processar URLs de dados
+    if (isDataUrl(url)) return url;
+    
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    
+    // Verificar se é uma URL do Supabase Storage
+    if (!pathname.includes('/storage/v1/object/public/')) {
+      return url;
+    }
+    
+    // Verificar duplicação do caminho sector_photos/sector_photos
+    if (pathname.includes('/sector_photos/sector_photos/')) {
+      return url; // Já está correto com o prefixo duplicado
+    }
+    
+    // Verificar se falta o prefixo do bucket no caminho
+    const parts = pathname.split('/storage/v1/object/public/');
+    if (parts.length === 2) {
+      const pathPart = parts[1];
+      
+      // Se o caminho não começa com 'sector_photos/', adicionar o prefixo
+      if (!pathPart.startsWith('sector_photos/')) {
+        const correctedPath = `/storage/v1/object/public/sector_photos/${pathPart}`;
+        const correctedUrl = url.replace(pathname, correctedPath);
+        return correctedUrl;
+      }
+    }
+    
+    return url;
+  } catch (e) {
+    console.warn('Erro ao corrigir caminho da URL:', e);
+    return url;
+  }
+}
+
+/**
+ * Converte um arquivo para base64
+ */
+export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
+    reader.onerror = error => reject(error);
   });
-};
-
-/**
- * Verifica se uma URL de imagem é acessível
- * Implementação mais tolerante a erros - apenas faz a verificação básica
- */
-export const checkImageExists = async (url: string): Promise<boolean> => {
-  try {
-    // Simplificando para tornar mais robusto - usar fetch com timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
-    const response = await fetch(url, { 
-      method: 'HEAD',
-      signal: controller.signal,
-      cache: 'no-store'
-    });
-    
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch (error) {
-    console.warn('Erro ao verificar se imagem existe:', error);
-    return false;
-  }
-};
-
-/**
- * Retorna um placeholder para imagens que falharam ao carregar
- */
-export const getImagePlaceholder = (): string => {
-  return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNmM2YzZjMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZW0gaW5kaXNwb27DrXZlbDwvdGV4dD48L3N2Zz4=';
-};
-
-/**
- * Verifica se uma URL é um Data URL (base64)
- */
-export const isDataUrl = (url: string | undefined): boolean => {
-  if (!url) return false;
-  return url.startsWith('data:');
-};
-
-/**
- * Corrige URL duplicadas no path do Supabase Storage
- */
-export const fixDuplicatedStoragePath = (url: string): string => {
-  if (!url) return url;
-  
-  // Corrigir caso de duplicação de 'sector_photos/sector_photos'
-  const duplicatePathPattern = /(sector_photos\/sector_photos)/;
-  if (duplicatePathPattern.test(url)) {
-    return url.replace(duplicatePathPattern, 'sector_photos');
-  }
-  
-  return url;
-};
-
-/**
- * Tenta várias estratégias para obter uma URL válida de imagem
- */
-export const getValidImageUrl = async (url: string): Promise<string | null> => {
-  if (!url) return null;
-  
-  // Verificar se é uma URL de dados (base64)
-  if (isDataUrl(url)) return url;
-  
-  try {
-    // Adicionar parâmetro para evitar cache
-    const noCacheUrl = addNoCacheParam(url);
-    
-    // Tentar verificar se a URL é acessível diretamente
-    try {
-      const exists = await checkImageExists(noCacheUrl);
-      if (exists) return noCacheUrl;
-    } catch (e) {
-      console.warn('Erro ao verificar URL diretamente:', e);
-    }
-    
-    // Se falhar, tentar corrigir possíveis problemas na URL
-    const fixedUrl = fixDuplicatedStoragePath(url);
-    if (fixedUrl !== url) {
-      const fixedNoCacheUrl = addNoCacheParam(fixedUrl);
-      try {
-        const exists = await checkImageExists(fixedNoCacheUrl);
-        if (exists) return fixedNoCacheUrl;
-      } catch (e) {
-        console.warn('Erro ao verificar URL corrigida:', e);
-      }
-    }
-    
-    return null;
-  } catch (e) {
-    console.error('Erro ao processar URL da imagem:', e);
-    return null;
-  }
-};
+}

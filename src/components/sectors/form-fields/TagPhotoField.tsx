@@ -40,6 +40,7 @@ export function TagPhotoField({
     try {
       // Corrigir possíveis problemas na URL
       const fixedUrl = fixDuplicatedStoragePath(url);
+      console.log('URL preparada para preview:', fixedUrl);
       
       // Adicionar parâmetro para evitar cache
       return addNoCacheParam(fixedUrl);
@@ -193,7 +194,7 @@ export function TagPhotoField({
         return;
       }
       
-      // Se não conseguir regenerar, tentar download direto
+      // Tentar download direto
       console.log("Tentando baixar a imagem diretamente...");
       const directUrl = await photoService.downloadPhoto(fixedUrl);
       

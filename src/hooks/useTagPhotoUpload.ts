@@ -17,6 +17,7 @@ export function useTagPhotoUpload() {
       
       // Corrigir possíveis problemas na URL
       const fixedUrl = fixDuplicatedStoragePath(tagPhotoUrl);
+      console.log("URL corrigida:", fixedUrl);
       
       // Verificar se a URL é acessível (com tratamento mais tolerante)
       let finalUrl = fixedUrl;

@@ -28,6 +28,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     
     // Corrigir possíveis problemas e adicionar anti-cache
     const fixedUrl = fixDuplicatedStoragePath(url);
+    console.log("URL da tag preparada:", fixedUrl);
     return addNoCacheParam(fixedUrl);
   };
   
