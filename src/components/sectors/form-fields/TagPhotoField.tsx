@@ -106,7 +106,7 @@ export function TagPhotoField({
       return;
     }
     
-    setRetryCount(prev => prev + A1);
+    setRetryCount(prev => prev + 1);
     
     // Primeiro, verificar se a URL está em um formato reconhecível
     if (!isValidUrl(previewUrl)) {

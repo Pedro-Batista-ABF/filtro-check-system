@@ -32,6 +32,8 @@ export type SectorOutcome =
   | "Reprovado"
   | "Sucateado";
 
+export type CycleOutcome = SectorOutcome;
+
 export interface ServiceType {
   id: string;
   name: string;

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
-import { SectorStatus, Sector, Service, ServiceType } from '@/types';
+import { SectorStatus, Sector, Service, ServiceType, CycleOutcome } from '@/types';
 import { ApiContext } from './ApiContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
@@ -35,7 +35,7 @@ const ApiContextExtendedContext = createContext<ApiContextExtendedValue>({
 // Provider do contexto
 export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ children }) => {
   const apiContext = useContext(ApiContext) || {};
-  const refreshData = apiContext.refreshData || (async () => {});
+  const refreshData = apiContext.refreshData ? apiContext.refreshData : async () => {};
   const { user } = useAuth();
 
   // Upload de uma foto
@@ -85,20 +85,23 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
           throw new Error('Usuário não autenticado');
         }
 
+        // Dados para inserção no banco
+        const sectorDataForDB = {
+          tag_number: sectorData.tagNumber,
+          tag_photo_url: sectorData.tagPhotoUrl,
+          nf_entrada: sectorData.entryInvoice,
+          data_entrada: sectorData.entryDate,
+          current_status: sectorData.status || 'peritagemPendente',
+          current_outcome: sectorData.outcome || 'EmAndamento',
+          cycle_count: sectorData.cycleCount || 1,
+          created_by: user.id,
+          updated_by: user.id,
+        };
+
         // Adicionar setor
         const { data: sectorResult, error: sectorError } = await supabase
           .from('sectors')
-          .insert({
-            tag_number: sectorData.tagNumber,
-            tag_photo_url: sectorData.tagPhotoUrl,
-            nf_entrada: sectorData.entryInvoice,
-            data_entrada: sectorData.entryDate,
-            current_status: sectorData.status || 'peritagemPendente',
-            current_outcome: sectorData.outcome || 'EmAndamento',
-            cycle_count: sectorData.cycleCount || 1,
-            created_by: user.id,
-            updated_by: user.id,
-          })
+          .insert(sectorDataForDB)
           .select();
 
         if (sectorError) {
@@ -155,19 +158,29 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
           throw new Error('Usuário não autenticado');
         }
 
+        // Dados para atualização no banco
+        const sectorDataForUpdate = {
+          tag_number: sectorData.tagNumber,
+          tag_photo_url: sectorData.tagPhotoUrl,
+          nf_entrada: sectorData.entryInvoice,
+          data_entrada: sectorData.entryDate,
+          current_status: sectorData.status,
+          current_outcome: sectorData.outcome as CycleOutcome | undefined,
+          updated_by: user.id,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Remover campos undefined
+        Object.keys(sectorDataForUpdate).forEach(key => {
+          if (sectorDataForUpdate[key] === undefined) {
+            delete sectorDataForUpdate[key];
+          }
+        });
+
         // Atualizar setor
         const { error: sectorError } = await supabase
           .from('sectors')
-          .update({
-            tag_number: sectorData.tagNumber,
-            tag_photo_url: sectorData.tagPhotoUrl,
-            nf_entrada: sectorData.entryInvoice,
-            data_entrada: sectorData.entryDate,
-            current_status: sectorData.status,
-            current_outcome: sectorData.outcome,
-            updated_by: user.id,
-            updated_at: new Date().toISOString(),
-          })
+          .update(sectorDataForUpdate)
           .eq('id', id);
 
         if (sectorError) {
