@@ -47,7 +47,6 @@ export const photoService = {
 
       // Corrigir possíveis problemas na URL
       const fixedUrl = fixDuplicatedStoragePath(url);
-      console.log(`Verificando URL: ${fixedUrl}`);
       
       // Tentar acessar a URL para verificar se está disponível
       const controller = new AbortController();

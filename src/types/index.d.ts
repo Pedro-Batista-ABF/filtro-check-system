@@ -1,38 +1,52 @@
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+}
 
-export type PhotoType = "before" | "after" | "tag" | "scrap";
+export type SectorStatus =
+  | 'peritagemPendente'
+  | 'emExecucao'
+  | 'pendenteChecagem'
+  | 'finalizado'
+  | 'rejeitado'
+  | 'aguardandoRetrabalho'
+  | 'sucateadoPendente'
+  | 'sucateadoAprovado'
+  | 'sucateadoRejeitado';
+
+export type CycleOutcome =
+  | 'EmAndamento'
+  | 'Aprovado'
+  | 'Reprovado'
+
+export interface Sector {
+  id: string;
+  tagNumber: string;
+  tagPhotoUrl?: string;
+  entryInvoice: string;
+  entryDate: string;
+  peritagemDate?: string;
+  services: Service[];
+  beforePhotos: Photo[];
+  afterPhotos: Photo[];
+  scrapPhotos: Photo[];
+  productionCompleted: boolean;
+  cycleCount: number;
+  status: SectorStatus;
+  outcome?: CycleOutcome;
+  updated_at?: string;
+  scrapObservations?: string;
+}
 
 export interface Photo {
   id: string;
   url: string;
-  type: PhotoType;
-  serviceId: string;
-  file?: File | null;
-  cycle_id?: string | null;
-  metadata?: Record<string, any>;
+  type: 'before' | 'after' | 'scrap' | 'tag';
+  serviceId?: string;
+  cycleId?: string;
 }
-
-export interface PhotoWithFile extends Photo {
-  file: File;
-}
-
-export type SectorStatus =
-  | "peritagemPendente"
-  | "emExecucao"
-  | "aguardandoPecas"
-  | "reparoEmAndamento"
-  | "qualidadePendente"
-  | "finalizado"
-  | "sucateadoPendente"
-  | "sucateado"
-  | "checagemFinalPendente";
-
-export type SectorOutcome =
-  | "EmAndamento"
-  | "Aprovado"
-  | "Reprovado"
-  | "Sucateado";
-
-export type CycleOutcome = SectorOutcome;
 
 export interface ServiceType {
   id: string;
@@ -45,31 +59,10 @@ export interface Service {
   name: string;
   description?: string;
   selected: boolean;
+  photos: Photo[];
   quantity?: number;
   observations?: string;
-  photos?: Photo[];
   completed?: boolean;
-  stage?: string;
-}
-
-export interface Sector {
-  id: string;
-  tagNumber: string;
-  tagPhotoUrl?: string;
-  entryInvoice: string;
-  entryDate?: string;
-  services?: Service[];
-  status: SectorStatus;
-  outcome?: SectorOutcome;
-  cycleCount: number;
-  entryObservations?: string;
-  updated_at?: string;
-  created_at?: string;
-  scrapObservations?: string;
-  scrapReturnInvoice?: string;
-  scrapReturnDate?: string;
-  scrapPhotos?: Photo[];
-  exitInvoice?: string;
-  exitDate?: string;
-  exitObservations?: string;
+  stage?: 'peritagem' | 'execucao' | 'checagem';
+  type?: string;
 }

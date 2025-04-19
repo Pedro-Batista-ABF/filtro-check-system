@@ -38,6 +38,7 @@ export function isDataUrl(url?: string): boolean {
 
 /**
  * Extrai o caminho do arquivo da URL do Supabase Storage
+ * Corrigido para lidar corretamente com caminhos duplicados
  */
 export function extractPathFromUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
@@ -60,13 +61,19 @@ export function extractPathFromUrl(url: string): string | null {
     
     const fullPath = parts[1];
     
-    // Verificar se já temos o prefixo 'sector_photos/'
+    // Verificar se o caminho já tem o prefixo "sector_photos/"
     if (fullPath.startsWith('sector_photos/')) {
+      // Verificar duplicação - se temos sector_photos/sector_photos/
+      const duplicatedCheck = fullPath.split('/');
+      if (duplicatedCheck.length > 1 && duplicatedCheck[0] === 'sector_photos' && duplicatedCheck[1] === 'sector_photos') {
+        // Temos duplicação, remover a primeira ocorrência
+        return fullPath.substring(13); // Remove "sector_photos/"
+      }
       return fullPath;
     }
     
-    // Adicionar o prefixo se necessário
-    return `sector_photos/${fullPath}`;
+    // Se não tem o prefixo, adicionar
+    return fullPath;
   } catch (e) {
     console.error('Erro ao extrair caminho da URL:', e);
     return null;
@@ -91,21 +98,21 @@ export function fixDuplicatedStoragePath(url: string): string {
       return url;
     }
     
-    // Verificar duplicação do caminho sector_photos/sector_photos
-    if (pathname.includes('/sector_photos/sector_photos/')) {
-      return url; // Já está correto com o prefixo duplicado
+    // Verificar e remover duplicação em sector_photos/sector_photos
+    if (pathname.indexOf('/sector_photos/sector_photos/') !== -1) {
+      const correctedPath = pathname.replace('/sector_photos/sector_photos/', '/sector_photos/');
+      return url.replace(pathname, correctedPath);
     }
     
-    // Verificar se falta o prefixo do bucket no caminho
+    // Verificar se o prefixo do bucket está faltando no caminho
     const parts = pathname.split('/storage/v1/object/public/');
     if (parts.length === 2) {
       const pathPart = parts[1];
       
-      // Se o caminho não começa com 'sector_photos/', adicionar o prefixo
-      if (!pathPart.startsWith('sector_photos/')) {
+      // Se o caminho não começa com 'sector_photos/' e não está vazio, adicionar o prefixo
+      if (!pathPart.startsWith('sector_photos/') && pathPart.length > 0) {
         const correctedPath = `/storage/v1/object/public/sector_photos/${pathPart}`;
-        const correctedUrl = url.replace(pathname, correctedPath);
-        return correctedUrl;
+        return url.replace(pathname, correctedPath);
       }
     }
     

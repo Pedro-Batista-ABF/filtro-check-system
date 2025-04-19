@@ -1,7 +1,7 @@
 
 import { sectorService } from './sectorService';
 import { serviceTypeService } from './serviceTypeService';
-import { photoService } from './photoService';
+import { photoService } from '@/services/photoService';
 
 // Implementação da função getSectorsByTag
 const getSectorsByTag = async (tagNumber: string) => {
@@ -27,9 +27,6 @@ const getSectorsByTag = async (tagNumber: string) => {
 // Upload photo function implementation
 const uploadPhoto = async (file: File, folder: string = 'general') => {
   try {
-    if (!photoService.uploadPhoto) {
-      throw new Error("Upload photo function not implemented in photoService");
-    }
     return await photoService.uploadPhoto(file, folder);
   } catch (error) {
     console.error("Error in uploadPhoto:", error);
