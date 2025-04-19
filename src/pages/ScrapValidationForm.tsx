@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sector, SectorStatus } from "@/types";
@@ -15,6 +14,7 @@ import { refreshAuthSession } from "@/integrations/supabase/client";
 import { validateSession } from "@/utils/sessionUtils";
 import SectorFormWrapper from "@/components/sectors/SectorFormWrapper";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -173,6 +173,36 @@ export default function ScrapValidationForm() {
       if (!result) {
         console.error("Resultado da atualização foi falso ou nulo");
         throw new Error("Falha ao atualizar o setor");
+      }
+      
+      // Verificar diretamente se a atualização do status foi bem-sucedida
+      const { data: checkData, error: checkError } = await supabase
+        .from('sectors')
+        .select('current_status')
+        .eq('id', sector.id)
+        .single();
+        
+      if (checkError) {
+        console.error("Erro ao verificar status após atualização:", checkError);
+      } else if (checkData.current_status !== 'sucateado') {
+        console.warn("Status não atualizado corretamente. Tentando forçar...");
+        
+        // Tentativa de forçar atualização do status
+        const { error: forceError } = await supabase
+          .from('sectors')
+          .update({ 
+            current_status: 'sucateado',
+            current_outcome: 'Sucateado',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sector.id);
+          
+        if (forceError) {
+          console.error("Erro ao forçar atualização do status:", forceError);
+          toast.error("Erro ao forçar atualização do status");
+        } else {
+          console.log("Status forçado com sucesso para 'sucateado'");
+        }
       }
       
       toast.success("Setor validado e sucateado com sucesso!");
