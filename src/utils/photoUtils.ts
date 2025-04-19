@@ -24,7 +24,7 @@ export const extractPathFromUrl = (url: string): string | null => {
       return `sector_photos/${match[1]}`;
     }
     
-    console.error("Formato de URL não reconhecido:", url);
+    console.warn("Formato de URL não reconhecido:", url);
     return null;
   } catch (e) {
     console.error('Erro ao extrair caminho da URL:', e);
@@ -75,17 +75,24 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 /**
  * Verifica se uma URL de imagem é acessível
+ * Implementação mais robusta com timeout e tratamento de CORS
  */
 export const checkImageExists = async (url: string): Promise<boolean> => {
   try {
+    // Usar fetch com método HEAD para verificar rapidamente a existência da imagem
+    // Configurado com timeout para evitar esperas longas
     const response = await fetch(url, { 
       method: 'HEAD',
       cache: 'no-store',
+      credentials: 'omit', // Evita problemas de CORS com credenciais
+      mode: 'no-cors', // Tenta contornar restrições de CORS
       signal: AbortSignal.timeout(3000)
     });
+    
+    // Se conseguimos uma resposta, a imagem existe
     return response.ok;
   } catch (error) {
-    console.error(`Erro ao verificar URL da imagem: ${url}`, error);
+    console.warn(`Erro ao verificar URL da imagem via HEAD: ${url}`, error);
     return false;
   }
 };

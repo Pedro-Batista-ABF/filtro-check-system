@@ -62,24 +62,6 @@ export const photoService = {
       const publicUrl = addNoCacheParam(data.publicUrl);
       console.log(`Upload concluído. URL pública: ${publicUrl}`);
       
-      // Verificar se a URL é acessível
-      try {
-        const isAccessible = await checkImageExists(publicUrl);
-        
-        if (!isAccessible) {
-          console.warn(`A URL gerada pode não ser acessível: ${publicUrl}`);
-          
-          // Tentar regenerar a URL
-          const regeneratedUrl = photoService.regeneratePublicUrl(publicUrl);
-          if (regeneratedUrl) {
-            console.log("URL regenerada:", regeneratedUrl);
-            return addNoCacheParam(regeneratedUrl);
-          }
-        }
-      } catch (urlCheckError) {
-        console.error('Erro ao verificar URL:', urlCheckError);
-      }
-      
       return publicUrl;
     } catch (error) {
       console.error('Erro ao fazer upload de foto:', error);
@@ -118,12 +100,46 @@ export const photoService = {
 
   /**
    * Verifica se uma URL de foto é válida e acessível
+   * Inclui fallback para caso a verificação HEAD falhe
    */
   verifyPhotoUrl: async (url: string): Promise<boolean> => {
     try {
       if (!url) return false;
       
-      return await checkImageExists(url);
+      // Primeiro, tente verificar usando HEAD (mais rápido)
+      try {
+        const isAccessible = await checkImageExists(url);
+        if (isAccessible) {
+          return true;
+        }
+      } catch (headError) {
+        console.warn('Erro na verificação HEAD, tentando fallback:', headError);
+      }
+      
+      // Fallback: Tentar criar uma imagem e verificar se carrega
+      // Este método é mais tolerante a problemas de CORS/headers
+      return new Promise((resolve) => {
+        const img = new Image();
+        const timeoutId = setTimeout(() => {
+          console.warn('Timeout ao carregar imagem:', url);
+          img.onload = null;
+          img.onerror = null;
+          resolve(false);
+        }, 5000);
+
+        img.onload = () => {
+          clearTimeout(timeoutId);
+          resolve(true);
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeoutId);
+          console.warn('Erro ao carregar imagem:', url);
+          resolve(false);
+        };
+        
+        img.src = addNoCacheParam(url);
+      });
     } catch (error) {
       console.error('Erro ao verificar URL da foto:', error);
       return false;
