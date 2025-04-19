@@ -155,32 +155,29 @@ export default function ScrapValidationForm() {
       }
       
       console.log("Validando sucateamento do setor:", sector.id);
-      console.log("Dados a serem enviados:", {
-        ...data,
-        status: 'sucateado',
-        scrapValidated: true
-      });
       
       // Ensure that the status is set to 'sucateado' with proper type
       const updatedData = { 
         ...data, 
         status: 'sucateado' as SectorStatus,
+        current_status: 'sucateado',
+        current_outcome: 'Sucateado',
         scrapValidated: true,
         outcome: 'Sucateado'
       };
+      
+      console.log("Dados a serem enviados:", updatedData);
       
       // First try with the API
       let result;
       try {
         result = await updateSector(sector.id, updatedData);
+        if (!result) {
+          throw new Error("Falha na resposta da API updateSector");
+        }
       } catch (updateError) {
         console.error("Erro na API updateSector:", updateError);
         throw new Error(`Falha ao atualizar o setor: ${updateError instanceof Error ? updateError.message : 'Erro desconhecido'}`);
-      }
-      
-      if (!result) {
-        console.error("Resultado da atualização foi falso ou nulo");
-        throw new Error("Falha ao atualizar o setor");
       }
       
       // Verificar diretamente se a atualização do status foi bem-sucedida
@@ -197,7 +194,7 @@ export default function ScrapValidationForm() {
         console.warn("Status não atualizado corretamente. Tentando forçar...");
         toast.warning("Status não atualizado corretamente, tentando forçar atualização");
         
-        // Tentativa de forçar atualização do status
+        // Tentativa de forçar atualização do status diretamente
         const { error: forceError } = await supabase
           .from('sectors')
           .update({ 
