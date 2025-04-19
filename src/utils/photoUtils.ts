@@ -96,3 +96,18 @@ export const checkImageExists = async (url: string): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Retorna um placeholder para imagens que falharam ao carregar
+ */
+export const getImagePlaceholder = (): string => {
+  return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNmM2YzZjMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij5JbWFnZW0gaW5kaXNwb27DrXZlbDwvdGV4dD48L3N2Zz4=';
+};
+
+/**
+ * Verifica se uma URL é um Data URL (base64)
+ */
+export const isDataUrl = (url: string | undefined): boolean => {
+  if (!url) return false;
+  return url.startsWith('data:');
+};

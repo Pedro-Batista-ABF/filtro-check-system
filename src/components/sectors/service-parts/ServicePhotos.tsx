@@ -1,9 +1,12 @@
 
 import React from 'react';
-import { Service, PhotoWithFile, PhotoType } from '@/types';
+import { Service } from '@/types';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import PhotoUpload from '../PhotoUpload';
+
+// Definir os tipos de fotos possíveis
+type PhotoType = "before" | "after";
 
 interface ServicePhotosProps {
   service: Service;
@@ -25,13 +28,15 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   onPhotoUpload
 }) => {
   const photoTypeLabel = photoType === "before" ? "Antes" : "Depois";
-  const photos = service.photos || [];
+  
+  // Garantir que photos é sempre um array válido
+  const photos = Array.isArray(service.photos) ? service.photos : [];
   
   // Filtrar fotos pelo tipo (antes/depois)
   const filteredPhotos = photos.filter(p => p.type === photoType);
   
   // Convert to PhotoWithFile type to satisfy the component props
-  const photoWithFiles: PhotoWithFile[] = filteredPhotos.map(photo => ({
+  const photoWithFiles = filteredPhotos.map(photo => ({
     ...photo,
     id: photo.id,
     url: photo.url,
@@ -59,28 +64,15 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
         </Label>
       </div>
 
-      {!hasPhotos ? (
-        <div className={cn(
-          "border-2 border-dashed rounded-md p-4 text-center",
-          required && !hasPhotos ? "border-red-300" : "border-gray-200",
-          "bg-gray-50"
-        )}>
-          <p className="text-sm text-gray-500">
-            {disabled 
-              ? "Upload desativado" 
-              : `Adicione fotos ${photoTypeLabel.toLowerCase()} do serviço`}
-          </p>
-        </div>
-      ) : (
-        <PhotoUpload
-          photos={photoWithFiles}
-          onChange={handleFileChange}
-          disabled={disabled}
-          title={`Fotos ${photoTypeLabel}`}
-          required={required}
-          onCameraCapture={onCameraCapture}
-        />
-      )}
+      {/* Sempre usar o componente PhotoUpload, independentemente de ter fotos ou não */}
+      <PhotoUpload
+        photos={photoWithFiles}
+        onChange={handleFileChange}
+        disabled={disabled}
+        title={`Fotos ${photoTypeLabel}`}
+        required={required}
+        onCameraCapture={onCameraCapture}
+      />
     </div>
   );
 };

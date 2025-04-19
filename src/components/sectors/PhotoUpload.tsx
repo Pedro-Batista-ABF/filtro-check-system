@@ -21,7 +21,7 @@ interface PhotoUploadProps {
 }
 
 export default function PhotoUpload({ 
-  photos, 
+  photos = [], // Garantir valor padrão para evitar undefined
   onChange, 
   disabled = false, 
   title = "Adicionar fotos", 
@@ -44,7 +44,10 @@ export default function PhotoUpload({
     const processPhotos = async () => {
       const newPhotoUrls: Record<string, string> = {};
       
-      for (const photo of photos) {
+      // Garantir que photos é sempre um array, mesmo que undefined
+      const safePhotos = Array.isArray(photos) ? photos : [];
+      
+      for (const photo of safePhotos) {
         const photoId = photo.id || `temp-${Date.now()}`;
         
         if (photo.url) {
@@ -230,10 +233,13 @@ export default function PhotoUpload({
     }
   };
 
+  // Garantir que photos seja sempre um array
+  const safePhotos = Array.isArray(photos) ? photos : [];
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {photos && photos.map((photo, index) => {
+        {safePhotos.map((photo, index) => {
           const photoId = photo.id || `temp-${index}`;
           const photoUrl = getPhotoUrl(photo);
           const hasError = imageErrors[photoId];
@@ -322,6 +328,7 @@ export default function PhotoUpload({
           );
         })}
         
+        {/* Botão de upload sempre visível, independentemente de haver fotos ou não */}
         <Button
           type="button"
           variant="outline"
