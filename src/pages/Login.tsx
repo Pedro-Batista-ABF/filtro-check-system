@@ -16,7 +16,7 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { signIn, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -34,7 +34,7 @@ const Login = () => {
         throw new Error('Por favor, preencha todos os campos');
       }
 
-      await login(email, password);
+      await signIn(email, password);
       toast.success("Login realizado com sucesso");
       navigate('/');
     } catch (err: any) {
