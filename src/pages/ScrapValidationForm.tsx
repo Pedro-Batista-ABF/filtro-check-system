@@ -8,12 +8,13 @@ import { Card } from "@/components/ui/card";
 import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import ConnectionStatus from "@/components/peritagem/ConnectionStatus";
 import { checkSupabaseConnection } from "@/utils/connectionUtils";
 import { refreshAuthSession } from "@/integrations/supabase/client";
 import { validateSession } from "@/utils/sessionUtils";
 import SectorFormWrapper from "@/components/sectors/SectorFormWrapper";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ScrapValidationForm() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function ScrapValidationForm() {
   const { updateSector, getSectorById } = useApi();
   const [sector, setSector] = useState<Sector | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
@@ -54,10 +56,14 @@ export default function ScrapValidationForm() {
     const fetchSector = async () => {
       if (!id) {
         toast.error("ID do setor não fornecido.");
+        setError("ID do setor não fornecido");
+        setLoading(false);
         return;
       }
 
       setLoading(true);
+      setError(null);
+      
       try {
         // Forçar refresh da sessão antes de buscar o setor
         await refreshAuthSession();
@@ -68,21 +74,37 @@ export default function ScrapValidationForm() {
           toast.error("Sessão inválida", {
             description: "Por favor, faça login novamente."
           });
+          setError("Sessão inválida. Por favor, faça login novamente.");
           navigate('/login');
           return;
         }
+        
+        console.log(`Buscando setor ${id} para validação de sucateamento...`);
         
         // Buscar o setor
         const sectorData = await getSectorById(id);
         
         if (!sectorData) {
-          throw new Error("Setor não encontrado");
+          throw new Error("Setor não encontrado ou você não tem permissão para acessá-lo");
         }
         
-        setSector(sectorData);
+        console.log("Setor carregado:", sectorData);
+        
+        // Verificar se o setor está no status correto para sucateamento
+        if (sectorData.status !== 'sucateadoPendente') {
+          toast.error(`Setor não está pendente para sucateamento (status atual: ${sectorData.status})`, {
+            description: "Apenas setores marcados como pendentes de sucateamento podem ser validados."
+          });
+          setError(`Este setor não está marcado como pendente para sucateamento. Status atual: ${sectorData.status}`);
+          setSector(sectorData); // Ainda definir o setor para exibir informações
+        } else {
+          setSector(sectorData);
+        }
       } catch (error) {
         console.error("Erro ao buscar setor:", error);
-        toast.error("Erro ao buscar informações do setor.");
+        const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+        toast.error(`Erro ao buscar informações do setor: ${errorMessage}`);
+        setError(`Não foi possível carregar o setor: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
@@ -119,6 +141,8 @@ export default function ScrapValidationForm() {
     }
 
     setSaving(true);
+    setError(null);
+    
     try {
       // Forçar refresh da sessão antes de atualizar o setor
       await refreshAuthSession();
@@ -155,7 +179,9 @@ export default function ScrapValidationForm() {
       navigate('/sucateamento');
     } catch (error) {
       console.error("Erro ao atualizar setor:", error);
-      toast.error(`Erro ao atualizar o setor: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      toast.error(`Erro ao atualizar o setor: ${errorMessage}`);
+      setError(`Falha ao validar sucateamento: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -174,6 +200,7 @@ export default function ScrapValidationForm() {
           const sectorData = await getSectorById(id);
           if (sectorData) {
             setSector(sectorData);
+            setError(null);
             toast.success("Conexão restaurada!");
           }
         }
@@ -188,7 +215,11 @@ export default function ScrapValidationForm() {
     }
   };
 
-  if (loading || !sector) {
+  const handleBack = () => {
+    navigate('/sucateamento');
+  };
+
+  if (loading) {
     return (
       <PageLayoutWrapper>
         <div className="p-6 flex justify-center items-center">
@@ -208,26 +239,47 @@ export default function ScrapValidationForm() {
               status={connectionStatus} 
               onRetryConnection={handleRetryConnection}
             />
-            <Button variant="outline" onClick={() => navigate('/sucateamento')}>
+            <Button variant="outline" onClick={handleBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Voltar
             </Button>
           </div>
         </div>
-        <Card className="border-none shadow-lg">
-          <div className="p-6">
-            {sector && (
-              <SectorFormWrapper 
-                initialSector={sector}
-                onSubmit={handleSubmit}
-                mode="scrap"
-                photoRequired={true}
-                isLoading={saving}
-                disableEntryFields={true}
-              />
-            )}
-          </div>
-        </Card>
+        
+        {error ? (
+          <Card className="border-none shadow-lg">
+            <div className="p-6">
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+              
+              <div className="flex justify-center mt-4">
+                <Button variant="default" onClick={handleRetryConnection} className="mr-2">
+                  Tentar novamente
+                </Button>
+                <Button variant="outline" onClick={handleBack}>
+                  Voltar para lista
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card className="border-none shadow-lg">
+            <div className="p-6">
+              {sector && (
+                <SectorFormWrapper 
+                  initialSector={sector}
+                  onSubmit={handleSubmit}
+                  mode="scrap"
+                  photoRequired={true}
+                  isLoading={saving}
+                  disableEntryFields={true}
+                />
+              )}
+            </div>
+          </Card>
+        )}
       </div>
     </PageLayoutWrapper>
   );

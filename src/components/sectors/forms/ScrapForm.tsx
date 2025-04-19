@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, ImageIcon, Camera, AlertCircle } from "lucide-react";
+import { CalendarIcon, ImageIcon, Camera, AlertCircle, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PhotoWithFile } from "@/types";
@@ -102,10 +102,24 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
                 <div><strong>NF Entrada:</strong> {entryInvoice || "N/A"}</div>
                 <div><strong>Data Entrada:</strong> {entryDate ? format(entryDate, "dd/MM/yyyy") : "N/A"}</div>
               </div>
+              {tagPhotoUrl && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium mb-1">Foto da TAG:</p>
+                  <img 
+                    src={tagPhotoUrl} 
+                    alt="Foto da TAG" 
+                    className="h-20 w-auto object-cover rounded-md border"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                </div>
+              )}
             </div>
             
             <div className="border-t pt-4">
-              <h3 className="font-medium mb-2">Motivo do Sucateamento</h3>
+              <h3 className="font-medium mb-2">Motivo do Sucateamento*</h3>
               <Textarea
                 id="scrapObservations"
                 value={scrapObservations}
@@ -249,6 +263,13 @@ const ScrapForm: React.FC<ScrapFormProps> = ({
             <AlertCircle className="h-4 w-4 text-yellow-800" />
             <AlertDescription className="text-yellow-800">
               Ao validar o sucateamento, o setor será <strong>permanentemente</strong> marcado como sucateado no sistema.
+            </AlertDescription>
+          </Alert>
+          
+          <Alert className="mt-2 bg-blue-50 border-blue-200">
+            <FileText className="h-4 w-4 text-blue-800" />
+            <AlertDescription className="text-blue-800">
+              Certifique-se de que todos os dados estão corretos antes de validar. Esta ação não pode ser desfeita.
             </AlertDescription>
           </Alert>
         </CardContent>
