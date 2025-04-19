@@ -1,5 +1,5 @@
 
-export type PhotoType = "before" | "after" | "tag";
+export type PhotoType = "before" | "after" | "tag" | "scrap";
 
 export interface Photo {
   id: string;

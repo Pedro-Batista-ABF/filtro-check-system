@@ -34,8 +34,8 @@ const ApiContextExtendedContext = createContext<ApiContextExtendedValue>({
 
 // Provider do contexto
 export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ children }) => {
-  const apiContext = useContext(ApiContext);
-  const { refreshData } = apiContext || {}; // Fix destructuring error by adding fallback
+  const apiContext = useContext(ApiContext) || {};
+  const refreshData = apiContext.refreshData || (async () => {});
   const { user } = useAuth();
 
   // Upload de uma foto
@@ -352,7 +352,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
       getSectorById,
       getSectorsByStatus: getSectorsByStatusCallback,
       getServiceTypes,
-      refreshData: refreshData || (async () => {}),
+      refreshData,
     }),
     [
       uploadPhoto,

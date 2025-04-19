@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Service, PhotoType } from '@/types';
+import { Service, Photo } from '@/types';
 import { Label } from '@/components/ui/label';
 import PhotoUpload from '../PhotoUpload';
 
@@ -36,7 +36,7 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
     ...photo,
     id: photo.id,
     url: photo.url,
-    type: photo.type as PhotoType || photoType,
+    type: photo.type || photoType,
     serviceId: service.id,
     file: undefined
   }));
