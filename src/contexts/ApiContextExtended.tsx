@@ -35,7 +35,11 @@ const ApiContextExtendedContext = createContext<ApiContextExtendedValue>({
 // Provider do contexto
 export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ children }) => {
   const apiContext = useContext(ApiContext);
-  const refreshData = apiContext?.refreshData || (async () => {});
+  const refreshData = async () => {
+    if (apiContext?.refreshData) {
+      await apiContext.refreshData();
+    }
+  };
   const { user } = useAuth();
 
   // Upload de uma foto
@@ -133,7 +137,6 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
             }));
 
           if (servicesToInsert.length > 0) {
-            // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
             const { error: servicesError } = await supabase
               .from('sector_services')
               .insert(servicesToInsert);
@@ -164,7 +167,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
         }
 
         // Dados para atualização no banco
-        const sectorDataForUpdate = {
+        const sectorDataForUpdate: Record<string, any> = {
           tag_number: sectorData.tagNumber,
           tag_photo_url: sectorData.tagPhotoUrl,
           nf_entrada: sectorData.entryInvoice,
@@ -183,11 +186,9 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
         });
 
         // Atualizar setor
-        // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
         const { error: sectorError } = await supabase
           .from('sectors')
           .update(sectorDataForUpdate)
-          // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
           .eq('id', id);
 
         if (sectorError) {
@@ -198,11 +199,9 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
         // Atualizar serviços do setor
         if (sectorData.services && sectorData.services.length > 0) {
           // Primeiro, remover serviços existentes
-          // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
           const { error: deleteError } = await supabase
             .from('sector_services')
             .delete()
-            // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
             .eq('sector_id', id);
 
           if (deleteError) {
@@ -223,7 +222,6 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
             }));
 
           if (servicesToInsert.length > 0) {
-            // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
             const { error: servicesError } = await supabase
               .from('sector_services')
               .insert(servicesToInsert);
@@ -251,7 +249,6 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
       const { data: sector, error: sectorError } = await supabase
         .from('sectors')
         .select('*')
-        // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
         .eq('id', id)
         .single();
 
@@ -261,11 +258,9 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
       }
 
       // Buscar serviços do setor
-      // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
       const { data: sectorServices, error: servicesError } = await supabase
         .from('sector_services')
         .select('*')
-        // @ts-ignore - Ignorar erro do TypeScript pois sabemos que o formato está correto
         .eq('sector_id', id);
 
       if (servicesError) {

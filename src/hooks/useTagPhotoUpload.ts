@@ -40,6 +40,29 @@ export function useTagPhotoUpload() {
         return true;
       }
 
+      // Atualizar a URL da foto da TAG diretamente na tabela sectors primeiro
+      const updateResult = await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
+      
+      if (!updateResult) {
+        console.error("Erro ao atualizar URL da foto da TAG no setor, tentativa alternativa");
+        
+        // Tentativa alternativa direta
+        const { error: sectorUpdateError } = await supabase
+          .from('sectors')
+          .update({
+            tag_photo_url: fixedUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', sectorId);
+          
+        if (sectorUpdateError) {
+          console.error("Erro na tentativa alternativa de atualizar URL da TAG:", sectorUpdateError);
+          throw new Error("Não foi possível atualizar a URL da foto da TAG no setor");
+        }
+      }
+      
+      console.log('Foto da TAG atualizada com sucesso na tabela sectors:', fixedUrl);
+
       // Inserir a foto da TAG no banco de dados
       console.log("Inserindo nova foto da TAG no banco de dados");
       const { data: photoData, error: tagPhotoError } = await supabase
@@ -66,28 +89,6 @@ export function useTagPhotoUpload() {
       
       console.log('Foto da TAG inserida com sucesso no banco de dados:', photoData);
       
-      // Atualizar a URL da foto da TAG diretamente na tabela sectors
-      const updateResult = await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
-      
-      if (!updateResult) {
-        console.error("Erro ao atualizar URL da foto da TAG no setor, tentativa alternativa");
-        
-        // Tentativa alternativa direta
-        const { error: sectorUpdateError } = await supabase
-          .from('sectors')
-          .update({
-            tag_photo_url: fixedUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', sectorId);
-          
-        if (sectorUpdateError) {
-          console.error("Erro na tentativa alternativa de atualizar URL da TAG:", sectorUpdateError);
-          throw new Error("Não foi possível atualizar a URL da foto da TAG no setor");
-        }
-      }
-      
-      console.log('Foto da TAG atualizada com sucesso na tabela sectors:', fixedUrl);
       return true;
     } catch (error) {
       console.error('Erro ao processar foto da TAG:', error);

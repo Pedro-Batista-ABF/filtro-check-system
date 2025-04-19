@@ -5,19 +5,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Camera } from "lucide-react";
 import { fixDuplicatedStoragePath } from "@/utils/photoUtils";
+import { useEffect, useState } from "react";
 
 interface TagPhotoProps {
   sector: Sector;
 }
 
 export default function TagPhoto({ sector }: TagPhotoProps) {
-  // Corrigir possíveis problemas na URL da foto da TAG
-  const tagPhotoUrl = sector.tagPhotoUrl ? fixDuplicatedStoragePath(sector.tagPhotoUrl) : '';
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+  
+  useEffect(() => {
+    if (sector?.tagPhotoUrl) {
+      // Corrigir possíveis problemas na URL da foto da TAG
+      const fixedUrl = fixDuplicatedStoragePath(sector.tagPhotoUrl);
+      setPhotoUrl(fixedUrl);
+      console.log("TagPhoto: URL processada:", fixedUrl);
+    } else {
+      setPhotoUrl('');
+    }
+  }, [sector?.tagPhotoUrl]);
   
   // Verificar se temos uma URL válida
-  const hasPhotoUrl = !!tagPhotoUrl && tagPhotoUrl.length > 0;
+  const hasPhotoUrl = !!photoUrl && photoUrl.length > 0;
 
-  console.log("TagPhoto rendering with URL:", tagPhotoUrl);
+  console.log("TagPhoto rendering with URL:", photoUrl);
 
   const handleImageLoadSuccess = () => {
     console.log("TagPhoto: imagem carregada com sucesso");
@@ -35,7 +46,7 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
           <div className="rounded-md overflow-hidden border">
             {hasPhotoUrl ? (
               <Image
-                src={tagPhotoUrl}
+                src={photoUrl}
                 alt={`Foto da TAG ${sector.tagNumber}`}
                 className="w-full h-auto max-h-40 object-contain bg-gray-50"
                 fallbackSrc="/placeholder-image.png"

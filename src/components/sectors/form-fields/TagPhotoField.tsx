@@ -26,6 +26,7 @@ export function TagPhotoField({
 }: TagPhotoFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | undefined>(tagPhotoUrl);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   // Update local URL when prop changes
   useEffect(() => {
@@ -35,12 +36,50 @@ export function TagPhotoField({
     }
   }, [tagPhotoUrl]);
   
+  // Simular progresso de upload para feedback visual
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (uploading) {
+      setUploadProgress(0);
+      
+      timer = setInterval(() => {
+        setUploadProgress(prev => {
+          // Limite o progresso a 95% até que o upload seja confirmado
+          if (prev < 95) {
+            return prev + 5;
+          }
+          return prev;
+        });
+      }, 200);
+    } else if (uploadProgress > 0) {
+      setUploadProgress(100);
+      timer = setTimeout(() => {
+        setUploadProgress(0);
+      }, 800);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [uploading]);
+  
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
     setUploading(true);
     try {
       console.log("Iniciando upload da foto da TAG...");
+      
+      // Verificar tamanho do arquivo (10MB max)
+      const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Arquivo muito grande", {
+          description: "O tamanho máximo permitido é 10MB"
+        });
+        return;
+      }
+      
       // Chamar a função de upload passada via props
       const result = await onPhotoUpload(e.target.files);
       
@@ -76,14 +115,24 @@ export function TagPhotoField({
         {required && <span className="text-red-500 ml-1">*</span>}
       </Label>
       <div className="flex space-x-2">
-        <Input
-          id="tagPhoto"
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className={`flex-1 ${error ? "border-red-500" : ""}`}
-          disabled={uploading || disabled}
-        />
+        <div className="relative flex-1">
+          <Input
+            id="tagPhoto"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className={`flex-1 ${error ? "border-red-500" : ""}`}
+            disabled={uploading || disabled}
+          />
+          {uploading && uploadProgress > 0 && (
+            <div className="absolute bottom-0 left-0 w-full bg-gray-200 h-1">
+              <div 
+                className="bg-primary h-1 transition-all" 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          )}
+        </div>
         <Button 
           variant="outline" 
           size="icon"
@@ -95,7 +144,14 @@ export function TagPhotoField({
         </Button>
       </div>
       
-      {(localPhotoUrl || tagPhotoUrl) && (
+      {uploading && (
+        <div className="flex items-center text-sm text-muted-foreground">
+          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          <span>Fazendo upload... {uploadProgress}%</span>
+        </div>
+      )}
+      
+      {(localPhotoUrl || tagPhotoUrl) && !uploading && (
         <div className="mt-2">
           <Image 
             src={localPhotoUrl || tagPhotoUrl} 
