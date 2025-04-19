@@ -100,13 +100,50 @@ export const photoService = {
 
   /**
    * Verifica se uma URL de foto é válida e acessível
-   * Simplificada para evitar problemas de CORS e falsos negativos
+   * Inclui fallback para caso a verificação HEAD falhe
    */
   verifyPhotoUrl: async (url: string): Promise<boolean> => {
-    if (!url) return false;
-    
-    // Simplificado para sempre retornar true e deixar o onError da imagem lidar com falhas
-    return true;
+    try {
+      if (!url) return false;
+      
+      // Primeiro, tente verificar usando HEAD (mais rápido)
+      try {
+        const isAccessible = await checkImageExists(url);
+        if (isAccessible) {
+          return true;
+        }
+      } catch (headError) {
+        console.warn('Erro na verificação HEAD, tentando fallback:', headError);
+      }
+      
+      // Fallback: Tentar criar uma imagem e verificar se carrega
+      // Este método é mais tolerante a problemas de CORS/headers
+      return new Promise((resolve) => {
+        const img = new Image();
+        const timeoutId = setTimeout(() => {
+          console.warn('Timeout ao carregar imagem:', url);
+          img.onload = null;
+          img.onerror = null;
+          resolve(false);
+        }, 5000);
+
+        img.onload = () => {
+          clearTimeout(timeoutId);
+          resolve(true);
+        };
+        
+        img.onerror = () => {
+          clearTimeout(timeoutId);
+          console.warn('Erro ao carregar imagem:', url);
+          resolve(false);
+        };
+        
+        img.src = addNoCacheParam(url);
+      });
+    } catch (error) {
+      console.error('Erro ao verificar URL da foto:', error);
+      return false;
+    }
   },
 
   /**

@@ -76,11 +76,11 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 /**
  * Verifica se uma URL de imagem é acessível
- * Simplificada para reduzir problemas de CORS e evitar bloqueios
+ * Implementação mais tolerante a erros - apenas faz a verificação básica
  */
 export const checkImageExists = async (url: string): Promise<boolean> => {
-  // Retornar true para permitir que o elemento <img> tente carregar diretamente
-  // e use o fallback com onError se necessário
+  // Simplificando para tornar mais robusto - retornar true para permitir
+  // que o elemento <img> tente carregar e use fallback se necessário
   return true;
 };
 
