@@ -30,7 +30,15 @@ export default function Checagem() {
   
   // Aplicar filtros
   useEffect(() => {
-    let result = [...sectors];
+    let result: Sector[] = [];
+    
+    // Certifique-se de que sectors é um array válido antes de usar spread
+    if (sectors && Array.isArray(sectors)) {
+      result = [...sectors];
+    } else {
+      console.warn("Sectors is not an array or is undefined:", sectors);
+      result = [];
+    }
     
     // Filtrar por TAG
     if (tagFilter) {
@@ -53,6 +61,7 @@ export default function Checagem() {
       const end = parse(endDate, "yyyy-MM-dd", new Date());
       
       result = result.filter(sector => {
+        if (!sector.entryDate) return false;
         const sectorDate = new Date(sector.entryDate);
         return isWithinInterval(sectorDate, { start, end });
       });
@@ -62,6 +71,7 @@ export default function Checagem() {
       const start = parse(startDate, "yyyy-MM-dd", new Date());
       
       result = result.filter(sector => {
+        if (!sector.entryDate) return false;
         const sectorDate = new Date(sector.entryDate);
         return isAfter(sectorDate, start) || format(sectorDate, "yyyy-MM-dd") === startDate;
       });
@@ -71,6 +81,7 @@ export default function Checagem() {
       const end = parse(endDate, "yyyy-MM-dd", new Date());
       
       result = result.filter(sector => {
+        if (!sector.entryDate) return false;
         const sectorDate = new Date(sector.entryDate);
         return isBefore(sectorDate, end) || format(sectorDate, "yyyy-MM-dd") === endDate;
       });
@@ -81,6 +92,7 @@ export default function Checagem() {
       const filterDateStr = format(dateFilter, "yyyy-MM-dd");
       
       result = result.filter(sector => {
+        if (!sector.entryDate) return false;
         const sectorDateStr = format(new Date(sector.entryDate), "yyyy-MM-dd");
         return sectorDateStr === filterDateStr;
       });
