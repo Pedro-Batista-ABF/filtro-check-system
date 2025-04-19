@@ -60,8 +60,8 @@ export default function SectorCard({ sector }: SectorCardProps) {
 
   const status = getStatusInfo(sector.status);
   
-  // Make sure services exists before filtering
-  const selectedServices = sector.services ? 
+  // Make sure services exists and is an array before filtering
+  const selectedServices = sector.services && Array.isArray(sector.services) ? 
     sector.services.filter(service => service.selected) : 
     [];
 
@@ -76,10 +76,10 @@ export default function SectorCard({ sector }: SectorCardProps) {
           </Badge>
         </div>
         <CardDescription>
-          NF Entrada: {sector.entryInvoice}
+          NF Entrada: {sector.entryInvoice || "N/A"}
         </CardDescription>
         <CardDescription>
-          Data: {new Date(sector.entryDate).toLocaleDateString('pt-BR')}
+          Data: {sector.entryDate ? new Date(sector.entryDate).toLocaleDateString('pt-BR') : "N/A"}
         </CardDescription>
         
         {/* Production Completion Badge */}

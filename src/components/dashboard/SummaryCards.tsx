@@ -26,7 +26,7 @@ export function SummaryCards() {
         const { count: peritagemCount, error: peritagemError } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'peritagemPendente');
+          .eq('current_status', 'peritagemPendente' as any);
           
         if (peritagemError) throw peritagemError;
         setEmPeritagem(peritagemCount || 0);
@@ -35,7 +35,7 @@ export function SummaryCards() {
         const { count: execucaoCount, error: execucaoError } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'emExecucao');
+          .eq('current_status', 'emExecucao' as any);
           
         if (execucaoError) throw execucaoError;
         setEmExecucao(execucaoCount || 0);
@@ -44,7 +44,7 @@ export function SummaryCards() {
         const { count: checagemCount, error: checagemError } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'emChecagem');
+          .eq('current_status', 'emChecagem' as any);
           
         if (checagemError) throw checagemError;
         setEmChecagem(checagemCount || 0);
@@ -53,7 +53,7 @@ export function SummaryCards() {
         const { count: concluidosCount, error: concluidosError } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'concluido');
+          .eq('current_status', 'concluido' as any);
           
         if (concluidosError) throw concluidosError;
         setConcluidos(concluidosCount || 0);
@@ -62,7 +62,7 @@ export function SummaryCards() {
         const { count: sucateadosCount, error: sucateadosError } = await supabase
           .from('sectors')
           .select('*', { count: 'exact', head: true })
-          .eq('current_status', 'sucateado');
+          .eq('current_status', 'sucateado' as any);
           
         if (sucateadosError) throw sucateadosError;
         setSucateados(sucateadosCount || 0);

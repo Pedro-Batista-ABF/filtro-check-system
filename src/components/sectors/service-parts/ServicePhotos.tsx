@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import PhotoUpload from '../PhotoUpload';
 
 // Definir os tipos de fotos possíveis
-type PhotoType = "before" | "after";
+export type PhotoType = "before" | "after";
 
 interface ServicePhotosProps {
   service: Service;

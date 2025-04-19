@@ -1,9 +1,9 @@
 import React, { createContext, useState, useContext, ReactNode, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Sector, Service, Photo } from '@/types';
+import { Sector, Service, Photo, SectorStatus } from '@/types';
 import { toast } from 'sonner';
 import { photoService } from '@/services/photoService';
-import { sectorService } from '@/services/sectorService';
+import { sectorService } from '@/services/supabase/sectorService';
 
 interface ApiContextValue {
   loading: boolean;
@@ -20,6 +20,7 @@ interface ApiContextValue {
   updateSector: (id: string, data: Partial<Sector>) => Promise<boolean>;
   refreshData: () => Promise<void>;
   getSectorById: (id: string) => Promise<Sector | null>;
+  getSectorsByStatus: (status: SectorStatus) => Promise<Sector[]>;
 }
 
 const ApiContext = createContext<ApiContextValue | undefined>(undefined);
@@ -143,7 +144,7 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
               service_id: serviceId,
               type: photo.type
             }
-          });
+          } as any);
           
         if (error) {
           console.error("Erro ao inserir foto:", error);
@@ -160,6 +161,39 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
     }
   };
 
+  // Implementação para getSectorsByStatus
+  const getSectorsByStatus = useCallback(async (status: SectorStatus): Promise<Sector[]> => {
+    console.log(`Buscando setores com status: ${status}`);
+    setLoading(true);
+    
+    try {
+      // Verificar se a conexão com Supabase e usuário estão OK
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("Usuário não autenticado");
+        throw new Error("Usuário não autenticado");
+      }
+      
+      console.log("Usuário autenticado:", user.id);
+      
+      // Obter todos os setores (usando a função existente em sectorService)
+      const allSectors = await sectorService.getAllSectors();
+      
+      // Filtra os setores pelo status solicitado
+      const filteredSectors = allSectors.filter(sector => sector.status === status);
+      
+      console.log(`Encontrados ${filteredSectors.length} setores com status ${status}`);
+      
+      return filteredSectors;
+    } catch (error) {
+      console.error(`Erro ao buscar setores com status ${status}:`, error);
+      setError(`Falha ao buscar setores com status ${status}`);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Implementação completa de getSectorById
   const getSectorById = useCallback(async (id: string): Promise<Sector | null> => {
     console.log(`Buscando setor com ID: ${id}`);
@@ -174,7 +208,7 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
       const { data: sectorData, error: sectorError } = await supabase
         .from('sectors')
         .select('*')
-        .eq('id', id)
+        .eq('id', id as any)
         .single();
         
       if (sectorError) {
@@ -202,7 +236,7 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
       const { data: cycleData, error: cycleError } = await supabase
         .from('cycles')
         .select('*')
-        .eq('sector_id', id)
+        .eq('sector_id', id as any)
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -228,7 +262,7 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
           afterPhotos: [],
           scrapPhotos: [],
           productionCompleted: false,
-          status: sectorData.current_status as any || 'peritagemPendente',
+          status: sectorData.current_status as SectorStatus || 'peritagemPendente',
           outcome: sectorData.current_outcome as any || 'EmAndamento',
           cycleCount: sectorData.cycle_count || 1,
           updated_at: sectorData.updated_at
@@ -679,7 +713,8 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
     addSector,
     updateSector,
     refreshData,
-    getSectorById
+    getSectorById,
+    getSectorsByStatus
   };
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

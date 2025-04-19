@@ -10,6 +10,7 @@ import SectorGrid from '@/components/sectors/SectorGrid';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 export default function Execucao() {
   const navigate = useNavigate();
@@ -53,6 +54,10 @@ export default function Execucao() {
     navigate(`/execucao/${sector.id}`);
   };
   
+  const handleTryAgain = () => {
+    window.location.reload();
+  };
+  
   const HeaderExtra = (
     <ConnectionStatus 
       status={connectionStatus} 
@@ -77,12 +82,12 @@ export default function Execucao() {
             <CardContent className="p-6">
               <div className="text-center">
                 <p className="text-red-500">{error}</p>
-                <button 
-                  onClick={() => window.location.reload()}
+                <Button 
+                  onClick={handleTryAgain}
                   className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
                 >
                   Tentar novamente
-                </button>
+                </Button>
               </div>
             </CardContent>
           </Card>
