@@ -1,8 +1,10 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "@/pages/LoginPage";
 import { useAuth } from "@/contexts/AuthContext";
-import PrivateRoute from "@/components/auth/PrivateRoute";
+import { Loader2 } from "lucide-react";
+
+// Pages
+import LoginPage from "@/pages/LoginPage";
 import Dashboard from "@/pages/Dashboard";
 import Peritagem from "@/pages/Peritagem";
 import PeritagemForm from "@/pages/PeritagemForm";
@@ -12,21 +14,27 @@ import Checagem from "@/pages/Checagem";
 import CheckagemFinal from "@/pages/CheckagemFinal";
 import Concluido from "@/pages/Concluido";
 import Relatorios from "@/pages/Relatorios";
-import RelatorioPreview from "@/pages/RelatorioPreview";
 import RelatorioDetalhado from "@/pages/RelatorioDetalhado";
+import RelatorioPreview from "@/pages/RelatorioPreview";
 import Sucateamento from "@/pages/Sucateamento";
 import ScrapValidationForm from "@/pages/ScrapValidationForm";
 
-function App() {
-  const { isLoading } = useAuth();
+// Components
+import PrivateRoute from "@/components/auth/PrivateRoute";
 
-  if (isLoading) {
-    return <div>Carregando...</div>;
+function App() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <span className="ml-2">Carregando...</span>
+    </div>;
   }
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
       
       <Route path="/" element={<PrivateRoute />}>
         <Route index element={<Dashboard />} />
