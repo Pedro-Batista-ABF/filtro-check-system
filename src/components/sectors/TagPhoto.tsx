@@ -10,13 +10,16 @@ interface TagPhotoProps {
 }
 
 export default function TagPhoto({ sector }: TagPhotoProps) {
+  // Ensure we have a valid tag photo URL
+  const hasPhotoUrl = !!sector.tagPhotoUrl && sector.tagPhotoUrl.length > 0;
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
         <div className="flex flex-col space-y-2">
           <Label className="text-sm font-medium">TAG: {sector.tagNumber}</Label>
           <div className="rounded-md overflow-hidden border">
-            {sector.tagPhotoUrl ? (
+            {hasPhotoUrl ? (
               <Image
                 src={sector.tagPhotoUrl}
                 alt={`Foto da TAG ${sector.tagNumber}`}

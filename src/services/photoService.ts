@@ -165,14 +165,24 @@ export const photoService = {
    */
   updateTagPhotoUrl: async (sectorId: string, url: string): Promise<boolean> => {
     try {
-      if (!sectorId || !url) return false;
+      if (!sectorId || !url) {
+        console.error("ID do setor ou URL inválidos:", { sectorId, url });
+        return false;
+      }
       
       console.log(`Atualizando URL da foto da TAG para o setor ${sectorId}`);
+      
+      // Garantir que a URL é válida antes de salvar
+      const fixedUrl = fixDuplicatedStoragePath(url);
+      if (!fixedUrl) {
+        console.error("URL inválida após correção");
+        return false;
+      }
       
       const { error } = await supabase
         .from('sectors')
         .update({ 
-          tag_photo_url: url,
+          tag_photo_url: fixedUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', sectorId);
@@ -182,7 +192,7 @@ export const photoService = {
         return false;
       }
       
-      console.log('URL da foto da TAG atualizada com sucesso');
+      console.log('URL da foto da TAG atualizada com sucesso:', fixedUrl);
       return true;
     } catch (error) {
       console.error('Erro ao atualizar URL da foto da TAG:', error);

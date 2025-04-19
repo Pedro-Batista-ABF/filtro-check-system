@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ interface TagPhotoFieldProps {
   onCameraCapture: (e: React.MouseEvent) => void;
   error?: boolean;
   required?: boolean;
+  disabled?: boolean;
 }
 
 export function TagPhotoField({
@@ -20,10 +21,18 @@ export function TagPhotoField({
   onPhotoUpload,
   onCameraCapture,
   error = false,
-  required = false
+  required = false,
+  disabled = false
 }: TagPhotoFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | undefined>(tagPhotoUrl);
+  
+  // Update local URL when prop changes
+  useEffect(() => {
+    if (tagPhotoUrl !== localPhotoUrl) {
+      setLocalPhotoUrl(tagPhotoUrl);
+    }
+  }, [tagPhotoUrl]);
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -63,14 +72,14 @@ export function TagPhotoField({
           accept="image/*"
           onChange={handleFileChange}
           className={`flex-1 ${error ? "border-red-500" : ""}`}
-          disabled={uploading}
+          disabled={uploading || disabled}
         />
         <Button 
           variant="outline" 
           size="icon"
           onClick={onCameraCapture}
           title="Usar câmera"
-          disabled={uploading}
+          disabled={uploading || disabled}
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
         </Button>

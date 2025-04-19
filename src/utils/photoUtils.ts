@@ -9,9 +9,11 @@ export function isValidUrl(urlString?: string): boolean {
     // Verificar se é uma URL de dados
     if (urlString.startsWith('data:')) return true;
     
+    // Para URLs de string, tenta criar um objeto URL para validar
     new URL(urlString);
     return true;
   } catch (e) {
+    console.warn("URL inválida:", urlString);
     return false;
   }
 }

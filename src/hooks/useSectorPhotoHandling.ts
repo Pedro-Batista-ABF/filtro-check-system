@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { photoService } from '@/services/photoService';
 import { Service, PhotoWithFile } from '@/types';
 import { useApi } from '@/contexts/ApiContextExtended';
-import { fileToBase64 } from '@/utils/photoUtils';
+import { fileToBase64, isValidUrl } from '@/utils/photoUtils';
 import { toast } from 'sonner';
 
 export const useSectorPhotoHandling = (
@@ -16,6 +16,7 @@ export const useSectorPhotoHandling = (
   const handleTagPhotoUpload = async (files: FileList): Promise<string | undefined> => {
     try {
       if (!files || files.length === 0) {
+        console.warn("Nenhum arquivo de foto da TAG selecionado");
         return undefined;
       }
       
@@ -40,6 +41,13 @@ export const useSectorPhotoHandling = (
       }
       
       console.log("URL da foto da TAG obtida com sucesso:", url);
+      
+      // Verificar se a URL é válida
+      if (!isValidUrl(url)) {
+        console.error("URL da foto da TAG obtida é inválida:", url);
+        throw new Error("URL da foto inválida");
+      }
+      
       return url;
     } catch (error) {
       console.error("Erro ao fazer upload da foto da TAG:", error);

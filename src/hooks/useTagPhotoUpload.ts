@@ -34,7 +34,10 @@ export function useTagPhotoUpload() {
         
       if (existingTagPhoto) {
         console.log("Foto da TAG já existe, ignorando:", fixedUrl);
-        return true; // Retornar true mesmo que a foto já exista
+        
+        // Garantir que a URL está atualizada no setor mesmo que a foto já exista
+        await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
+        return true;
       }
 
       // Inserir a foto da TAG no banco de dados
