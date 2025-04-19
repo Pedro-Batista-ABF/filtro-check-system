@@ -38,8 +38,8 @@ const ServicePhotos: React.FC<ServicePhotosProps> = ({
   const photoWithFiles = filteredPhotos.map(photo => ({
     ...photo,
     id: photo.id,
-    url: photo.url,
-    type: photo.type as PhotoType || photoType,
+    url: photo.url || '',
+    type: (photo.type as PhotoType) || photoType,
     serviceId: service.id,
     file: undefined
   }));

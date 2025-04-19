@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { photoService } from "@/services/photoService";
-import { isValidUrl } from "@/utils/photoUtils";
+import { isValidUrl, addNoCacheParam } from "@/utils/photoUtils";
 
 interface TagPhotoFieldProps {
   tagPhotoUrl?: string;
@@ -29,42 +29,11 @@ export function TagPhotoField({
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    // Verificar se a URL da foto é válida quando o componente monta ou a URL muda
+    // Quando a URL muda, atualizar a preview diretamente sem verificações demoradas
     if (tagPhotoUrl) {
-      setVerifying(true);
-      
-      const verifyPhoto = async () => {
-        if (!isValidUrl(tagPhotoUrl)) {
-          setPreviewError(true);
-          setVerifying(false);
-          return;
-        }
-        
-        try {
-          const isAccessible = await photoService.verifyPhotoUrl(tagPhotoUrl);
-          
-          if (isAccessible) {
-            setPreviewUrl(tagPhotoUrl);
-            setPreviewError(false);
-          } else {
-            // Tentar regenerar URL
-            const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
-            if (regeneratedUrl) {
-              setPreviewUrl(regeneratedUrl);
-              setPreviewError(false);
-            } else {
-              setPreviewError(true);
-            }
-          }
-        } catch (error) {
-          console.error("Erro ao verificar URL da foto da TAG:", error);
-          setPreviewError(true);
-        } finally {
-          setVerifying(false);
-        }
-      };
-      
-      verifyPhoto();
+      // Simplesmente definir a URL com cache-busting para evitar cache
+      setPreviewUrl(addNoCacheParam(tagPhotoUrl));
+      setPreviewError(false);
     } else {
       setPreviewUrl(undefined);
       setPreviewError(false);
@@ -78,7 +47,7 @@ export function TagPhotoField({
     try {
       const newUrl = await onPhotoUpload(e.target.files);
       if (newUrl) {
-        setPreviewUrl(newUrl);
+        setPreviewUrl(addNoCacheParam(newUrl));
         setPreviewError(false);
       } else {
         throw new Error("Erro ao obter URL da foto");
@@ -93,12 +62,20 @@ export function TagPhotoField({
   };
 
   const handleImageError = async () => {
-    if (previewUrl) {
-      setPreviewError(true);
-      
-      // Tentar carregar a imagem diretamente como fallback
+    setPreviewError(true);
+    
+    // Tentar carregar a imagem diretamente como fallback
+    if (tagPhotoUrl) {
       try {
-        const directUrl = await photoService.downloadPhoto(previewUrl);
+        // Tentar regenerar a URL e tentar novamente
+        const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
+        if (regeneratedUrl) {
+          setPreviewUrl(addNoCacheParam(regeneratedUrl));
+          return; // Tentar carregar novamente com a URL regenerada
+        }
+        
+        // Se não conseguir regenerar, tentar download direto
+        const directUrl = await photoService.downloadPhoto(tagPhotoUrl);
         if (directUrl) {
           setPreviewUrl(directUrl);
           setPreviewError(false);
@@ -116,32 +93,26 @@ export function TagPhotoField({
     setPreviewError(false);
     
     try {
-      // Tentar regenerar URL
+      // Tentar regenerar URL primeiro
       const regeneratedUrl = photoService.regeneratePublicUrl(tagPhotoUrl);
       
       if (regeneratedUrl) {
-        const isAccessible = await photoService.verifyPhotoUrl(regeneratedUrl);
-        
-        if (isAccessible) {
-          setPreviewUrl(regeneratedUrl);
-          setPreviewError(false);
-          toast.success("Imagem recarregada com sucesso");
-        } else {
-          // Tentar download direto
-          const directUrl = await photoService.downloadPhoto(tagPhotoUrl);
-          
-          if (directUrl) {
-            setPreviewUrl(directUrl);
-            setPreviewError(false);
-            toast.success("Imagem carregada via download direto");
-          } else {
-            setPreviewError(true);
-            toast.error("Não foi possível carregar a imagem");
-          }
-        }
+        setPreviewUrl(addNoCacheParam(regeneratedUrl));
+        setPreviewError(false);
+        toast.success("Imagem recarregada com sucesso");
+        return;
+      }
+      
+      // Se não conseguir regenerar, tentar download direto
+      const directUrl = await photoService.downloadPhoto(tagPhotoUrl);
+      
+      if (directUrl) {
+        setPreviewUrl(directUrl);
+        setPreviewError(false);
+        toast.success("Imagem carregada via download direto");
       } else {
         setPreviewError(true);
-        toast.error("Não foi possível regenerar a URL da imagem");
+        toast.error("Não foi possível carregar a imagem");
       }
     } catch (error) {
       console.error("Erro ao recarregar preview:", error);

@@ -21,7 +21,7 @@ interface PhotoUploadProps {
 }
 
 export default function PhotoUpload({ 
-  photos = [], // Garantir valor padrão para evitar undefined
+  photos = [], 
   onChange, 
   disabled = false, 
   title = "Adicionar fotos", 
@@ -48,38 +48,19 @@ export default function PhotoUpload({
       const safePhotos = Array.isArray(photos) ? photos : [];
       
       for (const photo of safePhotos) {
+        if (!photo) continue;
+        
         const photoId = photo.id || `temp-${Date.now()}`;
         
         if (photo.url) {
-          try {
-            // If it's a File object, create an object URL
-            if (photo.file instanceof File) {
-              newPhotoUrls[photoId] = URL.createObjectURL(photo.file);
-              continue;
-            }
-            
-            // Add a cache-busting parameter to the URL
-            const urlWithNoCache = addNoCacheParam(photo.url);
-            
-            // Try to verify the URL
-            const isValid = await photoService.verifyPhotoUrl(urlWithNoCache);
-            if (isValid) {
-              newPhotoUrls[photoId] = urlWithNoCache;
-            } else {
-              console.warn(`URL da foto ${photoId} não é válida, tentando regenerar...`);
-              
-              // Try to regenerate URL
-              const regeneratedUrl = photoService.regeneratePublicUrl(photo.url);
-              if (regeneratedUrl) {
-                newPhotoUrls[photoId] = regeneratedUrl;
-                console.log(`URL regenerada para ${photoId}: ${regeneratedUrl}`);
-              } else {
-                console.error(`Não foi possível regenerar URL para foto ${photoId}`);
-              }
-            }
-          } catch (error) {
-            console.error(`Erro ao processar URL da foto ${photoId}:`, error);
+          // If it's a File object, create an object URL
+          if (photo.file instanceof File) {
+            newPhotoUrls[photoId] = URL.createObjectURL(photo.file);
+            continue;
           }
+          
+          // Add a cache-busting parameter to the URL
+          newPhotoUrls[photoId] = addNoCacheParam(photo.url);
         } else if (photo.file instanceof File) {
           // If we have a file but no URL, create an object URL
           newPhotoUrls[photoId] = URL.createObjectURL(photo.file);
@@ -94,13 +75,13 @@ export default function PhotoUpload({
     // Clean up object URLs when unmounting
     return () => {
       Object.values(photoUrls).forEach(url => {
-        if (url.startsWith('blob:')) {
+        if (url && url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
         }
       });
       
       Object.values(fallbackUrls).forEach(url => {
-        if (url.startsWith('blob:')) {
+        if (url && url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
         }
       });
@@ -114,6 +95,8 @@ export default function PhotoUpload({
 
   // Function to get a safe photo URL
   const getPhotoUrl = (photo: PhotoWithFile): string => {
+    if (!photo) return '';
+    
     const photoId = photo.id || `temp-${Date.now()}`;
     
     // Check if we have a fallback URL first
@@ -140,22 +123,18 @@ export default function PhotoUpload({
       // First, try to regenerate the URL
       const regeneratedUrl = photoService.regeneratePublicUrl(photoUrl);
       if (regeneratedUrl && regeneratedUrl !== photoUrl) {
-        const isValid = await photoService.verifyPhotoUrl(regeneratedUrl);
-        if (isValid) {
-          console.log(`URL regenerada com sucesso para ${photoId}: ${regeneratedUrl}`);
-          setFallbackUrls(prev => ({
-            ...prev,
-            [photoId]: regeneratedUrl
-          }));
-          
-          setImageErrors(prev => ({
-            ...prev,
-            [photoId]: false
-          }));
-          
-          setIsRefreshing(prev => ({ ...prev, [photoId]: false }));
-          return;
-        }
+        setFallbackUrls(prev => ({
+          ...prev,
+          [photoId]: regeneratedUrl
+        }));
+        
+        setImageErrors(prev => ({
+          ...prev,
+          [photoId]: false
+        }));
+        
+        setIsRefreshing(prev => ({ ...prev, [photoId]: false }));
+        return;
       }
       
       // If regeneration didn't work, try direct download
@@ -190,22 +169,18 @@ export default function PhotoUpload({
       if (regeneratedUrl) {
         console.log(`URL regenerada: ${regeneratedUrl}`);
         
-        // Check if the regenerated URL is accessible
-        const isValid = await photoService.verifyPhotoUrl(regeneratedUrl);
-        if (isValid) {
-          setFallbackUrls(prev => ({
-            ...prev,
-            [photoId]: addNoCacheParam(regeneratedUrl)
-          }));
-          
-          setImageErrors(prev => ({
-            ...prev,
-            [photoId]: false
-          }));
-          
-          toast.success("Imagem atualizada com sucesso");
-          return;
-        }
+        setFallbackUrls(prev => ({
+          ...prev,
+          [photoId]: addNoCacheParam(regeneratedUrl)
+        }));
+        
+        setImageErrors(prev => ({
+          ...prev,
+          [photoId]: false
+        }));
+        
+        toast.success("Imagem atualizada com sucesso");
+        return;
       }
       
       // If regeneration didn't work, try direct download
@@ -240,6 +215,8 @@ export default function PhotoUpload({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {safePhotos.map((photo, index) => {
+          if (!photo) return null;
+          
           const photoId = photo.id || `temp-${index}`;
           const photoUrl = getPhotoUrl(photo);
           const hasError = imageErrors[photoId];
@@ -269,7 +246,9 @@ export default function PhotoUpload({
                           className="p-1 h-auto mt-1"
                           onClick={(e) => {
                             e.stopPropagation();
-                            refreshPhotoUrl(photoId, photo.url);
+                            if (photo.url) {
+                              refreshPhotoUrl(photoId, photo.url);
+                            }
                           }}
                           disabled={isRefreshingThis}
                         >
@@ -296,7 +275,11 @@ export default function PhotoUpload({
                         <AlertTriangle className="h-6 w-6 text-amber-500 mb-2" />
                         <span className="text-gray-500 mb-4">Não foi possível carregar a imagem</span>
                         <Button 
-                          onClick={() => refreshPhotoUrl(photoId, photo.url)}
+                          onClick={() => {
+                            if (photo.url) {
+                              refreshPhotoUrl(photoId, photo.url);
+                            }
+                          }}
                           disabled={isRefreshingThis}
                         >
                           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingThis ? 'animate-spin' : ''}`} />

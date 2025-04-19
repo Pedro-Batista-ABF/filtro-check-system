@@ -5,7 +5,7 @@ import { Sector, SectorStatus } from "@/types";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
-import PageLayoutWrapper from "@/components/layout/PageLayoutWrapper";
+import PageLayout from "@/components/layout/PageLayout";
 import { useApi } from "@/contexts/ApiContextExtended";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
@@ -155,32 +155,84 @@ export default function ScrapValidationForm() {
       }
       
       console.log("Validando sucateamento do setor:", sector.id);
-      console.log("Dados a serem enviados:", {
-        ...data,
-        status: 'sucateado',
-        scrapValidated: true
-      });
       
       // Ensure that the status is set to 'sucateado' with proper type
       const updatedData = { 
         ...data, 
         status: 'sucateado' as SectorStatus,
+        current_status: 'sucateado',
+        current_outcome: 'Sucateado',
         scrapValidated: true,
         outcome: 'Sucateado'
       };
       
-      // First try with the API
-      let result;
-      try {
-        result = await updateSector(sector.id, updatedData);
-      } catch (updateError) {
-        console.error("Erro na API updateSector:", updateError);
-        throw new Error(`Falha ao atualizar o setor: ${updateError instanceof Error ? updateError.message : 'Erro desconhecido'}`);
-      }
+      console.log("Dados a serem enviados:", updatedData);
       
-      if (!result) {
-        console.error("Resultado da atualização foi falso ou nulo");
-        throw new Error("Falha ao atualizar o setor");
+      try {
+        // Realizar a atualização diretamente via Supabase para garantir que os campos críticos sejam atualizados
+        const { error: directUpdateError } = await supabase
+          .from('sectors')
+          .update({
+            current_status: 'sucateado',
+            current_outcome: 'Sucateado',
+            updated_at: new Date().toISOString(),
+            scrap_observations: data.scrapObservations,
+            scrap_return_date: data.scrapReturnDate,
+            scrap_return_invoice: data.scrapReturnInvoice
+          })
+          .eq('id', sector.id);
+          
+        if (directUpdateError) {
+          console.error("Erro na atualização direta do setor:", directUpdateError);
+          throw new Error(`Falha na atualização direta: ${directUpdateError.message}`);
+        }
+        
+        // Atualizar o ciclo mais recente
+        const { data: cycles, error: cyclesError } = await supabase
+          .from('cycles')
+          .select('id')
+          .eq('sector_id', sector.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (cyclesError) {
+          console.error("Erro ao buscar ciclo:", cyclesError);
+          throw new Error(`Falha ao buscar ciclo: ${cyclesError.message}`);
+        }
+        
+        if (cycles && cycles.length > 0) {
+          const cycleId = cycles[0].id;
+          
+          const { error: cycleUpdateError } = await supabase
+            .from('cycles')
+            .update({
+              status: 'sucateado',
+              outcome: 'Sucateado',
+              updated_at: new Date().toISOString(),
+              scrap_validated: true,
+              scrap_observations: data.scrapObservations,
+              scrap_return_date: data.scrapReturnDate,
+              scrap_return_invoice: data.scrapReturnInvoice
+            })
+            .eq('id', cycleId);
+            
+          if (cycleUpdateError) {
+            console.error("Erro ao atualizar ciclo:", cycleUpdateError);
+            throw new Error(`Falha ao atualizar ciclo: ${cycleUpdateError.message}`);
+          }
+          
+          console.log("Ciclo atualizado com sucesso");
+        }
+        
+        // Também tentar pela API para garantir que as fotos são processadas corretamente
+        const result = await updateSector(sector.id, updatedData);
+        if (!result) {
+          console.warn("API updateSector não retornou resultado positivo, mas as atualizações diretas foram bem-sucedidas");
+        }
+        
+      } catch (updateError) {
+        console.error("Erro nas atualizações:", updateError);
+        throw new Error(`Falha ao atualizar: ${updateError instanceof Error ? updateError.message : 'Erro desconhecido'}`);
       }
       
       // Verificar diretamente se a atualização do status foi bem-sucedida
@@ -192,12 +244,12 @@ export default function ScrapValidationForm() {
         
       if (checkError) {
         console.error("Erro ao verificar status após atualização:", checkError);
-        toast.warning("Verificação do status após atualização falhou, tentando forçar atualização");
+        toast.warning("Verificação do status após atualização falhou");
       } else if (checkData.current_status !== 'sucateado') {
         console.warn("Status não atualizado corretamente. Tentando forçar...");
         toast.warning("Status não atualizado corretamente, tentando forçar atualização");
         
-        // Tentativa de forçar atualização do status
+        // Tentativa de forçar atualização do status diretamente
         const { error: forceError } = await supabase
           .from('sectors')
           .update({ 
@@ -262,29 +314,28 @@ export default function ScrapValidationForm() {
 
   if (loading) {
     return (
-      <PageLayoutWrapper>
+      <PageLayout>
         <div className="p-6 flex justify-center items-center">
           <p>Carregando informações do setor...</p>
         </div>
-      </PageLayoutWrapper>
+      </PageLayout>
     );
   }
 
   return (
-    <PageLayoutWrapper>
+    <PageLayout HeaderExtra={
+      <ConnectionStatus 
+        status={connectionStatus} 
+        onRetryConnection={handleRetryConnection}
+      />
+    }>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="page-title">Validar Sucateamento</h1>
-          <div className="flex items-center gap-2">
-            <ConnectionStatus 
-              status={connectionStatus} 
-              onRetryConnection={handleRetryConnection}
-            />
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
         </div>
         
         {error ? (
@@ -322,6 +373,6 @@ export default function ScrapValidationForm() {
           </Card>
         )}
       </div>
-    </PageLayoutWrapper>
+    </PageLayout>
   );
 }

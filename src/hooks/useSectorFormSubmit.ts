@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Sector, Service, CycleOutcome } from '@/types';
+import { Sector, Service, CycleOutcome, PhotoWithFile } from '@/types';
 import { format } from 'date-fns';
 import { toast } from "sonner";
 import { findServicesWithoutPhotos } from '@/utils/peritagemValidation';
@@ -16,6 +16,7 @@ interface FormState {
   scrapObservations: string;
   scrapDate?: Date;
   scrapInvoice: string;
+  scrapPhotos?: PhotoWithFile[];
 }
 
 export function useSectorFormSubmit() {
@@ -29,7 +30,8 @@ export function useSectorFormSubmit() {
       photos: false,
       exitDate: false,
       exitInvoice: false,
-      scrapObservations: formData.isScrap && !formData.scrapObservations.trim()
+      scrapObservations: formData.isScrap && !formData.scrapObservations.trim(),
+      scrapPhotos: formData.isScrap && (!formData.scrapPhotos || formData.scrapPhotos.length === 0)
     };
 
     // Se não for sucateamento, verificar serviços
@@ -78,6 +80,7 @@ export function useSectorFormSubmit() {
         scrapObservations: formState.scrapObservations,
         scrapReturnInvoice: formState.scrapInvoice || "",
         scrapReturnDate: formState.scrapDate ? format(formState.scrapDate, "yyyy-MM-dd") : undefined,
+        scrapPhotos: formState.scrapPhotos || [],
         status: 'sucateadoPendente',
         outcome: 'Sucateado' as CycleOutcome,
         services: [],
@@ -96,32 +99,21 @@ export function useSectorFormSubmit() {
         stage: 'peritagem' // Adicionar etapa do processo
       }));
     
-    const formData: Partial<Sector> = {
+    return {
       tagNumber: formState.tagNumber,
       tagPhotoUrl: formState.tagPhotoUrl,
       entryInvoice: formState.entryInvoice,
       entryDate: entryDateStr,
-      peritagemDate: format(new Date(), 'yyyy-MM-dd'),
       entryObservations: formState.entryObservations,
+      peritagemDate: format(new Date(), 'yyyy-MM-dd'),
       services: selectedServices,
-      beforePhotos: selectedServices.flatMap(s => (s.photos || []).map(photo => ({
-        ...photo,
-        stage: 'peritagem', // Garantir que fotos tenham etapa
-        serviceId: s.id
-      }))),
+      beforePhotos: [],
       afterPhotos: []
-    };
-
-    if (isEditing && formState.isScrap) {
-      formData.scrapObservations = formState.scrapObservations;
-      formData.scrapReturnInvoice = formState.scrapInvoice;
-      formData.scrapReturnDate = formState.scrapDate ? format(formState.scrapDate, "yyyy-MM-dd") : undefined;
-      formData.scrapValidated = true;
-      formData.outcome = 'Sucateado' as CycleOutcome;
-    }
-
-    return formData;
+    } as Partial<Sector>;
   };
 
-  return { validateForm, prepareFormData };
+  return {
+    validateForm,
+    prepareFormData
+  };
 }
