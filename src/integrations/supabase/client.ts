@@ -14,6 +14,7 @@ const options = {
     detectSessionInUrl: true,
     storageKey: 'supabase.auth.token',
     storage: localStorage,
+    flowType: 'implicit',
   },
   global: {
     headers: {
@@ -38,7 +39,7 @@ const options = {
   }
 };
 
-// Export the supabase client like this:
+// Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, options);

@@ -1,69 +1,106 @@
 
-import { useState, useEffect } from "react";
-import { Sector } from "@/types";
-import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import SectorGrid from "@/components/sectors/SectorGrid";
-import { useApi } from "@/contexts/ApiContextExtended";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PageLayout from '@/components/layout/PageLayout';
+import ConnectionStatus from '@/components/peritagem/ConnectionStatus';
+import { useConnectionAuth } from '@/hooks/useConnectionAuth';
+import { useApi } from '@/contexts/ApiContextExtended';
+import { Sector } from '@/types';
+import SectorGrid from '@/components/sectors/SectorGrid';
+import { Card, CardContent } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Execucao() {
+  const navigate = useNavigate();
+  const { connectionStatus, handleRetryConnection } = useConnectionAuth();
+  const { getSectorsByStatus } = useApi();
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
-  const { getSectorsByStatus } = useApi();
-
+  const [error, setError] = useState<string | null>(null);
+  
   useEffect(() => {
-    async function fetchSectors() {
+    document.title = "Execução - Gestão de Recuperação";
+    
+    const fetchSectors = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
+        console.log("Buscando setores em execução...");
+        const execucaoSectors = await getSectorsByStatus("emExecucao");
         
-        // Try to use the API context function first
-        if (getSectorsByStatus) {
-          const sectorsData = await getSectorsByStatus("emExecucao");
-          setSectors(sectorsData || []);
+        if (execucaoSectors && Array.isArray(execucaoSectors)) {
+          console.log(`Encontrados ${execucaoSectors.length} setores em execução`);
+          setSectors(execucaoSectors);
         } else {
-          // Fallback to direct Supabase query
-          const { data, error } = await supabase
-            .from('sectors')
-            .select('*')
-            .eq('current_status', 'emExecucao');
-            
-          if (error) throw error;
-          setSectors(data || []);
+          console.error("Resultado inesperado ao buscar setores:", execucaoSectors);
+          setSectors([]);
         }
       } catch (error) {
         console.error("Erro ao buscar setores em execução:", error);
-        toast.error("Falha ao carregar setores");
+        setError("Falha ao carregar setores em execução");
+        toast.error("Falha ao carregar setores em execução");
       } finally {
         setLoading(false);
       }
-    }
-
+    };
+    
     fetchSectors();
   }, [getSectorsByStatus]);
-
+  
+  const handleSectorSelect = (sector: Sector) => {
+    navigate(`/execucao/${sector.id}`);
+  };
+  
+  const HeaderExtra = (
+    <ConnectionStatus 
+      status={connectionStatus} 
+      onRetryConnection={handleRetryConnection} 
+      showDetails={true}
+    />
+  );
+  
   return (
-    <DashboardLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Setores em Execução</h1>
+    <PageLayout HeaderExtra={HeaderExtra}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Execução</h1>
+        </div>
         
         {loading ? (
-          <div className="flex justify-center p-12">
+          <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : sectors.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-muted-foreground">Nenhum setor em execução no momento</p>
+        ) : error ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <p className="text-red-500">{error}</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            </CardContent>
           </Card>
-        ) : (
+        ) : sectors.length > 0 ? (
           <SectorGrid 
-            sectors={sectors} 
-            onSectorClick={(sector) => console.log("Setor clicado:", sector.id)}
+            sectors={sectors}
+            onSelect={handleSectorSelect}
           />
+        ) : (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">
+                Nenhum setor em execução no momento.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
-    </DashboardLayout>
+    </PageLayout>
   );
 }

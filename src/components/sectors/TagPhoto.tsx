@@ -1,11 +1,11 @@
 
 import { Sector } from "@/types";
 import { useEffect, useState } from "react";
-import { addNoCacheParam } from "@/utils/photoUtils";
-import { Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { photoService } from "@/services/photoService";
+import { isValidUrl, addNoCacheParam } from "@/utils/photoUtils";
+import { Loader2, RefreshCw, AlertTriangle, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { photoService } from "@/services/photoService";
 
 interface TagPhotoProps {
   sector: Sector;
@@ -16,48 +16,81 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
   const [imgUrl, setImgUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fallbackAttempted, setFallbackAttempted] = useState(false);
   
   useEffect(() => {
     // Reset states when sector changes
     setImgError(false);
     setIsLoading(true);
+    setFallbackAttempted(false);
     
-    // Carregar imagem diretamente
-    if (sector.tagPhotoUrl) {
-      // Adicionar parâmetro para evitar cache
-      const noCacheUrl = addNoCacheParam(sector.tagPhotoUrl);
-      setImgUrl(noCacheUrl);
+    async function loadImage() {
+      if (!sector.tagPhotoUrl) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Validate URL format
+      if (!isValidUrl(sector.tagPhotoUrl)) {
+        console.warn("URL da foto da TAG é inválida:", sector.tagPhotoUrl);
+        setImgError(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // Add a cache-busting parameter and set it directly without verification
+        const noCacheUrl = addNoCacheParam(sector.tagPhotoUrl);
+        setImgUrl(noCacheUrl);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Erro ao processar URL da foto da TAG:", error);
+        setImgError(true);
+        setIsLoading(false);
+      }
     }
     
-    setIsLoading(false);
+    loadImage();
   }, [sector.tagPhotoUrl, sector.id]);
 
   const handleImageError = async () => {
     console.warn("Erro ao carregar imagem diretamente:", imgUrl);
-    setImgError(true);
     
-    // Tentar alternativas automaticamente
-    if (sector.tagPhotoUrl) {
-      try {
-        // Tentar regenerar URL
-        const regeneratedUrl = await photoService.regeneratePublicUrl(sector.tagPhotoUrl);
-        if (regeneratedUrl && regeneratedUrl !== sector.tagPhotoUrl) {
-          console.log("Tentando URL regenerada:", regeneratedUrl);
-          setImgUrl(addNoCacheParam(regeneratedUrl));
-          setImgError(false);
-          return;
-        }
-        
-        // Se regeneração falhou, tentar download direto
-        const downloadUrl = await photoService.downloadPhoto(sector.tagPhotoUrl);
-        if (downloadUrl) {
-          console.log("Usando URL de download direto como fallback");
-          setImgUrl(downloadUrl);
-          setImgError(false);
-        }
-      } catch (error) {
-        console.error("Falha no fallback da foto da TAG:", error);
+    // Avoid multiple fallback attempts
+    if (fallbackAttempted || !sector.tagPhotoUrl) {
+      setImgError(true);
+      return;
+    }
+
+    setFallbackAttempted(true);
+    
+    try {
+      console.log("Tentando abordagens alternativas para carregar a imagem");
+      
+      // Tentar regenerar a URL primeiro
+      const regeneratedUrl = photoService.regeneratePublicUrl(sector.tagPhotoUrl);
+      if (regeneratedUrl && regeneratedUrl !== sector.tagPhotoUrl) {
+        console.log("URL regenerada, tentando carregar:", regeneratedUrl);
+        setImgUrl(regeneratedUrl);
+        setImgError(false);
+        return;
       }
+      
+      // Se regeneração não funcionou, tentar download direto
+      console.log("Tentando download direto da imagem");
+      const downloadUrl = await photoService.downloadPhoto(sector.tagPhotoUrl);
+      
+      if (downloadUrl) {
+        console.log("Usando URL de download direto como fallback");
+        setImgUrl(downloadUrl);
+        setImgError(false);
+      } else {
+        console.error("Todas as tentativas de carregar a imagem falharam");
+        setImgError(true);
+      }
+    } catch (error) {
+      console.error("Falha no fallback da foto da TAG:", error);
+      setImgError(true);
     }
   };
   
@@ -68,20 +101,31 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     setImgError(false);
     
     try {
-      // Tentar URL direta com parâmetro de cache
+      // Tentar várias abordagens em sequência
+      console.log("Tentando recarregar a imagem via várias abordagens");
+      
+      // 1. Tentar URL direta com parâmetro de cache
       const directUrl = addNoCacheParam(sector.tagPhotoUrl);
       setImgUrl(directUrl);
       
-      // Tentar regenerar URL
-      const regeneratedUrl = await photoService.regeneratePublicUrl(sector.tagPhotoUrl);
+      // 2. Tentar regenerar URL
+      const regeneratedUrl = photoService.regeneratePublicUrl(sector.tagPhotoUrl);
       if (regeneratedUrl) {
-        setImgUrl(addNoCacheParam(regeneratedUrl));
-        toast.success("Imagem atualizada com sucesso");
-        return;
+        console.log("Tentando URL regenerada:", regeneratedUrl);
+        setImgUrl(regeneratedUrl);
+        
+        // Verificar se regeneração funcionou
+        const isValid = await photoService.verifyPhotoUrl(regeneratedUrl);
+        if (isValid) {
+          toast.success("Imagem atualizada com sucesso");
+          return;
+        }
       }
       
-      // Tentar download direto como último recurso
+      // 3. Tentar download direto como último recurso
+      console.log("Tentando download direto da imagem");
       const downloadUrl = await photoService.downloadPhoto(sector.tagPhotoUrl);
+      
       if (downloadUrl) {
         setImgUrl(downloadUrl);
         setImgError(false);

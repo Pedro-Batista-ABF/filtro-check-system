@@ -57,7 +57,6 @@ export const addNoCacheParam = (url: string): string => {
     urlObj.searchParams.set('t', Date.now().toString());
     return urlObj.toString();
   } catch (e) {
-    // Se não conseguir processar como URL, retornar original
     return url;
   }
 };
@@ -76,12 +75,29 @@ export const fileToBase64 = (file: File): Promise<string> => {
 
 /**
  * Verifica se uma URL de imagem é acessível
- * Simplificada para reduzir problemas de CORS e evitar bloqueios
+ * Implementação mais robusta com timeout e tratamento de CORS
+ * Modificado para ser mais tolerante a erros
  */
 export const checkImageExists = async (url: string): Promise<boolean> => {
-  // Retornar true para permitir que o elemento <img> tente carregar diretamente
-  // e use o fallback com onError se necessário
-  return true;
+  try {
+    // Usar fetch com método HEAD para verificar rapidamente a existência da imagem
+    // Configurado com timeout para evitar esperas longas
+    const response = await fetch(url, { 
+      method: 'HEAD',
+      cache: 'no-store',
+      credentials: 'omit', // Evita problemas de CORS com credenciais
+      mode: 'no-cors', // Tenta contornar restrições de CORS
+      signal: AbortSignal.timeout(3000)
+    });
+    
+    // Se conseguimos uma resposta, a imagem existe
+    return response.ok;
+  } catch (error) {
+    console.warn(`Erro ao verificar URL da imagem via HEAD: ${url}`, error);
+    // Retorna true para permitir que o componente <img> tente carregar mesmo assim
+    // e use seu próprio tratamento de erro onError
+    return true;
+  }
 };
 
 /**

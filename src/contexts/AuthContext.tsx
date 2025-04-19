@@ -13,7 +13,7 @@ interface AuthContextProps {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  registerUser: (email: string, password: string) => Promise<void>;
+  registerUser: (email: string, password: string) => Promise<void>; // Updated return type
   getUserMetadata: () => Record<string, any> | null;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
@@ -153,41 +153,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      console.log("AuthContext: Iniciando login com email:", email);
-      
-      // Limpar erros anteriores
-      setError(null);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      if (error) {
-        console.error("AuthContext: Erro de autenticação:", error);
-        
-        // Mensagem mais amigável para erro de credenciais inválidas
-        if (error.message.includes("Invalid login credentials")) {
-          throw new Error("Email ou senha incorretos. Por favor, verifique suas credenciais e tente novamente.");
-        }
-        
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log("AuthContext: Login bem-sucedido, dados:", data.session?.user?.id || "sem ID");
-      
-      if (data && data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
-        setIsAuthenticated(true);
-        toast.success('Login realizado com sucesso');
-        return;
-      } else {
-        throw new Error("Falha no login: Não foi possível obter dados da sessão");
-      }
+      toast.success('Login realizado com sucesso');
       
     } catch (error: any) {
-      console.error("AuthContext: Erro completo no login:", error);
       setError(error.message);
       toast.error('Erro ao fazer login', {
         description: error.message
@@ -278,10 +253,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signOut,
     signUp,
-    login: signIn, // alias para signIn
+    login: signIn,
     registerUser,
     getUserMetadata: () => user?.user_metadata || null,
-    logout: signOut, // alias para signOut
+    logout: signOut,
     refreshSession,
   };
 
