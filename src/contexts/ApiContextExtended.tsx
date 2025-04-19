@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Sector, Service, Photo } from '@/types';
 import { toast } from 'sonner';
 import { photoService } from '@/services/photoService';
+import { sectorService } from '@/services/sectorService';
 
 interface ApiContextValue {
   loading: boolean;
@@ -15,8 +16,8 @@ interface ApiContextValue {
   downloadPhoto: (url: string) => Promise<string | null>;
   updateTagPhotoUrl: (sectorId: string, url: string) => Promise<boolean>;
   updateServicePhotos: (serviceId: string, photos: { url: string, type: string }[]) => Promise<boolean>;
-  addSector: (sector: any) => Promise<string | boolean>;
-  updateSector: (id: string, data: any) => Promise<boolean>;
+  addSector: (sector: Partial<Sector>) => Promise<string | boolean>;
+  updateSector: (id: string, data: Partial<Sector>) => Promise<boolean>;
   refreshData: () => Promise<void>;
   getSectorById: (id: string) => Promise<Sector | null>;
 }
@@ -571,6 +572,39 @@ export const ApiContextExtendedProvider: React.FC<{ children: ReactNode }> = ({ 
     } catch (error) {
       console.error(`Erro em updateSector para setor ${id}:`, error);
       throw error;
+    }
+  };
+  
+  // Add Sector implementation
+  const addSector = async (sectorData: Partial<Sector>): Promise<string | boolean> => {
+    try {
+      console.log("Iniciando addSector com dados:", sectorData);
+      setLoading(true);
+      
+      // Verificar se o usuário está autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      // Use o serviço existente para adicionar o setor
+      const result = await sectorService.addSector(sectorData as Omit<Sector, 'id'>);
+      
+      console.log("Setor adicionado com sucesso:", result);
+      toast.success("Setor adicionado com sucesso");
+      
+      // Atualizar a lista de setores
+      await refreshData();
+      
+      return result;
+    } catch (error) {
+      console.error("Erro ao adicionar setor:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setError(`Falha ao adicionar setor: ${errorMessage}`);
+      toast.error(`Erro ao adicionar setor: ${errorMessage}`);
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
