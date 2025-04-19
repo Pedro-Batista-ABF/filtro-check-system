@@ -1,76 +1,60 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Plus, Minus } from 'lucide-react';
-import { Service } from '@/types';
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { MinusIcon, PlusIcon } from "lucide-react";
 
-export interface ServiceQuantityProps {
-  service: Service;
-  onQuantityChange: (id: string, quantity: number) => void;
-  disabled?: boolean;
+interface ServiceQuantityProps {
+  value: number;
+  onChange: (quantity: number) => void;
+  min?: number;
+  max?: number;
 }
 
-const ServiceQuantity: React.FC<ServiceQuantityProps> = ({
-  service,
-  onQuantityChange,
-  disabled = false
-}) => {
-  const handleDecrement = () => {
-    if (!service.selected || disabled) return;
-    const newQuantity = Math.max(1, (service.quantity || 1) - 1);
-    onQuantityChange(service.id, newQuantity);
-  };
-
+export default function ServiceQuantity({
+  value,
+  onChange,
+  min = 1,
+  max = 100
+}: ServiceQuantityProps) {
   const handleIncrement = () => {
-    if (!service.selected || disabled) return;
-    const newQuantity = (service.quantity || 1) + 1;
-    onQuantityChange(service.id, newQuantity);
+    if (value < max) {
+      onChange(value + 1);
+    }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!service.selected || disabled) return;
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
-      onQuantityChange(service.id, value);
+  const handleDecrement = () => {
+    if (value > min) {
+      onChange(value - 1);
     }
   };
 
   return (
-    <div className="flex items-center">
-      <span className="text-sm mr-2 whitespace-nowrap">Quantidade:</span>
-      <div className="flex items-center">
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">Quantidade</Label>
+      <div className="flex items-center space-x-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
           className="h-8 w-8 p-0"
           onClick={handleDecrement}
-          disabled={!service.selected || disabled}
+          disabled={value <= min}
         >
-          <Minus className="h-3 w-3" />
+          <MinusIcon className="h-4 w-4" />
         </Button>
-        <Input
-          type="number"
-          min="1"
-          value={service.quantity || 1}
-          onChange={handleInputChange}
-          className="h-8 w-14 mx-1 text-center p-1"
-          disabled={!service.selected || disabled}
-        />
+        <span className="w-8 text-center">{value}</span>
         <Button
           type="button"
           variant="outline"
           size="sm"
           className="h-8 w-8 p-0"
           onClick={handleIncrement}
-          disabled={!service.selected || disabled}
+          disabled={value >= max}
         >
-          <Plus className="h-3 w-3" />
+          <PlusIcon className="h-4 w-4" />
         </Button>
       </div>
     </div>
   );
-};
-
-export default ServiceQuantity;
+}

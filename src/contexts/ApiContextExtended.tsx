@@ -4,7 +4,7 @@ import { SectorStatus, Sector, Service, ServiceType } from '@/types';
 import { ApiContext } from './ApiContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
-import { getSectorsByStatus } from '@/utils/sectorServices';
+import { getSectorsByStatus as fetchSectorsByStatus } from '@/utils/sectorServices';
 
 // Interface para o contexto estendido da API
 interface ApiContextExtendedProps {
@@ -34,7 +34,8 @@ const ApiContextExtendedContext = createContext<ApiContextExtendedValue>({
 
 // Provider do contexto
 export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ children }) => {
-  const { refreshData } = useContext(ApiContext);
+  const apiContext = useContext(ApiContext);
+  const { refreshData } = apiContext || {}; // Fix destructuring error by adding fallback
   const { user } = useAuth();
 
   // Upload de uma foto
@@ -98,15 +99,18 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
             created_by: user.id,
             updated_by: user.id,
           })
-          .select()
-          .single();
+          .select();
 
         if (sectorError) {
           console.error('Erro ao adicionar setor:', sectorError);
           throw sectorError;
         }
 
-        const sectorId = sectorResult.id;
+        if (!sectorResult || sectorResult.length === 0) {
+          throw new Error('Nenhum resultado retornado ao criar setor');
+        }
+
+        const sectorId = sectorResult[0].id;
 
         // Adicionar serviços do setor
         if (sectorData.services && sectorData.services.length > 0) {
@@ -289,6 +293,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
               observations: sectorService.observations,
               photos: photos || [],
               completed: sectorService.completed,
+              stage: sectorService.stage,
             });
           }
         }
@@ -333,7 +338,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
   // Obter setores por status, usando o utilitário importado
   const getSectorsByStatusCallback = useCallback(
     async (status: SectorStatus): Promise<Sector[]> => {
-      return getSectorsByStatus(status);
+      return fetchSectorsByStatus(status);
     },
     []
   );
@@ -347,7 +352,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
       getSectorById,
       getSectorsByStatus: getSectorsByStatusCallback,
       getServiceTypes,
-      refreshData,
+      refreshData: refreshData || (async () => {}),
     }),
     [
       uploadPhoto,

@@ -63,7 +63,7 @@ export default function ServiceCheck({
             {service.selected && (
               <div className="mt-2 space-y-4">
                 <ServiceQuantity
-                  quantity={service.quantity || 1}
+                  value={service.quantity || 1}
                   onChange={(quantity) => onQuantityChange(service.id, quantity)}
                 />
                 
