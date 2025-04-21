@@ -36,29 +36,53 @@ export function useTagPhotoUpload() {
         console.log("Foto da TAG já existe, ignorando:", fixedUrl);
         
         // Garantir que a URL está atualizada no setor mesmo que a foto já exista
-        await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
+        const urlUpdateResult = await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
+        console.log("URL da TAG atualizada no setor:", urlUpdateResult);
         return true;
       }
 
-      // Atualizar a URL da foto da TAG diretamente na tabela sectors primeiro
-      const updateResult = await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
+      // Atualizar a URL da foto da TAG diretamente na tabela sectors
+      let updateResult = false;
+      let retryCount = 0;
+      
+      while (!updateResult && retryCount < 3) {
+        updateResult = await photoService.updateTagPhotoUrl(sectorId, fixedUrl);
+        
+        if (!updateResult) {
+          console.warn(`Tentativa ${retryCount + 1} de atualizar URL falhou, tentando novamente...`);
+          retryCount++;
+          
+          // Espera breve antes de tentar novamente
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Na última tentativa, usar método alternativo
+          if (retryCount === 2) {
+            try {
+              console.log("Tentando método alternativo de atualização...");
+              const { error: sectorUpdateError } = await supabase
+                .from('sectors')
+                .update({
+                  tag_photo_url: fixedUrl,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', sectorId);
+              
+              if (sectorUpdateError) {
+                console.error("Erro na tentativa alternativa:", sectorUpdateError);
+              } else {
+                console.log("Método alternativo bem-sucedido");
+                updateResult = true;
+              }
+            } catch (alternativeError) {
+              console.error("Erro no método alternativo:", alternativeError);
+            }
+          }
+        }
+      }
       
       if (!updateResult) {
-        console.error("Erro ao atualizar URL da foto da TAG no setor, tentativa alternativa");
-        
-        // Tentativa alternativa direta
-        const { error: sectorUpdateError } = await supabase
-          .from('sectors')
-          .update({
-            tag_photo_url: fixedUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', sectorId);
-          
-        if (sectorUpdateError) {
-          console.error("Erro na tentativa alternativa de atualizar URL da TAG:", sectorUpdateError);
-          throw new Error("Não foi possível atualizar a URL da foto da TAG no setor");
-        }
+        console.error("Todas as tentativas de atualizar URL no setor falharam");
+        throw new Error("Não foi possível atualizar a URL da foto da TAG no setor");
       }
       
       console.log('Foto da TAG atualizada com sucesso na tabela sectors:', fixedUrl);
@@ -84,10 +108,26 @@ export function useTagPhotoUpload() {
         
       if (tagPhotoError) {
         console.error('Erro ao inserir foto da TAG:', tagPhotoError);
-        throw tagPhotoError;
+        // Não interromper o fluxo por causa de erro na inserção da foto,
+        // já que a URL foi atualizada no setor
+        console.warn('A URL foi atualizada no setor, mas não foi possível registrar na tabela photos');
+      } else {
+        console.log('Foto da TAG inserida com sucesso no banco de dados:', photoData);
       }
       
-      console.log('Foto da TAG inserida com sucesso no banco de dados:', photoData);
+      // Verificar se a URL da TAG foi realmente salva
+      const { data: checkSector } = await supabase
+        .from('sectors')
+        .select('tag_photo_url')
+        .eq('id', sectorId)
+        .maybeSingle();
+        
+      if (checkSector) {
+        console.log("Verificação final - URL salva:", checkSector.tag_photo_url);
+        if (checkSector.tag_photo_url !== fixedUrl) {
+          console.warn("ALERTA: A URL salva não corresponde à URL corrigida!");
+        }
+      }
       
       return true;
     } catch (error) {

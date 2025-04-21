@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Image } from "@/components/ui/image";
+import { fixDuplicatedStoragePath, addNoCacheParam } from "@/utils/photoUtils";
 
 interface TagPhotoFieldProps {
   tagPhotoUrl?: string;
@@ -27,12 +28,27 @@ export function TagPhotoField({
   const [uploading, setUploading] = useState(false);
   const [localPhotoUrl, setLocalPhotoUrl] = useState<string | undefined>(tagPhotoUrl);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Update local URL when prop changes
   useEffect(() => {
     if (tagPhotoUrl !== localPhotoUrl) {
       console.log("TagPhotoField: tagPhotoUrl changed:", tagPhotoUrl);
-      setLocalPhotoUrl(tagPhotoUrl);
+      
+      if (tagPhotoUrl) {
+        try {
+          // Corrigir URL e adicionar parâmetro anti-cache
+          const fixedUrl = fixDuplicatedStoragePath(tagPhotoUrl);
+          const cachedUrl = addNoCacheParam(fixedUrl);
+          setLocalPhotoUrl(cachedUrl);
+          console.log("TagPhotoField: URL processada:", cachedUrl);
+        } catch (error) {
+          console.error("TagPhotoField: Erro ao processar URL:", error);
+          setLocalPhotoUrl(tagPhotoUrl);
+        }
+      } else {
+        setLocalPhotoUrl(undefined);
+      }
     }
   }, [tagPhotoUrl]);
   
@@ -88,8 +104,12 @@ export function TagPhotoField({
         throw new Error("Nenhuma URL retornada pelo upload");
       }
       
-      setLocalPhotoUrl(result);
-      console.log("Upload concluído com sucesso, URL:", result);
+      // Processar URL retornada
+      const fixedUrl = fixDuplicatedStoragePath(result);
+      const cachedUrl = addNoCacheParam(fixedUrl);
+      
+      setLocalPhotoUrl(cachedUrl);
+      console.log("Upload concluído com sucesso, URL:", cachedUrl);
       toast.success("Foto da TAG carregada com sucesso");
     } catch (error) {
       console.error('Erro ao fazer upload da foto da TAG:', error);
@@ -105,7 +125,24 @@ export function TagPhotoField({
 
   const handleImageLoadError = (error: any) => {
     console.error("Erro ao carregar imagem da TAG:", error);
-    toast.error("Erro ao carregar imagem da TAG");
+  };
+  
+  const handleRefreshImage = async () => {
+    if (!localPhotoUrl) return;
+    
+    setRefreshing(true);
+    try {
+      // Adicionar novo parâmetro anti-cache
+      const refreshedUrl = addNoCacheParam(localPhotoUrl);
+      console.log("Atualizando imagem com URL:", refreshedUrl);
+      setLocalPhotoUrl(refreshedUrl);
+      toast.success("Imagem atualizada");
+    } catch (error) {
+      console.error("Erro ao atualizar imagem:", error);
+      toast.error("Erro ao atualizar imagem");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -152,7 +189,7 @@ export function TagPhotoField({
       )}
       
       {(localPhotoUrl || tagPhotoUrl) && !uploading && (
-        <div className="mt-2">
+        <div className="mt-2 relative group">
           <Image 
             src={localPhotoUrl || tagPhotoUrl} 
             alt="TAG do Setor" 
@@ -162,6 +199,17 @@ export function TagPhotoField({
             onLoadSuccess={handleImageLoadSuccess}
             onLoadError={handleImageLoadError}
           />
+          
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute top-1 right-1 h-6 w-6 bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={handleRefreshImage}
+            disabled={refreshing}
+            title="Recarregar imagem"
+          >
+            <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       )}
       

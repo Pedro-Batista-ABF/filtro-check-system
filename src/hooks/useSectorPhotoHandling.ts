@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { photoService } from '@/services/photoService';
 import { Service, PhotoWithFile } from '@/types';
 import { useApi } from '@/contexts/ApiContextExtended';
-import { fileToBase64, isValidUrl, fixDuplicatedStoragePath } from '@/utils/photoUtils';
+import { fileToBase64, isValidUrl, fixDuplicatedStoragePath, addNoCacheParam } from '@/utils/photoUtils';
 import { toast } from 'sonner';
 
 export const useSectorPhotoHandling = (
@@ -64,14 +64,21 @@ export const useSectorPhotoHandling = (
         throw new Error("URL da foto inválida");
       }
       
-      // Corrigir possíveis problemas na URL
+      // Corrigir possíveis problemas na URL e adicionar parâmetro anti-cache
       const fixedUrl = fixDuplicatedStoragePath(url);
-      console.log("URL da foto da TAG corrigida:", fixedUrl);
+      const cachedUrl = addNoCacheParam(fixedUrl);
+      console.log("URL da foto da TAG corrigida:", cachedUrl);
       
       // Limpar URL temporária
       URL.revokeObjectURL(tempUrl);
       
-      return fixedUrl;
+      // Verificar imediatamente se a URL é acessível
+      const isAccessible = await photoService.verifyPhotoUrl(cachedUrl);
+      if (!isAccessible) {
+        console.warn("A URL não está imediatamente acessível. Isso pode ser normal devido ao atraso de propagação.");
+      }
+      
+      return cachedUrl;
     } catch (error) {
       console.error("Erro ao fazer upload da foto da TAG:", error);
       toast.error("Erro ao fazer upload da foto");

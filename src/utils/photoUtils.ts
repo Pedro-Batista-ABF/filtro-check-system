@@ -29,6 +29,11 @@ export function addNoCacheParam(url: string): string {
     if (url.startsWith('data:')) return url;
     
     const urlObj = new URL(url);
+    
+    // Remover parâmetro 't' existente para evitar acumular parâmetros
+    urlObj.searchParams.delete('t');
+    
+    // Adicionar novo parâmetro anti-cache
     urlObj.searchParams.set('t', Date.now().toString());
     return urlObj.toString();
   } catch (e) {
@@ -118,7 +123,12 @@ export function fixDuplicatedStoragePath(url: string): string {
     if (pathname.indexOf('/sector_photos/sector_photos/') !== -1) {
       console.log('Corrigindo caminho duplicado:', pathname);
       const correctedPath = pathname.replace('/sector_photos/sector_photos/', '/sector_photos/');
-      return url.replace(pathname, correctedPath);
+      // Criar uma nova URL mantendo os parâmetros de consulta originais
+      const newUrl = new URL(urlObj.origin + correctedPath);
+      urlObj.searchParams.forEach((value, key) => {
+        newUrl.searchParams.set(key, value);
+      });
+      return newUrl.toString();
     }
     
     return url;

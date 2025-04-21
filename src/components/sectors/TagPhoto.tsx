@@ -13,29 +13,54 @@ interface TagPhotoProps {
 
 export default function TagPhoto({ sector }: TagPhotoProps) {
   const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [loadError, setLoadError] = useState<boolean>(false);
+  const [loadAttempts, setLoadAttempts] = useState<number>(0);
   
   useEffect(() => {
     if (sector?.tagPhotoUrl) {
-      // Corrigir possíveis problemas na URL da foto da TAG
-      const fixedUrl = fixDuplicatedStoragePath(sector.tagPhotoUrl);
-      setPhotoUrl(fixedUrl);
-      console.log("TagPhoto: URL processada:", fixedUrl);
+      try {
+        // Corrigir possíveis problemas na URL da foto da TAG
+        const fixedUrl = fixDuplicatedStoragePath(sector.tagPhotoUrl);
+        console.log("TagPhoto: Processando URL:", sector.tagPhotoUrl);
+        console.log("TagPhoto: URL processada:", fixedUrl);
+        setPhotoUrl(fixedUrl);
+        setLoadError(false);
+        setLoadAttempts(0);
+      } catch (error) {
+        console.error("TagPhoto: Erro ao processar URL:", error);
+        setLoadError(true);
+      }
     } else {
       setPhotoUrl('');
+      setLoadError(false);
     }
   }, [sector?.tagPhotoUrl]);
   
   // Verificar se temos uma URL válida
   const hasPhotoUrl = !!photoUrl && photoUrl.length > 0;
 
-  console.log("TagPhoto rendering with URL:", photoUrl);
-
   const handleImageLoadSuccess = () => {
-    console.log("TagPhoto: imagem carregada com sucesso");
+    console.log("TagPhoto: imagem carregada com sucesso:", photoUrl);
+    setLoadError(false);
   };
 
   const handleImageLoadError = (error: any) => {
     console.error("TagPhoto: erro ao carregar imagem:", error);
+    setLoadError(true);
+    
+    // Tentativa de recarregar a imagem (máximo 3 tentativas)
+    if (loadAttempts < 3) {
+      console.log(`TagPhoto: Tentativa ${loadAttempts + 1} de 3`);
+      setLoadAttempts(prevAttempts => prevAttempts + 1);
+      
+      // Adicionar um timestamp à URL para evitar cache
+      if (photoUrl && !photoUrl.includes('t=')) {
+        const separator = photoUrl.includes('?') ? '&' : '?';
+        const newUrl = `${photoUrl}${separator}t=${Date.now()}`;
+        console.log("TagPhoto: Tentando URL com timestamp:", newUrl);
+        setPhotoUrl(newUrl);
+      }
+    }
   };
 
   return (
