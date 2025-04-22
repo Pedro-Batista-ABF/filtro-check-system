@@ -64,8 +64,8 @@ export function useTagPhotoUpload() {
                 .update({
                   tag_photo_url: fixedUrl,
                   updated_at: new Date().toISOString()
-                })
-                .eq('id', sectorId);
+                } as any)
+                .eq('id', sectorId as any);
               
               if (sectorUpdateError) {
                 console.error("Erro na tentativa alternativa:", sectorUpdateError);
@@ -89,6 +89,13 @@ export function useTagPhotoUpload() {
 
       // Inserir a foto da TAG no banco de dados
       console.log("Inserindo nova foto da TAG no banco de dados");
+      const photoMetadata = {
+        sector_id: sectorId,
+        stage: 'peritagem',
+        type: 'tag',
+        created_at: new Date().toISOString()
+      };
+      
       const { data: photoData, error: tagPhotoError } = await supabase
         .from('photos')
         .insert({
@@ -97,13 +104,8 @@ export function useTagPhotoUpload() {
           url: fixedUrl,
           type: 'tag',
           created_by: userId,
-          metadata: {
-            sector_id: sectorId,
-            stage: 'peritagem',
-            type: 'tag',
-            created_at: new Date().toISOString()
-          }
-        })
+          metadata: photoMetadata
+        } as any)
         .select('id');
         
       if (tagPhotoError) {
@@ -119,7 +121,7 @@ export function useTagPhotoUpload() {
       const { data: checkSector } = await supabase
         .from('sectors')
         .select('tag_photo_url')
-        .eq('id', sectorId)
+        .eq('id', sectorId as any)
         .maybeSingle();
         
       if (checkSector) {

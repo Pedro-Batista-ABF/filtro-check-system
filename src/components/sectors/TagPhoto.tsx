@@ -4,7 +4,7 @@ import { Image } from "@/components/ui/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Camera } from "lucide-react";
-import { fixDuplicatedStoragePath } from "@/utils/photoUtils";
+import { fixDuplicatedStoragePath, addNoCacheParam } from "@/utils/photoUtils";
 import { useEffect, useState } from "react";
 
 interface TagPhotoProps {
@@ -21,9 +21,13 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
       try {
         // Corrigir possíveis problemas na URL da foto da TAG
         const fixedUrl = fixDuplicatedStoragePath(sector.tagPhotoUrl);
+        // Adicionar parâmetro anti-cache
+        const cachedUrl = addNoCacheParam(fixedUrl);
+        
         console.log("TagPhoto: Processando URL:", sector.tagPhotoUrl);
-        console.log("TagPhoto: URL processada:", fixedUrl);
-        setPhotoUrl(fixedUrl);
+        console.log("TagPhoto: URL processada:", cachedUrl);
+        
+        setPhotoUrl(cachedUrl);
         setLoadError(false);
         setLoadAttempts(0);
       } catch (error) {
@@ -49,16 +53,18 @@ export default function TagPhoto({ sector }: TagPhotoProps) {
     setLoadError(true);
     
     // Tentativa de recarregar a imagem (máximo 3 tentativas)
-    if (loadAttempts < 3) {
+    if (loadAttempts < 3 && sector?.tagPhotoUrl) {
       console.log(`TagPhoto: Tentativa ${loadAttempts + 1} de 3`);
       setLoadAttempts(prevAttempts => prevAttempts + 1);
       
-      // Adicionar um timestamp à URL para evitar cache
-      if (photoUrl && !photoUrl.includes('t=')) {
-        const separator = photoUrl.includes('?') ? '&' : '?';
-        const newUrl = `${photoUrl}${separator}t=${Date.now()}`;
-        console.log("TagPhoto: Tentando URL com timestamp:", newUrl);
+      try {
+        // Gerar nova URL com timestamp atualizado
+        const fixedUrl = fixDuplicatedStoragePath(sector.tagPhotoUrl);
+        const newUrl = addNoCacheParam(fixedUrl);
+        console.log("TagPhoto: Tentando URL com novo timestamp:", newUrl);
         setPhotoUrl(newUrl);
+      } catch (err) {
+        console.error("TagPhoto: Erro ao gerar nova URL:", err);
       }
     }
   };

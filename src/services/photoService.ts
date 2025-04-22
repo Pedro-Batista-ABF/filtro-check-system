@@ -184,8 +184,8 @@ export const photoService = {
         .update({ 
           tag_photo_url: fixedUrl,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', sectorId);
+        } as any)
+        .eq('id', sectorId as any);
         
       if (error) {
         console.error('Erro ao atualizar URL da foto da TAG:', error);
@@ -195,8 +195,8 @@ export const photoService = {
           .from('sectors')
           .update({
             tag_photo_url: fixedUrl
-          })
-          .match({ id: sectorId });
+          } as any)
+          .eq('id', sectorId as any);
           
         if (retryError) {
           console.error('Erro na segunda tentativa:', retryError);

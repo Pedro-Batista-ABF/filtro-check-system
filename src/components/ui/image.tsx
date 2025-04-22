@@ -18,13 +18,13 @@ export function Image({
   src,
   alt,
   className,
-  fallbackSrc,
+  fallbackSrc = '/placeholder-image.png', // Valor padrão para fallback
   onLoadError,
   onLoadSuccess,
   showRefresh = true,
   ...props
 }: ImageProps) {
-  const [imgSrc, setImgSrc] = useState<string | undefined>(src);
+  const [imgSrc, setImgSrc] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -145,36 +145,13 @@ export function Image({
       // Fix any path issues
       const fixedUrl = fixDuplicatedStoragePath(src);
       
-      // Check if the URL is directly accessible
-      const isAccessible = await photoService.verifyPhotoUrl(fixedUrl);
+      // Add a new cache-busting parameter
+      const refreshedUrl = addNoCacheParam(fixedUrl);
+      console.log('Refreshing image with URL:', refreshedUrl);
+      setImgSrc(refreshedUrl);
+      setIsRefreshing(false);
       
-      if (isAccessible) {
-        setImgSrc(addNoCacheParam(fixedUrl));
-        setIsRefreshing(false);
-        toast.success('Imagem atualizada com sucesso');
-        return;
-      }
-      
-      // Try to regenerate the URL
-      const regeneratedUrl = photoService.regeneratePublicUrl(fixedUrl);
-      if (regeneratedUrl) {
-        setImgSrc(addNoCacheParam(regeneratedUrl));
-        setIsRefreshing(false);
-        toast.success('Imagem atualizada com sucesso');
-        return;
-      }
-      
-      // As a last resort, try a direct download
-      const downloadUrl = await photoService.downloadPhoto(fixedUrl);
-      if (downloadUrl) {
-        setImgSrc(downloadUrl);
-        setIsRefreshing(false);
-        toast.success('Imagem recuperada do armazenamento');
-      } else {
-        setIsRefreshing(false);
-        setHasError(true);
-        toast.error('Não foi possível recuperar a imagem');
-      }
+      // Toast will be shown after successful load
     } catch (error) {
       console.error('Error refreshing image:', error);
       setIsRefreshing(false);

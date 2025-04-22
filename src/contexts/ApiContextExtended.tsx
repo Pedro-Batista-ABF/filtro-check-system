@@ -35,11 +35,15 @@ const ApiContextExtendedContext = createContext<ApiContextExtendedValue>({
 // Provider do contexto
 export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ children }) => {
   const apiContext = useContext(ApiContext);
+  
+  // Definindo refreshData com uma implementação padrão
   const refreshData = async () => {
-    if (apiContext?.refreshData) {
+    // Se o apiContext e refreshData existir, chame-o. Caso contrário, não faça nada.
+    if (apiContext && 'refreshData' in apiContext && typeof apiContext.refreshData === 'function') {
       await apiContext.refreshData();
     }
   };
+  
   const { user } = useAuth();
 
   // Upload de uma foto
@@ -105,7 +109,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
         // Adicionar setor
         const { data: sectorResult, error: sectorError } = await supabase
           .from('sectors')
-          .insert(sectorDataForDB)
+          .insert(sectorDataForDB as any)
           .select();
 
         if (sectorError) {
@@ -139,7 +143,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
           if (servicesToInsert.length > 0) {
             const { error: servicesError } = await supabase
               .from('sector_services')
-              .insert(servicesToInsert);
+              .insert(servicesToInsert as any);
 
             if (servicesError) {
               console.error('Erro ao adicionar serviços do setor:', servicesError);
@@ -189,7 +193,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
         const { error: sectorError } = await supabase
           .from('sectors')
           .update(sectorDataForUpdate)
-          .eq('id', id);
+          .eq('id', id as any);
 
         if (sectorError) {
           console.error('Erro ao atualizar setor:', sectorError);
@@ -202,7 +206,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
           const { error: deleteError } = await supabase
             .from('sector_services')
             .delete()
-            .eq('sector_id', id);
+            .eq('sector_id', id as any);
 
           if (deleteError) {
             console.error('Erro ao remover serviços do setor:', deleteError);
@@ -224,7 +228,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
           if (servicesToInsert.length > 0) {
             const { error: servicesError } = await supabase
               .from('sector_services')
-              .insert(servicesToInsert);
+              .insert(servicesToInsert as any);
 
             if (servicesError) {
               console.error('Erro ao adicionar serviços do setor:', servicesError);
@@ -249,7 +253,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
       const { data: sector, error: sectorError } = await supabase
         .from('sectors')
         .select('*')
-        .eq('id', id)
+        .eq('id', id as any)
         .single();
 
       if (sectorError) {
@@ -261,7 +265,7 @@ export const ApiContextExtendedProvider: React.FC<ApiContextExtendedProps> = ({ 
       const { data: sectorServices, error: servicesError } = await supabase
         .from('sector_services')
         .select('*')
-        .eq('sector_id', id);
+        .eq('sector_id', id as any);
 
       if (servicesError) {
         console.error('Erro ao buscar serviços do setor:', servicesError);
